@@ -1,0 +1,140 @@
+@document.meta
+    title: TODO
+    description: 
+    author: dagle
+    categories: 
+    created: 2021-12-12
+    version: 0.1
+@end
+
+0.1
+===
+
+* Escape newlines //  render bad emails.
+  Kind works, need to write tests etc
+
+* Reader
+  - [x] generate email
+  - [-]  gpg
+  -- [x] signing email
+  -- [x] encrypt email
+  -- [ ] encrypt the whole email and not just parts
+  - [x] send email using sendmail interface
+  - [x] Use an exmark line seperate the header from the message
+  - [x] Support reply-all
+
+* Compose
+  - [ ] An command for adding attachments :AddAttachment file
+  - [ ] Solve the draft issue. A draft should have a message but it isn't a reply
+
+* Reply
+  - [ ] Get a way to autoset the from (you want to use the same addr as the recieved)
+
+* Render
+  - [x] Can correctly render an email and decrypt and verify the message
+  - [x] Can't do fancy rendering, like extmarks to show if the message is verified (etc)
+  - [x] A way to show html email
+  -- [x] use html2text for now
+  - [x] Qouting, add the filter.
+  - [x] Fix the alternative part of show_part
+  - [ ] Do exmarks to show different parts
+  - [ ] Do highlights to show if a message is verified or failed
+
+* Write tests, once the interface is "done"
+  - [ ] reading and composing the same buffer over and over shouldn't change the content
+  - [ ] reading and writing part shouldn't change the content (also for attachments)
+  - [ ] writing tests for the ffi code to make sure it doesn't leak/segfault
+
+* Fix a build system
+  - [x] Build project
+  - [x] Being able to run tests
+
+
+* Decouple logic and gui, for easier reuse and testing
+  - [ ] Render
+  - [ ] Reader
+  - [x] Jobs
+  - [ ] Util
+  - [ ] Get dependencies correctly, no cycles
+  - [ ] Some More utils
+
+* Telescope 
+  - [x] render an email correctly in the preview
+  - [x] don't display filename but subject (or to:subject)
+  - [-] Add attachments
+  - [-] Load draft and save drafts
+  - [ ] Something like loading messages like 
+
+* ffi bugs
+  - [ ] Add a logger, to easier detect error
+  - [-] Add a real debug script, to do real debugging
+  - [ ] Do we really need to convert to strings back and forward?
+  - [ ] notmuch go through the code and check for leaks
+  - [ ] gmime leaks memory
+  - [ ] gmime segfaults 
+  - [ ] gmime can't be reloaded?
+
+* Complete the different view models (thread, threadmessages, and messages)
+  - [ ] threadmessage_view
+  -- [ ] Make it support folding
+  -- [ ] Make it possible to open a group
+  -- [ ] drop the other views?
+  - [ ] thread_view
+  - [ ] message_view
+ ** Missing from all
+
+* respect the notmuch config
+
+* Functions 
+ ** view
+	- [-] reply
+	-- [x] reply
+	-- [x] reply-all
+	-- [ ] respond-list
+	-- [ ] respond-sender(?)
+	-- [ ] respond-forward (include an email as an attachment in the response)
+	- [-] Forward email (what should it do?)
+	- [-] message movement
+	-- [ ] view-next email (+prev)
+	-- [ ] view-next in thread (+prev)
+	-- [x] view-next thread (+prev)
+	-- [ ] view-next subsearch (+prev) (like next unread, why? vim does this)
+	- [ ] save-attachments
+	- [ ] view raw
+ ** browser
+ ** search
+ ** gloabal
+	- [x] Make a read message read
+
+0.2 
+===
+* A way to save searches (0.1 will just use the config)
+
+* Get tagviewer
+  - [ ] Set the tags with exmarks
+
+* Clean up the code
+
+* Support GPG/MIME
+
+* Archiving
+
+* Attachments
+  - [ ] Be able to load attachments into quickfix
+
+* Folds
+  - [ ] Fold message / replies
+  - [ ] Fold parts of the message
+  - [ ] Fold threads 
+
+* Adress book support
+  - [ ] Easy way to add and delete addresses
+  - [ ] Support for notmuch-address
+  - [ ] cmp support
+
+0.3
+===
+* Can we aid spam filtering?
+
+* Fix the whole buffer system, don't have global buffers but real framework (0.3)
+

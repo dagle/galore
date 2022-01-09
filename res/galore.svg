@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="235.60165mm"
+   height="192.88126mm"
+   viewBox="0 0 890.46296 729.00003"
+   version="1.1"
+   id="svg27"
+   sodipodi:docname="galore.svg"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20, custom)"
+   inkscape:export-filename="/home/dagle/neovim-logos/galore.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+  <sodipodi:namedview
+     id="namedview29"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="0.48978202"
+     inkscape:cx="297.07093"
+     inkscape:cy="326.67594"
+     inkscape:window-width="1276"
+     inkscape:window-height="1001"
+     inkscape:window-x="1280"
+     inkscape:window-y="19"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Page-1"
+     units="mm"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:snap-global="true"
+     inkscape:document-units="mm" />
+  <title
+     id="title2">neovim-mark@2x</title>
+  <description>Created with Sketch (http://www.bohemiancoding.com/sketch)</description>
+  <defs
+     id="defs19">
+    <linearGradient
+       x1="167.95833"
+       y1="-0.46142399"
+       x2="167.95833"
+       y2="335.45523"
+       id="linearGradient-1"
+       gradientTransform="matrix(0.46142398,0,0,2.1672042,-455.30459,-739.10431)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#16B0ED"
+         stop-opacity="0.800235524"
+         offset="0%"
+         id="stop4" />
+      <stop
+         stop-color="#0F59B2"
+         stop-opacity="0.83700023"
+         offset="100%"
+         id="stop6" />
+    </linearGradient>
+    <linearGradient
+       x1="1118.3427"
+       y1="-0.46586797"
+       x2="1118.3427"
+       y2="338.68604"
+       id="linearGradient-2"
+       gradientTransform="matrix(-0.46586797,0,0,2.1465309,967.47705,-7.1460362)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#7DB643"
+         offset="0%"
+         id="stop9" />
+      <stop
+         stop-color="#367533"
+         offset="100%"
+         id="stop11" />
+    </linearGradient>
+    <linearGradient
+       x1="351.48798"
+       y1="0"
+       x2="351.48798"
+       y2="601.27155"
+       id="linearGradient-3"
+       gradientTransform="matrix(0.82592241,0,0,1.2107675,-455.30459,-739.10431)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#88C649"
+         stop-opacity="0.8"
+         offset="0%"
+         id="stop14" />
+      <stop
+         stop-color="#439240"
+         stop-opacity="0.84"
+         offset="100%"
+         id="stop16" />
+    </linearGradient>
+    <linearGradient
+       x1="167.95833"
+       y1="-0.46142399"
+       x2="167.95833"
+       y2="335.45523"
+       id="linearGradient-1-3"
+       gradientTransform="matrix(-0.46142398,0,0,2.1672042,435.15834,-738.10431)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#16B0ED"
+         stop-opacity="0.800235524"
+         offset="0%"
+         id="stop4-6" />
+      <stop
+         stop-color="#0F59B2"
+         stop-opacity="0.83700023"
+         offset="100%"
+         id="stop6-7" />
+    </linearGradient>
+    <linearGradient
+       x1="356.33795"
+       y1="0"
+       x2="356.33795"
+       y2="612.90131"
+       id="linearGradient-3-3"
+       gradientTransform="matrix(-0.84189739,0,0,1.1877932,435.14463,-739.10431)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#88C649"
+         stop-opacity="0.8"
+         offset="0%"
+         id="stop14-5" />
+      <stop
+         stop-color="#439240"
+         stop-opacity="0.84"
+         offset="100%"
+         id="stop16-6" />
+    </linearGradient>
+  </defs>
+  <g
+     id="Page-1"
+     stroke="none"
+     stroke-width="1"
+     fill="none"
+     fill-rule="evenodd"
+     sketch:type="MSPage"
+     transform="translate(453.30459,737.10431)">
+    <g
+       id="mark-copy"
+       sketch:type="MSLayerGroup"
+       transform="translate(2,3)">
+      <path
+         d="m -455.30459,-583.53391 155,-156.5704 v 727.999999 l -155,-154.762079 z"
+         id="Left---green"
+         fill="url(#linearGradient-1)"
+         sketch:type="MSShapeGroup"
+         style="fill:url(#linearGradient-1)" />
+      <path
+         d="m 435.15834,-582.53391 -155,-156.5704 v 727.999999 l 155,-154.762079 z"
+         id="Left---green-5"
+         fill="url(#linearGradient-1)"
+         sketch:type="MSShapeGroup"
+         style="fill:url(#linearGradient-1-3)" />
+      <path
+         d="M -300.3183,-739.10431 83.299028,-153.00919 -10.079992,-11.104311 -413.30459,-624.93229 Z"
+         id="Cross---blue"
+         fill="url(#linearGradient-3)"
+         sketch:type="MSShapeGroup"
+         sodipodi:nodetypes="ccccc"
+         style="fill:url(#linearGradient-3)" />
+      <path
+         d="M 280.15834,-739.10431 -103.71422,-153.77483 -10.079992,-11.104311 393.14463,-624.93229 Z"
+         id="Cross---blue-2"
+         fill="url(#linearGradient-3)"
+         sketch:type="MSShapeGroup"
+         style="fill:url(#linearGradient-3-3)"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         d="m -300.30459,-455.27199 -0.21325,24.16768 -123.78675,-183.28939 11.46195,-11.71061 z"
+         id="Shadow"
+         fill-opacity="0.13"
+         fill="#000000"
+         sketch:type="MSShapeGroup" />
+      <path
+         d="m 280.60658,-454.09998 0.21325,24.16768 123.78675,-183.28938 -11.46195,-11.71061 z"
+         id="Shadow-9"
+         fill-opacity="0.13"
+         fill="#000000"
+         sketch:type="MSShapeGroup" />
+    </g>
+  </g>
+  <metadata
+     id="metadata1801">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>neovim-mark@2x</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
