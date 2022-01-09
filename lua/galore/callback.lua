@@ -11,6 +11,7 @@ local message_view = require('galore.message_view')
 local compose = require('galore.compose')
 local gu = require('galore.gmime-util')
 local gm = require('galore.gmime')
+local tele = require('galore.telescope')
 
 local M = {}
 
@@ -96,6 +97,10 @@ end
 
 function M.compose_send()
 	compose.send_message()
+end
+
+function M.compose_add_attachment()
+	tele.attach_file({}, compose.add_attachment)
 end
 
 -- function M.reply()

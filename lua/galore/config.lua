@@ -73,6 +73,7 @@ M.values = {
 		},
 		compose = {
 			["<leader>ms"] = M.cb("compose_send"),
+			["<leader>ma"] = M.cb("compose_add_attachment"),
 		},
 	}
 }

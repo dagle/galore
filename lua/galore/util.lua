@@ -123,11 +123,13 @@ function M.split_lines(str)
 	return lines
 end
 
-local default_template = {
-	"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",
-	"To: ",
-	"Subject: ",
-}
+M.default_template = function ()
+	return {
+		"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",
+		"To: ",
+		"Subject: ",
+	}
+end
 
 
 return M

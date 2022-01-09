@@ -16,6 +16,12 @@ local M = {}
 
 M.attachments = {}
 
+function M.add_attachment(file)
+	-- check that compose is opened
+	-- check that the file actually exist
+	table.insert(M.attachments, file)
+end
+
 -- this should be move to some util function
 -- maybe us virtual lines to split between header and message
 -- FIXME: Convert all keys to lower etc, shouldn't force people to write
@@ -60,13 +66,6 @@ function M.send_message()
 	job.send_mail(to, from, message_str)
 end
 
-local default_template = {
-	"From: " .. conf.values.primary_email,
-	"To: ",
-	"Subject: " .. "test subject",
-	"",
-}
-
 function M.save_draft()
 	vim.ui.input({
 		prompt = "Save as: ",
@@ -103,7 +102,7 @@ function M.create(kind, message, is_reply)
 	if message then
 		template = make_template(message)
 	else
-		template = default_template
+		template = u.default_template()
 	end
 	-- if M.compose then
 		-- M.compose:focus()

@@ -17,7 +17,7 @@ local tele = require('galore.telescope')
 require('galore.gmime').init()
 
 local db_path = os.getenv("HOME") .. '/mail'
--- vim.api.nvim_set_keymap('n', '<leader>mc', '<cmd>lua require("galore.compose").create("tab")<CR>', {noremap = true, silent = true})
+vim.api.nvim_set_keymap('n', '<leader>mc', '<cmd>lua require("galore.compose").create("tab")<CR>', {noremap = true, silent = true})
 
 local galore = {
 	-- saved = saved,

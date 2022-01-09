@@ -99,7 +99,7 @@ M.load_draft = function(opts)
 	M.notmuch_search(opts)
 end
 
-M.attach_file = function(opts)
+M.attach_file = function(opts, func)
 	opts = opts or {}
 	opts.prompt_title = "Attach file"
 	-- is this even the best way? works now tm
@@ -111,7 +111,7 @@ M.attach_file = function(opts)
     end, function()
 		actions.close(prompt_bufnr)
 		local file = action_state.get_selected_entry().path
-		P(file)
+		func(file)
 		-- add file to attachment to current compose
     end)
     return true
