@@ -72,14 +72,14 @@ function M.save_draft()
 	function(filename)
 		-- should warn if you overwrite a file
 		-- path:new(filename)
-		local file = u.save_path(filename, conf.values.drafts)
-		local p = Path:new(file)
-		if p:exists() then
-			-- write an error
+		local path = Path:new(conf.value.drafts, filename)
+		if path:exists() then
+			error("File exist")
 			return
 		end
 		local message = reader.create_message(M.ref, M.attachments)
-		gm.write_message(file, message)
+		gm.write_message(path:expand(), message)
+		-- XXX we need to add the file into notmuch or we won't find our draft files
 		print("draft saved")
 	end
 	)
@@ -95,6 +95,7 @@ end
 
 
 -- this should also not be global
+-- We need a way to know if it's a draft or not
 function M.create(kind, message, is_reply)
 	local template
 	-- local ref = util.get_ref()
