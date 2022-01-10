@@ -30,24 +30,26 @@ local notmuch_picker = function(opts)
 	local query = nm.create_query(db, search)
 	for m in nm.query_get_messages(query) do
 		local display = nm.message_get_header(m, "Subject")
-		local filename = nm.message_get_filename(m)
-		table.insert(data, {filename, display})
+		-- local filename = nm.message_get_filename(m)
+		-- table.insert(data, {filename, display})
+		table.insert(data, {m, display})
 	end
-	return finders.new_table {
+	return query, finders.new_table {
+	-- return finders.new_table {
 		results = data,
 		entry_maker = function (entry)
 			return {
 				value = entry[1],
 				display = entry[2],
-				ordinal = entry[1],
+				ordinal = entry[2],
 			}
 		end
 	}
 end
 
--- XXX we are opening message multiple times
 local function open_draft(bufnr, type)
 	local entry = action_state.get_selected_entry()
+	-- maybe we can cache this, maybe it's not needed
 	local message = gm.parse_message(entry.value)
 	local mode = "current"
 	actions.close(bufnr)
@@ -67,16 +69,21 @@ end
 
 M.notmuch_search = function(opts)
   opts = opts or {}
+  local q, picker = notmuch_picker(opts)
   pickers.new(opts, {
     prompt_title = "Notmuch search",
     results_title = "Notmuch match",
-    finder = notmuch_picker(opts),
+    -- finder = notmuch_picker(opts),
+	finder = picker,
     previewer = previewers.new_buffer_previewer {
 		title = opts.preview_title or "Notmuch preview",
 		keep_last_buf = true,
 		define_preview = function(self, entry, status)
-			local message = gm.parse_message(entry.value)
-			r.show_header(message, self.state.bufnr)
+			local filename = nm.message_get_filename(entry.value)
+			local message = gm.parse_message(filename)
+			-- local message = gm.parse_message(entry.value)
+			local ns = vim.api.nvim_create_namespace('message-view')
+			r.show_header(message, self.state.bufnr, {ns = ns}, entry.value)
 			r.show_message(message, self.state.bufnr, {})
 			putils.highlighter(self.state.bufnr, "mail")
 		end,
@@ -85,6 +92,7 @@ M.notmuch_search = function(opts)
 		action_set.select:replace(open_draft)
 		return true
 	end,
+	-- free the query
     sorter = teleconf.file_sorter(opts),
   }):find()
 end

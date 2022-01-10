@@ -90,8 +90,9 @@ function M.update(message)
 	if filename then
 		local gmessage = gm.parse_message(filename)
 		if gmessage then
+			M.ns = vim.api.nvim_create_namespace('message-view')
 			M.message = gmessage
-			r.show_header(gmessage, buffer.handle)
+			r.show_header(gmessage, buffer.handle, {ns = M.ns}, message)
 			add_tags(message, buffer.handle)
 			r.show_message(gmessage, buffer.handle, {})
 			vim.api.nvim_buf_set_option(buffer.handle, "modifiable", false)

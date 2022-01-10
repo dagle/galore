@@ -1,5 +1,6 @@
 local gm = require('galore.gmime')
 local u = require('galore.util')
+local nm = require('galore.notmuch')
 local ffi = require('ffi')
 local conf = require('galore.config')
 
@@ -26,23 +27,7 @@ local function mark(buffer, start, stop)
 	-- vim.api.nvim_buf_del_extmark(buffer.handle, ns_id: number, id: number)
 end
 
-function M.show_all_message(message, buffer, opts)
-	M.show_header(message, buffer)
-	M.show_message(message, buffer, opts)
-end
-
-
-function M.save_path(filename, default_path)
-	local path
-	default_path = default_path or ""
-	if M.is_absolute(filename) then
-		path = filename
-	else
-		path = default_path .. filename
-	end
-	return path
-end
-
+-- XXX we need something better than this
 local function collect(iter)
 	local box = {}
 	for k,val in iter do
@@ -76,12 +61,28 @@ local function format_header(iter)
 	end
 	return box
 end
+
+local function add_tags(nm_message, buffer, ns)
+	local tags = table.concat(u.collect(nm.message_get_tags(nm_message)), " ")
+	local str = "(" .. tags .. ")"
+
+	local line_num = 0
+	local col_num = 0
+
+	local opts = {
+		virt_text = {{str, "Comment"}},
+	}
+	vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
+end
 -- XXX fix this, it feels really ugly
--- XXX don't show marks in 
-function M.show_header(message, buffer)
+function M.show_header(message, buffer, opts, nm_message)
+	opts = opts or {}
 	local headers = collect(gm.header_iter(message))
 	filter(in_map, headers)
 	vim.api.nvim_buf_set_lines(buffer, 0, 0, false, format_header(headers))
+	if opts.ns then
+		add_tags(nm_message, buffer, opts.ns)
+	end
 end
 
 -- applies filters and writes it to memory
@@ -188,10 +189,10 @@ function M.show_part(part, buf, opts, state)
 			local ct = gm.get_content_type(part)
 			local type = gm.get_mime_type(ct)
 			if type == "text/plain" then
-				local str = part_to_string(part)
+				local str = part_to_string(part, opts)
 				M.draw(buf, format(str))
 			elseif type == "text/html" then
-				local str = part_to_string(part)
+				local str = part_to_string(part, opts)
 				local html = conf.values.show_html(str)
 				M.draw(buf, html)
 			end

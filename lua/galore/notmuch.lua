@@ -743,7 +743,8 @@ local function message_iterator(messages)
 		  nm.notmuch_messages_move_to_next(messages)
 		  return message
 	  else
-		  nm.notmuch_messages_destroy(messages)
+		  -- not needed, we just destroy the query instead
+		  -- nm.notmuch_messages_destroy(messages)
 	  end
   end
 end
