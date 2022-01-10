@@ -41,9 +41,19 @@ Then using your favorite plugin-manager install galore.
 
 With packer:
 ``` lua
-use {'dagle/galore', run = 'make' }
+use {'
+	dagle/galore', run = 'make', 
+	requires = {
+      'nvim-telescope/telescope.nvim',
+      'nvim-lua/popup.nvim',
+	  'nvim-lua/plenary.nvim',
+	  'nvim-telescope/telescope-file-browser.nvim',
+	  'hrsh7th/nvim-cmp',
+	}
+}
 ```
 You need to install **telescope** and **cmp** if you want support for that
+
 
 ## Usage
 After installing galore, you need to add the following to init:
