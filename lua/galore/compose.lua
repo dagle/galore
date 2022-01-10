@@ -6,7 +6,6 @@ local gu = require('galore.gmime-util')
 local Buffer = require('galore.lib.buffer')
 local job = require('galore.jobs')
 -- local path = require('plenary.path')
-local u = require('galore.util')
 local conf = require('galore.config')
 local reader = require('galore.reader')
 local render = require('galore.render')
@@ -89,7 +88,7 @@ end
 local function make_template(message, reply_all)
 	local headers = gu.respone_headers(message, reply_all)
 	local sub = gm.message_get_subject(message)
-	sub = u.add_prefix(sub, "Re:")
+	sub = "Subject: " .. u.add_prefix(sub, "Re:")
 	table.insert(headers, sub)
 	return headers
 end
@@ -135,7 +134,7 @@ function M.create(kind, message, is_reply)
 
 			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, template)
 			if message then
-				render.show_message(message, buffer.handle, is_reply)
+				render.show_message(message, buffer.handle, true)
 			end
 			M.marks = vim.api.nvim_buf_set_extmark(buffer.handle, M.ns, line_num, col_num, opts)
 			for bind, func in pairs(conf.values.key_bindings.compose) do

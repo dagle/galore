@@ -37,10 +37,10 @@ function M.collect(it)
   return box
 end
 
-function M.add_prefix(prefix, str)
+function M.add_prefix(str, prefix)
 	local start, _ = string.find(str, "^" .. prefix)
-	if start ~= 0 then
-		str = "Re: " .. str
+	if not start then
+		str = prefix .. " " .. str
 	end
 	return str
 end
