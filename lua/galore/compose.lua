@@ -134,7 +134,7 @@ function M.create(kind, message, is_reply)
 
 			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, template)
 			if message then
-				render.show_message(message, buffer.handle, true)
+				render.show_message(message, buffer.handle, {reply = true})
 			end
 			M.marks = vim.api.nvim_buf_set_extmark(buffer.handle, M.ns, line_num, col_num, opts)
 			for bind, func in pairs(conf.values.key_bindings.compose) do

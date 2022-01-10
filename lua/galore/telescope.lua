@@ -77,7 +77,7 @@ M.notmuch_search = function(opts)
 		define_preview = function(self, entry, status)
 			local message = gm.parse_message(entry.value)
 			r.show_header(message, self.state.bufnr)
-			r.show_message(message, self.state.bufnr, false)
+			r.show_message(message, self.state.bufnr, {})
 			putils.highlighter(self.state.bufnr, "mail")
 		end,
 	},

@@ -7,6 +7,7 @@ local nm = require("galore.notmuch")
 local gm = require('galore.gmime')
 local Buffer = require('galore.lib.buffer')
 local conf = require('galore.config')
+local Path = require('plenary.path')
 -- local attach_view = require('galore.attach_view')
 local M = {}
 
@@ -31,22 +32,36 @@ local function view_attachment(filename, kind)
 	error("No attachment with that name")
 end
 
-function M.save_attachment(filename, save_path)
+function M._save_attachment(filename, save_path)
+	-- path = path or cwd
 	if M.parts[filename] then
-		local path
-		if u.is_absolute(save_path) then
-			path = save_path
-		else
-			save_path = save_path or ""
-			path = conf.values.save_path .. save_path
+		local path = Path:new(save_path)
+		if path:is_dir() then
+			path = path:joinpath(filename)
 		end
-		if is_directory(path) then
-			path = path .. filename
-		end
-		gm.save_part(M.parts[filename], path)
+		-- if path:exists() then
+		-- end
+		gm.save_part(M.parts[filename], path:expand())
 		return
 	end
 	error("No attachment with that name")
+end
+
+function M.save_attach()
+	-- switch to telescope later?
+	vim.ui.select(M.parts, {
+		prompt = "Attachment to save:"
+	}, function(item, _)
+		if item then
+			vim.ui.input({
+				prompt = "Save as:"
+			}, function(path)
+				M._save_attachment(item, path)
+			end)
+		else
+			error("No file selected")
+		end
+	end)
 end
 
 local function add_tags(message, buffer)
@@ -78,7 +93,7 @@ function M.update(message)
 			M.message = gmessage
 			r.show_header(gmessage, buffer.handle)
 			add_tags(message, buffer.handle)
-			r.show_message(gmessage, buffer.handle, false)
+			r.show_message(gmessage, buffer.handle, {})
 			vim.api.nvim_buf_set_option(buffer.handle, "modifiable", false)
 		end
 	end
@@ -122,23 +137,6 @@ function M.message_ref()
 	return M.message
 end
 
--- local function ppMail(message)
--- 	print(message.get_path())
--- end
-
--- function M.show_message(settings, thread)
-	-- local messages = thread:get_messages()
-	-- for _, message in ipairs(messages) do
-	-- 	local file = messages.get_path(message)
-	-- 	-- feed this into gmime?
-	-- 	for line in io.lines(file) do
-	-- 		print(line)
-	-- 	end
-	-- 	-- print(ppMail())
-	-- end
-	-- -- print(vim.inspect(thread:get_messages()))
--- end
-
 function M.next()
 end
 
@@ -146,9 +144,6 @@ function M.prev()
 end
 
 function M.open_attach()
-end
-
-function M.save_attach()
 end
 
 return M

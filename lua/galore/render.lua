@@ -26,9 +26,9 @@ local function mark(buffer, start, stop)
 	-- vim.api.nvim_buf_del_extmark(buffer.handle, ns_id: number, id: number)
 end
 
-function M.show_all_message(message, buffer, is_reply)
+function M.show_all_message(message, buffer, opts)
 	M.show_header(message, buffer)
-	M.show_message(message, buffer, is_reply)
+	M.show_message(message, buffer, opts)
 end
 
 
@@ -86,9 +86,8 @@ end
 
 -- applies filters and writes it to memory
 -- @param part a gmime part
--- @param is_reply bool if this should be qouted
 -- @return string of the part
-local function part_to_string(part, is_reply)
+local function part_to_string(part, opts)
 	local content = gm.get_content(part)
 	local stream = gm.get_stream(content)
 	gm.stream_reset(stream)
@@ -109,7 +108,7 @@ local function part_to_string(part, is_reply)
 	local unix = gm.filter_dos2unix(false)
 	gm.filter_add(filters, unix)
 
-	if is_reply then
+	if opts.reply then
 		local reply_filter= gm.filter_reply(true)
 		gm.filter_add(filters, reply_filter)
 	end
@@ -121,12 +120,11 @@ end
 
 
 -- @param message gmime message
--- @param is_reply bool if this should be qouted
 -- @param state table containing the parts
-local function show_message_helper(message, buf, is_reply, state)
+local function show_message_helper(message, buf, opts, state)
 	local part = gm.mime_part(message)
 
-	if is_reply then
+	if opts.reply then
 		local date = gm.message_get_date(message)
 		local author = gm.show_addresses(gm.message_get_address(message, 'from'))
 		local qoute = conf.values.qoute_header(date, author)
@@ -134,20 +132,21 @@ local function show_message_helper(message, buf, is_reply, state)
 	end
 
 	if gm.is_multipart(part) then
-		M.show_part(part, buf, is_reply, state)
+		M.show_part(part, buf, opts, state)
 	else
-		local str = part_to_string(part, is_reply)
+		local str = part_to_string(part, opts)
 		M.draw(buf, format(str))
 	end
 end
 
 -- @param message gmime message
--- @param is_reply bool if this should be qouted
+-- @param reply bool if this should be qouted
+-- @param opts 
 -- @return a {body, attachments}, where body is a string and attachments is GmimePart
-function M.show_message(message, buf, is_reply)
+function M.show_message(message, buf, opts)
 	local box = {}
 	box.attachments = {}
-	show_message_helper(message, buf, is_reply, box)
+	show_message_helper(message, buf, opts, box)
 end
 
 -- something like this
@@ -162,28 +161,27 @@ local function rate(part)
 	return 1
 end
 
-function M.show_part(part, buf, is_reply, state)
+function M.show_part(part, buf, opts, state)
 	if gm.is_message_part(part) then
 		local message = gm.get_message(part)
 		-- do we want to show that it's a new message?
-		show_message_helper(message, buf, is_reply, state)
+		show_message_helper(message, buf, opts, state)
 	elseif gm.is_partial(part) then
 		local full = gm.partial_collect(part)
 		-- do we want to show that it's a collected message?
-		show_message_helper(full, buf, is_reply, state)
+		show_message_helper(full, buf, opts, state)
 	elseif gm.is_part(part) then
 		-- if gm.is_attachment(part) then
 		if gm.get_disposition(part) == "attachment" then
 			local ppart = ffi.cast("GMimePart *", part)
 			table.insert(state.attachments, ppart)
-			-- local filename = gm.part_filename(ppart)
+			local filename = gm.part_filename(ppart)
 			-- M.parts[filename] = ppart
-			-- local str = "- [ " .. filename .. " ]"
-			-- v.nvim_buf_set_lines(0, -1, -1, true, {str})
+			local str = "- [ " .. filename .. " ]"
+			M.draw(buf, {str})
+
 			-- -- local str = gm.print_part(part)
 			-- -- v.nvim_buf_set_lines(0, -1, -1, true, split_lines(str))
-			-- -- gm.save_part(part, "/home/dagle/saved.txt")
-			-- M.parts[filename] = part
 		else
 			-- should contain more stuff
 			-- should push some filetypes into attachments
@@ -206,7 +204,7 @@ function M.show_part(part, buf, is_reply, state)
 				mark("sign confirmed")
 				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
-			M.show_part(de_part, buf, is_reply, state)
+			M.show_part(de_part, buf, opts, state)
 			return
 		elseif gm.is_multipart_signed(part) then
 			-- maybe apply some colors etc if the sign is correct or not
@@ -215,7 +213,7 @@ function M.show_part(part, buf, is_reply, state)
 				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
 			local se_part = gm.get_signed_part(part)
-			M.show_part(se_part, buf, is_reply, state)
+			M.show_part(se_part, buf, opts, state)
 			-- return something
 			return
 		elseif conf.values.alt_mode == 1 and gm.is_multipart_alt(part) then
@@ -233,7 +231,7 @@ function M.show_part(part, buf, is_reply, state)
 				end
 				i = i + 1
 			end
-			M.show_part(saved, buf, is_reply, state)
+			M.show_part(saved, buf, opts, state)
         else
 			local multi = ffi.cast("GMimeMultipart *", part)
 			local i = 0
@@ -242,7 +240,7 @@ function M.show_part(part, buf, is_reply, state)
 			-- end
 			while i < j do
 				local child = gm.multipart_child(multi, i)
-				M.show_part(child, buf, is_reply, state)
+				M.show_part(child, buf, opts, state)
 				i = i + 1
 			end
 		end
