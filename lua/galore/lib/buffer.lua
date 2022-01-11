@@ -67,6 +67,12 @@ function M.create(config)
 	elseif kind == "vsplit" then
 		vim.cmd("top vnew")
 		buffer = M:new(vim.api.nvim_get_current_buf())
+	elseif kind == "popup" then
+		-- XXX Fix this
+		local opts = {
+		}
+		buffer = M:new(v.nvim_create_buf(false, true))
+		local win = vim.api.nvim_open_win(buffer.handle, true, opts)
 	end
 	buffer.kind = kind
 	buffer.ref = config.ref -- config could be {}
