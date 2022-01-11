@@ -238,6 +238,7 @@ int internet_address_list_length (InternetAddressList *list);
 void internet_address_list_append (InternetAddressList *list, InternetAddressList *append);
 gboolean internet_address_list_remove (InternetAddressList *list, InternetAddress *ia);
 gboolean internet_address_list_remove_at (InternetAddressList *list, int index);
+gboolean g_mime_content_type_is_type (GMimeContentType *content_type, const char *type, const char *subtype);
 ]]
 
 -- write an index function so that if M._index doesn't exist, look in galore

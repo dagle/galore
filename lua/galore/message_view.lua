@@ -17,12 +17,23 @@ M.state = {}
 -- for now, parts is just attachments
 M.parts = {}
 
-local function view_attachment(filename, kind)
-	kind = kind or conf.values.attachment_preview
+local function _view_attachment(filename, kind)
+	-- kind = kind or "floating"
+	kind = kind or "current"
 	if M.parts[filename] then
-		-- XXX
-		-- check if the file is viewable
-		if u.viewable(M.parts[filename]) then
+		if M.parts[filename][2] then
+			local buf = Buffer.create {
+				name = filename,
+				ft = require'plenary.filetype'.detect(filename),
+				kind = kind,
+				-- ref = ref,
+				cursor = "top",
+				init = function(buffer)
+					local content = u.format(gm.part_to_buf(M.parts[filename][1]))
+					v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
+					v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
+				end,
+			}
 			-- attach_view.create(M.attachment[filename], kind)
 		else
 			error("File not viewable")
@@ -32,8 +43,18 @@ local function view_attachment(filename, kind)
 	print("No attachment with that name")
 end
 
-local function raw_mode(gmessage, buffer)
-	-- create a popup window and display the file and bind 
+local function raw_mode(nm_message)
+	local filename = nm.message_get_filename(nm_message)
+	local buf = Buffer.create {
+		name = filename,
+		ft = 'mail',
+		kind = "popup",
+		-- ref = ref,
+		cursor = "top",
+		init = function(buffer)
+			vim.cmd("e " .. filename)
+		end,
+	}
 end
 
 function M._save_attachment(filename, save_path)
@@ -43,11 +64,25 @@ function M._save_attachment(filename, save_path)
 		if path:is_dir() then
 			path = path:joinpath(filename)
 		end
-		gm.save_part(M.parts[filename], path:expand())
+		gm.save_part(M.parts[filename][1], path:expand())
 		return
 	end
 	error("No attachment with that name")
 end
+
+function M.view_attachment()
+	local files = u.collect_keys(M.parts)
+	vim.ui.select(files, {
+		prompt = "View attachment:"
+	}, function(item, _)
+		if item then
+			_view_attachment(item)
+		else
+			error("No file selected")
+		end
+	end)
+end
+
 
 function M.save_attach()
 	-- switch to telescope later?
@@ -60,27 +95,12 @@ function M.save_attach()
 				-- we want to have hints
 				prompt = "Save as: "
 			}, function(path)
-				P(path)
 				M._save_attachment(item, path)
 			end)
 		else
 			error("No file selected")
 		end
 	end)
-end
-
-local function add_tags(message, buffer)
-	M.ns = vim.api.nvim_create_namespace('message-tags')
-	local tags = table.concat(u.collect(nm.message_get_tags(message)), " ")
-	local str = "(" .. tags .. ")"
-
-	local line_num = 0
-	local col_num = 0
-
-	local opts = {
-		virt_text = {{str, "Comment"}},
-	}
-	M.marks = vim.api.nvim_buf_set_extmark(buffer, M.ns, line_num, col_num, opts)
 end
 
 function M.update(message)
@@ -98,7 +118,6 @@ function M.update(message)
 			M.ns = vim.api.nvim_create_namespace('message-view')
 			M.message = gmessage
 			r.show_header(gmessage, buffer.handle, {ns = M.ns}, message)
-			add_tags(message, buffer.handle)
 			M.parts = r.show_message(gmessage, buffer.handle, {})
 			vim.api.nvim_buf_set_option(buffer.handle, "modifiable", false)
 		end

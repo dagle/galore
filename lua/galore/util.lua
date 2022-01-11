@@ -131,6 +131,17 @@ function M.split_lines(str)
 	return lines
 end
 
+function M.format(part, qoute)
+	local box = {}
+	for line in string.gmatch(part, "[^\n]+") do
+		table.insert(box, line)
+		-- if qoute then
+		-- 	table.insert(box, "> " .. line)
+		-- end
+	end
+	return box
+end
+
 M.default_template = function ()
 	return {
 		"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",

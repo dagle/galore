@@ -142,7 +142,7 @@ end
 
 -- @param message gmime message
 -- @param reply bool if this should be qouted
--- @param opts 
+-- @param opts
 -- @return a {body, attachments}, where body is a string and attachments is GmimePart
 function M.show_message(message, buf, opts)
 	local box = {}
@@ -177,11 +177,12 @@ function M.show_part(part, buf, opts, state)
 		if gm.get_disposition(part) == "attachment" then
 			local ppart = ffi.cast("GMimePart *", part)
 			local filename = gm.part_filename(ppart)
-			state.attachments[filename] = ppart
+			local viewable = gm.part_is_type(part, "text", "*")
+			state.attachments[filename] = {ppart, viewable}
 			-- table.insert(state.attachments, ppart)
 			-- M.parts[filename] = ppart
 			local str = "- [ " .. filename .. " ]"
-			-- don't do this here!
+			-- XXX don't do this here!
 			M.draw(buf, {str})
 
 			-- -- local str = gm.print_part(part)
