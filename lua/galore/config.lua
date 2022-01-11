@@ -48,6 +48,11 @@ M.values = {
 		return "msmtp", {"-a", "default", to}
 	end,
 	key_bindings = {
+		global = {
+			["<leader>mc"] = '<cmd>lua require("galore.compose").create("tab")<CR>',
+			["<leader>mf"] = '<cmd>lua require("galore.telescope").load_draft()<CR>',
+			["<leader>mn"] = '<cmd>lua require("galore.jobs").new()<CR>',
+		},
 		search = {
 			["<CR>"] = M.cb("select_search"),
 			["q"] = M.cb("close_saved"),
@@ -64,11 +69,13 @@ M.values = {
 		},
 		message_view = {
 			["r"] = M.cb("message_reply"),
+			["R"] = M.cb("message_reply_all"),
+			["s"] = M.cb("save_attach"),
+			["S"] = M.cb("view_attach"),
 			["q"] = M.cb("close_message"),
 		},
 		thread_view= {
 			["r"] = M.cb("message_reply"),
-			["R"] = M.cb("message_reply_all"),
 			["q"] = M.cb("close_message"),
 		},
 		compose = {
