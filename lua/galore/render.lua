@@ -148,6 +148,7 @@ function M.show_message(message, buf, opts)
 	local box = {}
 	box.attachments = {}
 	show_message_helper(message, buf, opts, box)
+	return box.attachments
 end
 
 -- something like this
@@ -175,10 +176,12 @@ function M.show_part(part, buf, opts, state)
 		-- if gm.is_attachment(part) then
 		if gm.get_disposition(part) == "attachment" then
 			local ppart = ffi.cast("GMimePart *", part)
-			table.insert(state.attachments, ppart)
 			local filename = gm.part_filename(ppart)
+			state.attachments[filename] = ppart
+			-- table.insert(state.attachments, ppart)
 			-- M.parts[filename] = ppart
 			local str = "- [ " .. filename .. " ]"
+			-- don't do this here!
 			M.draw(buf, {str})
 
 			-- -- local str = gm.print_part(part)

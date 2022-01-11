@@ -29,18 +29,20 @@ local function view_attachment(filename, kind)
 			return
 		end
 	end
-	error("No attachment with that name")
+	print("No attachment with that name")
+end
+
+local function raw_mode(gmessage, buffer)
+	-- create a popup window and display the file and bind 
 end
 
 function M._save_attachment(filename, save_path)
-	-- path = path or cwd
 	if M.parts[filename] then
-		local path = Path:new(save_path)
+		-- better way to do this?
+		local path = Path:new(Path:new(save_path):expand())
 		if path:is_dir() then
 			path = path:joinpath(filename)
 		end
-		-- if path:exists() then
-		-- end
 		gm.save_part(M.parts[filename], path:expand())
 		return
 	end
@@ -49,13 +51,16 @@ end
 
 function M.save_attach()
 	-- switch to telescope later?
-	vim.ui.select(M.parts, {
+	local files = u.collect_keys(M.parts)
+	vim.ui.select(files, {
 		prompt = "Attachment to save:"
 	}, function(item, _)
 		if item then
 			vim.ui.input({
-				prompt = "Save as:"
+				-- we want to have hints
+				prompt = "Save as: "
 			}, function(path)
+				P(path)
 				M._save_attachment(item, path)
 			end)
 		else
@@ -94,7 +99,7 @@ function M.update(message)
 			M.message = gmessage
 			r.show_header(gmessage, buffer.handle, {ns = M.ns}, message)
 			add_tags(message, buffer.handle)
-			r.show_message(gmessage, buffer.handle, {})
+			M.parts = r.show_message(gmessage, buffer.handle, {})
 			vim.api.nvim_buf_set_option(buffer.handle, "modifiable", false)
 		end
 	end

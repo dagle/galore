@@ -45,6 +45,14 @@ function M.add_prefix(str, prefix)
 	return str
 end
 
+function M.collect_keys(iter)
+	local box = {}
+	for k, _ in pairs(iter) do
+		table.insert(box, k)
+	end
+	return box
+end
+
 function M.basename(path)
   	return string.gsub(path, ".*/(.*)", "%1")
 end
