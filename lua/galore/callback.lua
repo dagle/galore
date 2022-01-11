@@ -11,6 +11,7 @@ local message_view = require('galore.message_view')
 local compose = require('galore.compose')
 local gu = require('galore.gmime-util')
 local gm = require('galore.gmime')
+local nu = require('galore.notmuch-util')
 local tele = require('galore.telescope')
 
 local M = {}
@@ -21,7 +22,7 @@ function M.select_search()
 	if conf.values.expand_threads then
 		thread_message.create(search, conf.values.threads_open, ref)
 	else
-		threads.create(search, conf.values.threads_open)
+		-- threads.create(search, conf.values.threads_open)
 	end
 	-- mb.create(search, "current")
 end
@@ -50,6 +51,63 @@ function M.message_reply_all()
 	local message = message_view:message_ref()
 	-- should have a reply-mode
 	compose.create("current", message, true)
+end
+
+function M.save_attach()
+	message_view.save_attach()
+end
+
+function M.view_attach()
+	message_view.view_attachment()
+end
+
+-- XXX rethink args to compose?
+function M.compose_template()
+end
+
+-- uses message to create a template
+function M.compose_sender()
+end
+
+function M.change_tag(tag)
+	local message = thread_message:select()[1]
+	if tag then
+		nu.tag_change(tag)
+	else
+		vim.ui.input({ prompt = "Tags change: "},
+			function(itag)
+				if itag then
+					nu.change_tag(message, itag)
+				else
+					error("No tag")
+				end
+			end)
+	end
+end
+
+function M.archive()
+	M.change_tag("+archive")
+end
+
+function M.delete()
+	M.change_tag("+delete")
+end
+
+-- a way to get id / filename for piping etc
+
+function M.tree_view()
+end
+
+function M.compose()
+	compose.create("tab")
+end
+
+function M.compose_send()
+	compose.send_message()
+end
+
+function M.compose_add_attachment()
+	tele.attach_file({}, compose.add_attachment)
 end
 
 -- XXX what should a forward do?
@@ -89,18 +147,6 @@ end
 
 function M.close_saved()
 	saved.close()
-end
-
-function M.compose()
-	compose.create("tab")
-end
-
-function M.compose_send()
-	compose.send_message()
-end
-
-function M.compose_add_attachment()
-	tele.attach_file({}, compose.add_attachment)
 end
 
 -- function M.reply()

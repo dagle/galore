@@ -13,7 +13,7 @@ local function gets(db, name)
 	return u.collect(nm.config_get_values_string(db, name))
 end
 
-function M.change_tag(message, str)
+local function _change_tag(message, str)
 	local start, stop = string.find(str, "[+-]%a+")
 	if start == nil then
 		return
@@ -26,7 +26,7 @@ function M.change_tag(message, str)
 		status = nm.message_remove_tag(message, tag)
 	end
 	if status ~= 0 then
-		-- print a warning
+		print("Change tag failed with: " .. status)
 	end
 	if stop == #str then
 		return
@@ -64,11 +64,14 @@ end
 -- 	local db = nm.thread_get_d
 -- end
 
-local function tag_unread(message)
-	-- M.change_tag(message, "-unread +read")
+function M.change_tag(message, str)
 	M.with_message_writer(message, function(new_message)
-		M.change_tag(new_message, "-unread")
+		_change_tag(new_message, str)
 	end)
+end
+
+local function tag_unread(message)
+	M.change_tag(message, "-unread")
 end
 
 function M.gen_config(path, config, profile)
