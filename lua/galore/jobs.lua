@@ -3,25 +3,16 @@ local Job = require('plenary.job')
 
 local M = {}
 
--- use a notmuch hooks
--- function M.sync()
--- 	local cmd, args = unpack(conf.values.sync_cmd)
--- 	Job:new({
--- 		command = cmd,
--- 		args = args,
--- 		on_exit = function (j, ret_val)
--- 			if ret_val == 0 then
--- 				M.new()
--- 			end
--- 		end
--- 	}):start()
--- end
---
 function M.new()
 	Job:new({
 		command = "notmuch",
 		args = {"new"},
-		on_exit = function (j, ret_val)
+		on_exit = function (_, ret_val)
+			if ret_val == 0 then
+				print("Notmuch updated successfully")
+			else
+				print("Notmuch update failed")
+			end
 		end
 	}):start()
 end
