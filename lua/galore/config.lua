@@ -3,6 +3,9 @@ local M = {}
 function M.cb(fun)
   return string.format("<cmd>lua require'galore.callback'.call('%s')<cr>", fun)
 end
+function M.cb2(fun)
+  return string.format("<cmd>lua require'galore.callback'.%s<cr>", fun)
+end
 
 -- should read more stuff from notmuch config
 M.values = {
@@ -64,6 +67,7 @@ M.values = {
 			["q"] = M.cb("close_thread"),
 		},
 		message_browser = {
+			["a"] = M.cb2("change_tag()"),
 			["<CR>"] = M.cb("select_message"),
 			["q"] = M.cb("close_thread"),
 		},
