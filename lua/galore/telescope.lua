@@ -1,6 +1,6 @@
 local ok, _ = pcall(require, 'telescope')
 if not ok then
-	print("You need to install telescope to use this module")
+	error("You need to install telescope to use this module")
 	return
 end
 
@@ -20,6 +20,75 @@ local nm = require('galore.notmuch')
 local conf = require('galore.config')
 
 local M = {}
+
+-- parses the tree and outputs the parts
+-- XXX todo, a bit over the top atm
+-- M.parts_browser = function (message)
+-- -- function M.show_part(part, buf, opts, state)
+-- 	if gm.is_message_part(part) then
+-- 		local message = gm.get_message(part)
+-- 		-- do we want to show that it's a new message?
+-- 		-- show_message_helper(message, buf, opts, state)
+-- 	elseif gm.is_partial(part) then
+-- 		local full = gm.partial_collect(part)
+-- 		-- do we want to show that it's a collected message?
+-- 		-- show_message_helper(full, buf, opts, state)
+-- 	elseif gm.is_part(part) then
+-- 		-- if gm.is_attachment(part) then
+-- 		if gm.get_disposition(part) == "attachment" then
+-- 			local ppart = ffi.cast("GMimePart *", part)
+-- 			local filename = gm.part_filename(ppart)
+-- 			-- M.parts[filename] = ppart
+-- 			local str = "- [ " .. filename .. " ]"
+-- 			-- M.draw(buf, {str})
+--
+-- 			-- -- local str = gm.print_part(part)
+-- 			-- -- v.nvim_buf_set_lines(0, -1, -1, true, split_lines(str))
+-- 		else
+-- 			-- should contain more stuff
+-- 			-- should push some filetypes into attachments
+-- 			local ct = gm.get_content_type(part)
+-- 			local type = gm.get_mime_type(ct)
+-- 			if type == "text/plain" then
+-- 			elseif type == "text/html" then
+-- 			end
+-- 		end
+-- 	elseif gm.is_multipart(part) then
+-- 		if gm.is_multipart_encrypted(part) then
+-- 			-- display as "encrypted part, until it's decrypted, then refresh the renderer"
+-- 			-- local de_part, sign = gm.decrypt_and_verify(part)
+-- 			return
+-- 		elseif gm.is_multipart_signed(part) then
+-- 			-- maybe apply some colors etc if the sign is correct or not
+-- 			-- if gm.verify_signed(part) then
+-- 				-- table.insert(state.parts, "--- sign confirmed! ---")
+-- 			-- end
+-- 			local se_part = gm.get_signed_part(part)
+-- 			return
+-- 		elseif gm.is_multipart_alt(part) then
+-- 			local multi = ffi.cast("GMimeMultipart *", part)
+-- 			local i = 0
+-- 			local j = gm.multipart_len(multi)
+-- 			while i < j do
+-- 				local child = gm.multipart_child(multi, i)
+-- 				M.show_part(child, buf, opts, state)
+-- 				i = i + 1
+-- 			end
+--         else
+-- 			local multi = ffi.cast("GMimeMultipart *", part)
+-- 			local i = 0
+-- 			local j = gm.multipart_len(multi)
+-- 			-- for i = 0, j-1 do
+-- 			-- end
+-- 			while i < j do
+-- 				local child = gm.multipart_child(multi, i)
+-- 				M.show_part(child, buf, opts, state)
+-- 				i = i + 1
+-- 			end
+-- 		end
+-- 	end
+-- 	vim.ui.select(items: table, opts: table, on_choice: function)
+-- end
 
 local notmuch_picker = function(opts)
 	-- local db_path = conf.values.db_path

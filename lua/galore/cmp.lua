@@ -1,6 +1,6 @@
 local ok, cmp = pcall(require, 'cmp')
 if not ok then
-	-- print error message?
+	print("Error can't load cmp needed for address book")
 	return
 end
 
