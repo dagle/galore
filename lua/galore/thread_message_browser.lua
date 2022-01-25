@@ -20,25 +20,25 @@ local function get_message(message, i, tot)
 	return {message, i, tot, ppdate, from, sub, tags}
 end
 
--- XXX do nice folds
 local function get_messages(db, search)
 	local box = {}
 	local query = nm.create_query(db, search)
 	for thread in nm.query_get_threads(query) do
 		local i = 1
-		local mes
-		if config.values.reverse_thread then
-			mes = nm.thread_get_toplevel_messages(thread)
-		else
-			mes = nm.thread_get_messages(thread)
-		end
+		local mes = nm.thread_get_messages(thread)
 		local tot = nm.thread_get_total_messages(thread)
+		local current = #box + 1
 		for message in mes do
-			table.insert(box, get_message(message, i, tot))
+			-- reverse the order of the messages in a thread, so the newest in
+			-- the thread is at the the top
+			if config.values.reverse_thread then
+				box[current + (tot - i)] = get_message(message, i, tot)
+			else
+				table.insert(box, get_message(message, i, tot))
+			end
 			i = i + 1
 		end
 	end
-	-- do we actually use freed memory?
 	M.State = box
 	return box
 end
