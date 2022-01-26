@@ -8,6 +8,7 @@ local u = require('galore.util')
 local config = require('galore.config')
 local Buffer = require('galore.lib.buffer')
 M.State = {}
+M.Cache = {}
 
 M.threads_buffer = nil
 
@@ -16,9 +17,45 @@ local function get_message(message, i, tot)
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_date(message))
-	local ppdate = os.date("%Y-%m-%d", date)
+	-- local ppdate = os.date("%Y-%m-%d ", date)
+	local ppdate = os.date("%c", date)
 	return {message, i, tot, ppdate, from, sub, tags}
 end
+
+local function show_message(message, level, num, tot, box)
+	-- table.insert(box, get_message(message, num, tot))
+	local i = num
+	for child in nm.message_get_replies(message) do
+		i = i + 1
+		P(get_message(child))
+		-- show_message(child, level+1, i, tot, box)
+	end
+end
+
+local function get_messages2(db, search)
+	local box = {}
+	local query = nm.create_query(db, search)
+	for thread in nm.query_get_threads(query) do
+		local i = 1
+		local tot = nm.thread_get_total_messages(thread)
+		local mes = nm.thread_get_toplevel_messages(thread)
+		-- local current = #box + 1
+		for message in mes do
+			-- reverse the order of the messages in a thread, so the newest in
+			-- the thread is at the the top
+			-- if config.values.reverse_thread then
+			-- 	box[current + (tot - i)] = get_message(message, i, tot)
+			-- else
+			show_message(message, 0, i, tot, box)
+			-- end
+			i = i + 1
+		end
+		P("-- NEW THREAD --")
+	end
+	M.State = box
+	return box
+end
+
 
 local function get_messages(db, search)
 	local box = {}
@@ -26,6 +63,8 @@ local function get_messages(db, search)
 	for thread in nm.query_get_threads(query) do
 		local i = 1
 		local mes = nm.thread_get_messages(thread)
+		-- local mes = nm.thread_get_toplevel_messages(thread)
+		-- notmuch_thread_get_toplevel_messages
 		local tot = nm.thread_get_total_messages(thread)
 		local current = #box + 1
 		for message in mes do
@@ -43,17 +82,35 @@ local function get_messages(db, search)
 	return box
 end
 
--- this should be a user defineable function
-local function ppMessage(message)
-	local _, num, tot, date, author, sub, tags = unpack(message)
-	local t = table.concat(tags, " ")
-	local formated
-	if num > 1 then
-		formated = string.format("%s [%d/%d] %s; ╰▶ %s (%s)", date, num, tot, author, sub, t)
-	else
-		formated = string.format("%s [%d/%d] %s; %s (%s)", date, num, tot, author, sub, t)
+local function contains(list, item)
+	for _, l in ipairs(list) do
+		if l == item then
+			return true
+		end
 	end
-	return string.gsub(formated, "\n", "")
+	return false
+end
+
+local function ppMessage(messages)
+	local box = {}
+	for _, message in ipairs(messages) do
+		local _, num, tot, date, author, sub, tags = unpack(message)
+		local t = table.concat(tags, " ")
+		local formated = ""
+		if num > 1 then
+			-- if contains(tags, "unread") then
+			-- if config.values.reverse_thread then
+			-- 	formated = string.format("%s [%d/%d] %s; ◀╮ %s (%s)", date, num, tot, author, sub, t)
+			-- else
+				formated = string.format("%s [%d/%d] %s; ╰▶ %s (%s)", date, num, tot, author, sub, t)
+			-- end
+		else
+			formated = string.format("%s [%d/%d] %s; %s (%s)", date, num, tot, author, sub, t)
+		end
+	    formated = string.gsub(formated, "\n", "")
+		table.insert(box, formated)
+	end
+	return box
 end
 
 -- update the content of the buffer, thi
@@ -63,7 +120,8 @@ function M.refresh(search)
 	buffer:clear()
 	-- local results = get_messages(config.values.db_path, search)
 	local results = get_messages(config.values.db, search)
-	local formated = vim.tbl_map(ppMessage, results)
+	-- local formated = vim.tbl_map(ppMessage, results)
+	local formated = ppMessage(results)
 	v.nvim_buf_set_lines(buffer.handle, 0, 0, true, formated)
 
 	v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
