@@ -850,9 +850,21 @@ function M.query_set_omit(query, exclude)
 end
 
 --- @param query object
---- @param sort number (oldest, newest, message_id, unsort)
+--- @param sort number (oldest, newest, message-id, unsort)
 function M.query_set_sort(query, sort)
-	nm.notmuch_query_set_sort(query, sort)
+	local sortint
+	if sort == 'oldest' then
+		sortint = 0
+	elseif sort == 'newest' then
+		sortint = 1
+	elseif sort == 'message-id' then
+		sortint = 2
+	elseif sort == nil or sort == 'unsorted' then
+		sortint = 3
+	else
+		assert(false, "Can't find sorting algorithm")
+	end
+	nm.notmuch_query_set_sort(query, sortint)
 end
 
 --- @param query object
