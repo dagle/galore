@@ -12,24 +12,50 @@ M.Cache = {}
 
 M.threads_buffer = nil
 
-local function get_message(message, i, tot)
+local function get_message(message, level, prestring, i, tot)
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_date(message))
-	-- local ppdate = os.date("%Y-%m-%d ", date)
-	local ppdate = os.date("%c", date)
-	return {message, i, tot, ppdate, from, sub, tags}
+	local ppdate = os.date("%Y-%m-%d ", date)
+	-- local ppdate = os.date("%c", date)
+	return {message, level, prestring, i, tot, ppdate, from, sub, tags}
 end
 
-local function show_message(message, level, num, tot, box)
-	-- table.insert(box, get_message(message, num, tot))
-	local i = num
-	for child in nm.message_get_replies(message) do
-		i = i + 1
-		P(get_message(child))
-		-- show_message(child, level+1, i, tot, box)
+local function reverse_cmp(m1, m2)
+	return tonumber(nm.message_get_date(m1)) > tonumber(nm.message_get_date(m2))
+end
+
+local function sort(messages)
+	if config.values.reverse_thread then
+		local sorted = table.sort(u.collect(messages), reverse_cmp) or {}
+		return ipairs(sorted)
 	end
+	return messages
+end
+
+local function show_messages(messages, level, prestring, num, tot, box)
+	local show_message = function (lmessage, llevel, lprestring, lnum, ltot, lbox)
+		table.insert(lbox, get_message(lmessage, llevel, lprestring, lnum, ltot))
+		local sorted = sort(nm.message_get_replies(lmessage))
+		local k = show_messages(sorted, llevel+1, lprestring, lnum, ltot, lbox)
+		return k
+	end
+	local i = num
+	local collected = u.collect(messages)
+	local j = 1
+	for _, message in ipairs(collected) do
+		if j == #collected then
+			prestring = prestring .. "└─"
+		elseif j == 1 then
+			prestring = prestring .. "├─"
+		else
+			prestring = prestring .. "│ "
+		end
+		i = show_message(message, level, prestring, i, tot, box)
+		j = j + 1
+	end
+	return i
 end
 
 local function get_messages2(db, search)
@@ -38,19 +64,9 @@ local function get_messages2(db, search)
 	for thread in nm.query_get_threads(query) do
 		local i = 1
 		local tot = nm.thread_get_total_messages(thread)
-		local mes = nm.thread_get_toplevel_messages(thread)
-		-- local current = #box + 1
-		for message in mes do
-			-- reverse the order of the messages in a thread, so the newest in
-			-- the thread is at the the top
-			-- if config.values.reverse_thread then
-			-- 	box[current + (tot - i)] = get_message(message, i, tot)
-			-- else
-			show_message(message, 0, i, tot, box)
-			-- end
-			i = i + 1
-		end
-		P("-- NEW THREAD --")
+		local messages = nm.thread_get_toplevel_messages(thread)
+		-- Maybe not
+		show_messages(messages, 0, "", i, tot, box)
 	end
 	M.State = box
 	return box
@@ -71,9 +87,9 @@ local function get_messages(db, search)
 			-- reverse the order of the messages in a thread, so the newest in
 			-- the thread is at the the top
 			if config.values.reverse_thread then
-				box[current + (tot - i)] = get_message(message, i, tot)
+				box[current + (tot - i)] = get_message(message, 0, i, tot)
 			else
-				table.insert(box, get_message(message, i, tot))
+				table.insert(box, get_message(message, 0, i, tot))
 			end
 			i = i + 1
 		end
@@ -94,7 +110,7 @@ end
 local function ppMessage(messages)
 	local box = {}
 	for _, message in ipairs(messages) do
-		local _, num, tot, date, author, sub, tags = unpack(message)
+		local _, level, prestring, num, tot, date, author, sub, tags = unpack(message)
 		local t = table.concat(tags, " ")
 		local formated = ""
 		if num > 1 then
@@ -102,7 +118,8 @@ local function ppMessage(messages)
 			-- if config.values.reverse_thread then
 			-- 	formated = string.format("%s [%d/%d] %s; ◀╮ %s (%s)", date, num, tot, author, sub, t)
 			-- else
-				formated = string.format("%s [%d/%d] %s; ╰▶ %s (%s)", date, num, tot, author, sub, t)
+				-- formated = string.format("%s [%d/%d] %s; ╰▶ %s (%s)", date, num, tot, author, sub, t)
+				formated = string.format("%s [%d/%d] %s;  %s▶", date, num, tot, author, prestring)
 			-- end
 		else
 			formated = string.format("%s [%d/%d] %s; %s (%s)", date, num, tot, author, sub, t)
@@ -119,7 +136,7 @@ function M.refresh(search)
 	vim.api.nvim_buf_set_option(buffer.handle, "modifiable", true)
 	buffer:clear()
 	-- local results = get_messages(config.values.db_path, search)
-	local results = get_messages(config.values.db, search)
+	local results = get_messages2(config.values.db, search)
 	-- local formated = vim.tbl_map(ppMessage, results)
 	local formated = ppMessage(results)
 	v.nvim_buf_set_lines(buffer.handle, 0, 0, true, formated)
