@@ -28,7 +28,7 @@
   - [ ] Solve the draft issue. A draft should have a message but it isn't a reply
 
 * Reply
-  - [ ] Get a way to autoset the from (you want to use the same addr as the recieved)
+  - [x] Get a way to autoset the from (you want to use the same addr as the recieved)
 
 * Render
   - [x] Can correctly render an email and decrypt and verify the message
@@ -51,18 +51,18 @@
 
 
 * Decouple logic and gui, for easier reuse and testing
-  - [ ] Render
-  - [ ] Reader
+  - [x] Render
+  - [x] Reader
   - [x] Jobs
-  - [ ] Util
-  - [ ] Get dependencies correctly, no cycles
+  - [x] Util
+  - [-] Get dependencies correctly, no cycles
   - [ ] Some More utils
 
 * Telescope 
   - [x] render an email correctly in the preview
   - [x] don't display filename but subject (or to:subject)
-  - [-] Add attachments
-  - [-] Load draft and save drafts
+  - [x] Add attachments
+  - [x] Load draft and save drafts
   - [ ] Something like loading messages like 
 
 * ffi bugs
@@ -70,6 +70,7 @@
   - [-] Add a real debug script, to do real debugging
   - [ ] Do we really need to convert to strings back and forward?
   - [ ] notmuch go through the code and check for leaks
+  -- [ ] Fix destroying queries before we are done with them.
   - [ ] gmime leaks memory
   - [ ] gmime segfaults 
   - [ ] gmime can't be reloaded?
@@ -84,6 +85,18 @@
  ** Missing from all
 
 * respect the notmuch config
+  - [x] Read config values for basic values (name, account, dir, etc)
+  - [ ] Use othe custom settings.
+
+Missing:
+Reply, no message
+Reply, template?
+
+* Fix the whole buffer system
+  - [ ] Add float
+  - [ ] Add cleanup
+  - [ ] Update function
+  - [ ] More OO
 
 * Functions 
  ** view
@@ -94,13 +107,14 @@
 	-- [ ] respond-sender(?)
 	-- [ ] respond-forward (include an email as an attachment in the response)
 	- [-] Forward email (what should it do?)
-	- [-] message movement
-	-- [ ] view-next email (+prev)
-	-- [ ] view-next in thread (+prev)
+	 -- [ ] Forward as attachment
+	- [x] message movement
+	-- [x] view-next email (+prev)
 	-- [x] view-next thread (+prev)
-	-- [ ] view-next subsearch (+prev) (like next unread, why? vim does this)
 	- [ ] save-attachments
 	- [ ] view raw
+	- [ ] preview
+	- [ ] treview
  ** browser
  ** search
  ** gloabal
@@ -136,5 +150,4 @@
 ===
 * Can we aid spam filtering?
 
-* Fix the whole buffer system, don't have global buffers but real framework (0.3)
 
