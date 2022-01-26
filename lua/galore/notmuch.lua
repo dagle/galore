@@ -622,7 +622,7 @@ end
 
 --- @param db object database
 --- @return number
-function M.db_get_versin(db)
+function M.db_get_version(db)
 	return nm.notmuch_database_get_version(db)
 end
 
