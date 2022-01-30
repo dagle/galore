@@ -6,7 +6,7 @@ local gu = require('galore.gmime-util')
 local Buffer = require('galore.lib.buffer')
 local job = require('galore.jobs')
 -- local path = require('plenary.path')
-local conf = require('galore.config')
+local config = require('galore.config')
 local reader = require('galore.reader')
 local render = require('galore.render')
 local Path = require "plenary.path"
@@ -72,7 +72,7 @@ function M.save_draft()
 	function(filename)
 		-- should warn if you overwrite a file
 		-- path:new(filename)
-		local path = Path:new(conf.value.drafts, filename)
+		local path = Path:new(config.value.drafts, filename)
 		if path:exists() then
 			error("File exist")
 			return
@@ -115,6 +115,7 @@ function M.create(kind, message, is_reply)
 		kind = kind,
 		cursor = "top",
 		modifiable = true,
+		mappings = config.values.key_bindings.compose,
 		-- shouldn't be a wipeable?
 		-- ref = ref,
 		init = function(buffer)
@@ -138,11 +139,7 @@ function M.create(kind, message, is_reply)
 				render.show_message(message, buffer.handle, {reply = true})
 			end
 			M.marks = vim.api.nvim_buf_set_extmark(buffer.handle, M.ns, line_num, col_num, opts)
-			for bind, func in pairs(conf.values.key_bindings.compose) do
-				v.nvim_buf_set_keymap(buffer.handle, 'n', bind, func, { noremap=true, silent=true })
-			end
 			-- local buf = M.parse_buffer()
-			-- P(buf)
 			-- local mes = r.create_message(buf, reply, nil)
 			-- gm.write_message("/home/dagle/test.eml", mes)
 			-- local mes = M.create_message(reply, {"/home/dagle/tinywl.c"})
