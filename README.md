@@ -7,7 +7,7 @@
 <a href="/LICENSE"> ![License](https://img.shields.io/badge/license-GPL%20v2-brightgreen?style=flat-square) </a>
 <a href="#wip"> ![Status](https://img.shields.io/badge/status-WIP-informational?style=flat-square) </a>
 
-# mail galore - A notmuch cliend for neovim
+# mail galore - A notmuch client for neovim
 
 [Installation](#installation)
 •
