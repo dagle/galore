@@ -1,32 +1,42 @@
--- maybe move all of gm stuff to gm-util
--- this shouldn't be here
-local gm = require("galore.gmime")
-local ffi = require("ffi")
--- don't like this
 local conf = require("galore.config")
 local M = {}
 
--- u.print_table = function(tab)
---   print(vim.inspect(tab))
--- end
-
--- u.capture = function(cmd)
---   local f = assert(io.popen(cmd, 'r'))
---   local out = assert(f:read('*a')) -- *a means all content of pipe/file
---   f:close()
---   return out
--- end
-
--- u.split = function(s, delim)
---   local out = {}
---   for entry in string.gmatch(s, delim) do
---     table.insert(out, entry);
---   end
---   return out
--- end
-
 function M.trim(s)
    return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
+function M.contains(list, item)
+	for _, l in ipairs(list) do
+		if l == item then
+			return true
+		end
+	end
+	return false
+end
+
+function M.string_setlength(str, len)
+	local trimmed = vim.fn.strcharpart(str, 0, len)
+	local tlen = vim.fn.strchars(trimmed)
+	return trimmed .. string.rep(" ", len-tlen)
+end
+
+function M.reverse(list)
+	local box= {}
+	for i=#list, 1, -1 do
+		box[#box+1] = list[i]
+	end
+	return box
+end
+
+function M.upairs(list)
+	local i = 1
+	return function ()
+		if i < #list then
+			local element = list[i]
+			i = i + 1
+			return element
+		end
+	end
 end
 
 function M.collect(it)
@@ -68,58 +78,6 @@ function M.save_path(filename, default_path)
 	return path
 end
 
--- get the ref if we are loading a draft
-function M.get_ref(message)
-	local ref_str = gm.object_get_header(ffi.cast("GMimeObject *", message), "References")
-	local ref
-	if ref_str then
-		ref = gm.reference_parse(nil, ref_str)
-	end
-	local reply
-	local reply_str = gm.g_mime_object_get_header(ffi.cast("GMimeObject *", message), "In-Reply-To")
-	if reply_str then
-		reply = gm.reference_parse(nil, ref_str)
-	end
-	return {
-		reference = ref,
-		in_reply_to = reply,
-	}
-end
-
--- make a new ref if we a making a reply
-function M.make_ref(message)
-  local ref_str = gm.object_get_header(ffi.cast("GMimeObject *", message), "References")
-  local ref
-  if ref_str then
-    ref = gm.reference_parse(nil, ref_str)
-  else
-    ref = gm.new_ref()
-  end
-  local reply = nil
-  local reply_str = gm.g_mime_object_get_header(ffi.cast("GMimeObject *", message), "Message-ID")
-  if reply_str then
-    reply = gm.reference_parse(nil, reply_str)
-    gm.references_append(ref, reply_str)
-  end
-  return {
-    reference = ref,
-    in_reply_to = reply,
-  }
-  -- add old reply tail of refs
-  -- add set
-end
-
-function M.viewable(part, control_bits)
-	if gm.part_is_type(part, "text", "*") then
-		return true
-	end
-	--
-	-- if can_decrypt(part, control_bits) then
-	-- 	return true
-	-- end
-	-- if it's encrypted return true if we can decrypt it
-end
-
 function M.split_lines(str)
 	local lines = {}
 	-- should convert everything to unix from dos.
@@ -149,6 +107,5 @@ M.default_template = function ()
 		"Subject: ",
 	}
 end
-
 
 return M
