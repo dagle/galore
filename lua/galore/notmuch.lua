@@ -724,14 +724,16 @@ local function tag_iterator(tags)
   end
 end
 
+-- Don't free! Auto-free when the query is freed
 local function thread_iterator(threads)
   return function ()
 	  if nm.notmuch_threads_valid(threads) == 1 then
-		  local thread = ffi.gc(nm.notmuch_threads_get(threads), nm.notmuch_thread_destroy)
+		  -- local thread = ffi.gc(nm.notmuch_threads_get(threads), nm.notmuch_thread_destroy)
+		  local thread = nm.notmuch_threads_get(threads)
 		  nm.notmuch_threads_move_to_next(threads)
 		  return thread
 	  else
-		  nm.notmuch_threads_destroy(threads)
+		  -- nm.notmuch_threads_destroy(threads)
 	  end
   end
 end
