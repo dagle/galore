@@ -63,11 +63,12 @@ function M.create(kind)
 		return
 	end
 	-- try to find a buffer first
-	Buffer.create {
+	return Buffer.create {
 		name = "galore-saved",
 		ft = "galore-saved",
 		kind = kind,
 		cursor = "top",
+		mappings = config.values.key_bindings.search,
 		init = function(buffer)
 			M.saved_buffer = buffer
 
@@ -76,11 +77,6 @@ function M.create(kind)
 			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, formated)
 			-- delete last line
 			v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
-
-			-- set keybindings etc, later
-			for bind, func in pairs(config.values.key_bindings.search) do
-				v.nvim_buf_set_keymap(buffer.handle, 'n', bind, func, { noremap=true, silent=true })
-			end
 		end,
 	}
 end

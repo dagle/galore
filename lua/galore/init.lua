@@ -11,13 +11,15 @@ local config = require('galore.config')
 local saved = require('galore.saved')
 -- local compose = require('galore.compose')
 -- local jobs = require('galore.jobs')
--- local cmp = require('galore.cmp')
+local cmp = require('galore.cmp')
 local nu = require('galore.notmuch-util')
 require('galore.gmime').init()
 
 local galore = {
 	-- saved = saved,
 	open = function (opts)
+		vim.fn.sign_define("uncollapsed", {text="v"})
+		vim.fn.sign_define("collapsed", {text=">>"})
 		-- idk about this stuff
 		-- if opts ~= nil then
 		-- 	local window = require("notmuch.window." .. opts)
@@ -27,7 +29,7 @@ local galore = {
 		-- 		error("no window module called " .. opts)
 		-- 	end
 		-- end
-		return saved.create("current")
+		return saved.create("replace")
 		-- create tab etc
 	end,
 	setup = function (opts)

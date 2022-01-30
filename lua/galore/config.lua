@@ -3,9 +3,9 @@ local M = {}
 function M.cb(fun)
   return string.format("<cmd>lua require'galore.callback'.call('%s')<cr>", fun)
 end
-function M.cb2(fun)
-  return string.format("<cmd>lua require'galore.callback'.%s<cr>", fun)
-end
+-- function M.cb2(fun)
+--   return string.format("<cmd>lua require'galore.callback'.%s<cr>", fun)
+-- end
 
 -- should read more stuff from notmuch config
 M.values = {
@@ -17,14 +17,14 @@ M.values = {
 	exclude_tags = "",
 	saved_search = {},
 	show_tags = true,
-	threads_open = "current",
+	threads_open = "replace", -- maybe remove these
 	threads_ratio = 0.6, -- just an idea to make it a bit
-	message_open = "current",
+	message_open = "split",
 	bind_prefix = "", -- maybe
 	expand_threads = true,
 	make_html = false,
 	autocrypt = true,
-	reverse_thread = false,
+	reverse_thread = true,
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
@@ -50,6 +50,7 @@ M.values = {
 		from = from or 'default'
 		return "msmtp", {"-a", "default", to}
 	end,
+	-- need to support modes
 	key_bindings = {
 		global = {
 			["<leader>mc"] = '<cmd>lua require("galore.compose").create("tab")<CR>',
@@ -57,34 +58,47 @@ M.values = {
 			["<leader>mn"] = '<cmd>lua require("galore.jobs").new()<CR>',
 		},
 		search = {
-			["<CR>"] = M.cb("select_search"),
-			["q"] = M.cb("close_saved"),
-			["<C-x>"] = M.cb("split_search"),
-			["<C-v>"] = M.cb("vsplit_search"),
+			n = {
+				["<CR>"] = M.cb("select_search"),
+				["q"] = M.cb("close_saved"),
+				["<C-x>"] = M.cb("split_search"),
+				["<C-v>"] = M.cb("vsplit_search"),
+			},
 		},
 		thread_browser = {
-			["<CR>"] = M.cb("select_thread"),
-			["q"] = M.cb("close_thread"),
+			n = {
+				["<CR>"] = M.cb("select_thread"),
+				["q"] = M.cb("close_thread"),
+			},
 		},
 		message_browser = {
-			["a"] = M.cb2("change_tag()"),
-			["<CR>"] = M.cb("select_message"),
-			["q"] = M.cb("close_thread"),
+			n = {
+				["a"] = M.cb("change_tag"),
+				["<CR>"] = M.cb("select_message"),
+				["q"] = M.cb("close_thread"),
+				["<tab>"] = M.cb("toggle"),
+			},
 		},
 		message_view = {
-			["r"] = M.cb("message_reply"),
-			["R"] = M.cb("message_reply_all"),
-			["s"] = M.cb("save_attach"),
-			["S"] = M.cb("view_attach"),
-			["q"] = M.cb("close_message"),
+			n = {
+				["r"] = M.cb("message_reply"),
+				["R"] = M.cb("message_reply_all"),
+				["s"] = M.cb("save_attach"),
+				["S"] = M.cb("view_attach"),
+				["q"] = M.cb("close_message"),
+				["<C-n>"] = M.cb("next"),
+				["<C-p>"] = M.cb("prev"),
+			},
 		},
 		thread_view= {
 			["r"] = M.cb("message_reply"),
 			["q"] = M.cb("close_message"),
 		},
 		compose = {
-			["<leader>ms"] = M.cb("compose_send"),
-			["<leader>ma"] = M.cb("compose_add_attachment"),
+			n = {
+				["<leader>ms"] = M.cb("compose_send"),
+				["<leader>ma"] = M.cb("compose_add_attachment"),
+			},
 		},
 	}
 }

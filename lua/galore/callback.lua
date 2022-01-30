@@ -10,7 +10,6 @@ local thread_view = require('galore.thread_view')
 local message_view = require('galore.message_view')
 local compose = require('galore.compose')
 local gu = require('galore.gmime-util')
-local gm = require('galore.gmime')
 local nu = require('galore.notmuch-util')
 local tele = require('galore.telescope')
 
@@ -37,8 +36,8 @@ function M.select_message()
 	local ref = thread_message:ref()
 	-- local mes = mb:select()
 	-- local ref = mb:ref()
-	conf.values.tag_unread(mes[1])
-	message_view.create(mes[1], conf.values.message_open, ref)
+	conf.values.tag_unread(mes)
+	message_view.create(mes, conf.values.message_open, ref)
 end
 
 function M.message_reply()
@@ -75,13 +74,13 @@ function M.change_tag(tag)
 		nu.tag_change(tag)
 	else
 		vim.ui.input({ prompt = "Tags change: "},
-			function(itag)
-				if itag then
-					nu.change_tag(message, itag)
-				else
-					error("No tag")
-				end
-			end)
+		function(itag)
+			if itag then
+				nu.change_tag(message, itag)
+			else
+				error("No tag")
+			end
+		end)
 	end
 end
 
@@ -115,25 +114,11 @@ function M.forward()
 	local message = message_view:message_ref()
 	vim.ui.input({prompt = "Forward to: "}, function (to)
 		if to == nil then
-			-- alert user that it failed
+			-- local new = gu.forward(message, to)
+			-- job.send_mail(to, our, message_str)
 			return
 		end
-
-		local our = gu.get_from(message)
-		-- clean smtp headers
-		-- clear cc and bcc
-		-- clear from
-		-- gm.message_add_mailbox(message, 'from', conf.values.name, our)
-
-		local sub = gm.message_get_subject(message)
-		sub = u.add_prefix(sub, "Fwd:")
-		gm.message_set_subject(message, sub)
-		-- set message to, to to
-		local message_str = gm.write_message_mem(message)
-		job.send_mail(to, our, message_str)
-	-- set the to addr
 	end)
-	-- get our address
 end
 
 function M.close_message()
@@ -153,11 +138,40 @@ end
 -- 	local mid = message:select()
 -- 	compose.create({mid})
 -- end
+function M.next()
+	local mes = thread_message:next()
+	local ref = thread_message:ref()
+	-- local mes = mb:select()
+	-- local ref = mb:ref()
+	conf.values.tag_unread(mes)
+	message_view.create(mes, conf.values.message_open, ref)
+end
 
+function M.prev()
+	local mes = thread_message:prev()
+	local ref = thread_message:ref()
+	-- local mes = mb:select()
+	-- local ref = mb:ref()
+	conf.values.tag_unread(mes)
+	message_view.create(mes, conf.values.message_open, ref)
+end
+
+function M.toggle()
+	local line = vim.fn.getpos(".")[2]
+	local type, uline = thread_message:toggle(line)
+	thread_message:redraw()
+	if type then
+	  vim.api.nvim_win_set_cursor(0, { line, 0 })
+	else
+	  vim.api.nvim_win_set_cursor(0, { uline, 0 })
+	end
+end
 
 function M.call(fun)
 	M[fun]()
 end
+
+
 
 
 return M
