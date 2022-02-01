@@ -44,11 +44,13 @@ M.values = {
 	encrypt = false,
 	gpg_id = "Testi McTest",
 	headers = {
-		'Subject', 'To', 'From', 'Date',
+		'From', 'To', 'Cc', 'Date', 'Subject',
 	},
 	send_cmd = function(to, from)
 		from = from or 'default'
-		return "msmtp", {"-a", "default", to}
+		return "msmtp", {"-a", from, to}
+	end,
+	show_message_descripiton = function(_, _, _, _, _, _, _)
 	end,
 	-- need to support modes
 	key_bindings = {

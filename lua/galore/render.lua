@@ -2,6 +2,7 @@ local gm = require('galore.gmime')
 local u = require('galore.util')
 local nm = require('galore.notmuch')
 local ffi = require('ffi')
+local nu = require('galore.notmuch-util')
 local conf = require('galore.config')
 
 local M = {}
@@ -22,12 +23,6 @@ function M.draw(buffer, input)
 	vim.api.nvim_buf_set_lines(buffer, -1, -1, true, input)
 end
 
-local function mark(buffer, start, stop)
-	-- nvim_buf_add_highlight()
-	-- vim.api.nvim_buf_del_extmark(buffer.handle, ns_id: number, id: number)
-end
-
--- XXX we need something better than this
 local function collect(iter)
 	local box = {}
 	for k,val in iter do
@@ -36,52 +31,45 @@ local function collect(iter)
 	return box
 end
 
-local function filter(func, map)
-	for k, v in pairs(map) do
-		if not func(k,v) then
-			map[k] = nil
-		end
-	end
-end
-
-local function in_map(k,_)
-	for _, a in ipairs(conf.values.headers) do
-		if a == k then
-			return true
-		end
-	end
-	return false
-end
-
-local function format_header(iter)
-	local box = {}
-	for k, val in pairs(iter) do
-		local str = string.gsub(val,"\n", "")
-		table.insert(box, k .. ": " .. str)
-	end
-	return box
-end
-
-local function add_tags(nm_message, buffer, ns)
-	local tags = table.concat(u.collect(nm.message_get_tags(nm_message)), " ")
-	local str = "(" .. tags .. ")"
-
-	local line_num = 0
+local function mark(buffer, ns, content, i)
+	local line_num = i
 	local col_num = 0
 
 	local opts = {
-		virt_text = {{str, "Comment"}},
+		virt_text = {{content, "Comment"}},
 	}
 	vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
 end
--- XXX fix this, it feels really ugly
+
+local marks = {
+	From = function (buffer, ns, i, nm_message)
+		local tags = table.concat(u.collect(nm.message_get_tags(nm_message)), " ")
+		mark(buffer, ns, "(" .. tags .. ")", i)
+	end,
+	-- this creashes luajit, also it might be a bad idea
+	-- Subject = function (buffer, ns, i, nm_message)
+		-- local count = nu.message_with_thread(nm_message, function (thread)
+		-- 	local tot = nm.thread_get_total_messages(thread)
+		-- 	local current = nu.get_index(thread, nm_message)
+		-- 	return string.format("[%02d/%02d]", current, tot)
+		-- end)
+		-- mark(buffer, ns, count, i)
+	-- end
+}
+
 function M.show_header(message, buffer, opts, nm_message)
 	opts = opts or {}
 	local headers = collect(gm.header_iter(message))
-	filter(in_map, headers)
-	vim.api.nvim_buf_set_lines(buffer, 0, 0, false, format_header(headers))
-	if opts.ns then
-		add_tags(nm_message, buffer, opts.ns)
+	local i = 0
+	for _, k in ipairs(conf.values.headers) do
+		if headers[k] then
+			local str = string.gsub(k .. ": " .. headers[k],"\n", "")
+			vim.api.nvim_buf_set_lines(buffer, i, i+1, false, {str})
+			if marks[k] and opts.ns then
+				marks[k](buffer, opts.ns, i, nm_message)
+			end
+			i = i + 1
+		end
 	end
 end
 
@@ -206,7 +194,7 @@ function M.show_part(part, buf, opts, state)
 			-- display as "encrypted part, until it's decrypted, then refresh the renderer"
 			local de_part, sign = gm.decrypt_and_verify(part)
 			if sign then
-				mark("sign confirmed")
+				-- mark("sign confirmed")
 				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
 			M.show_part(de_part, buf, opts, state)
@@ -214,7 +202,7 @@ function M.show_part(part, buf, opts, state)
 		elseif gm.is_multipart_signed(part) then
 			-- maybe apply some colors etc if the sign is correct or not
 			if gm.verify_signed(part) then
-				mark("sign confirmed")
+				-- mark("sign confirmed")
 				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
 			local se_part = gm.get_signed_part(part)
