@@ -1,17 +1,17 @@
 local job = require("galore.jobs")
-local u = require('galore.util')
-local util = require('galore.util')
-local saved = require('galore.saved')
-local threads = require('galore.thread_browser')
-local thread_message = require('galore.thread_message_browser')
-local conf = require('galore.config')
-local mb = require('galore.message_browser')
-local thread_view = require('galore.thread_view')
-local message_view = require('galore.message_view')
-local compose = require('galore.compose')
-local gu = require('galore.gmime-util')
-local nu = require('galore.notmuch-util')
-local tele = require('galore.telescope')
+local u = require("galore.util")
+local util = require("galore.util")
+local saved = require("galore.saved")
+local threads = require("galore.thread_browser")
+local thread_message = require("galore.thread_message_browser")
+local conf = require("galore.config")
+local mb = require("galore.message_browser")
+local thread_view = require("galore.thread_view")
+local message_view = require("galore.message_view")
+local compose = require("galore.compose")
+local gu = require("galore.gmime-util")
+local nu = require("galore.notmuch-util")
+local tele = require("galore.telescope")
 
 local M = {}
 
@@ -61,20 +61,17 @@ function M.view_attach()
 end
 
 -- XXX rethink args to compose?
-function M.compose_template()
-end
+function M.compose_template() end
 
 -- uses message to create a template
-function M.compose_sender()
-end
+function M.compose_sender() end
 
 function M.change_tag(tag)
 	local message = thread_message:select()[1]
 	if tag then
 		nu.tag_change(tag)
 	else
-		vim.ui.input({ prompt = "Tags change: "},
-		function(itag)
+		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
 				nu.change_tag(message, itag)
 			else
@@ -94,8 +91,7 @@ end
 
 -- a way to get id / filename for piping etc
 
-function M.tree_view()
-end
+function M.tree_view() end
 
 function M.compose()
 	compose.create("tab")
@@ -112,7 +108,7 @@ end
 -- XXX what should a forward do?
 function M.forward()
 	local message = message_view:message_ref()
-	vim.ui.input({prompt = "Forward to: "}, function (to)
+	vim.ui.input({ prompt = "Forward to: " }, function(to)
 		if to == nil then
 			-- local new = gu.forward(message, to)
 			-- job.send_mail(to, our, message_str)
@@ -157,17 +153,14 @@ function M.toggle()
 	local type, uline = thread_message:toggle(line)
 	thread_message:redraw()
 	if type then
-	  vim.api.nvim_win_set_cursor(0, { line, 0 })
+		vim.api.nvim_win_set_cursor(0, { line, 0 })
 	else
-	  vim.api.nvim_win_set_cursor(0, { uline, 0 })
+		vim.api.nvim_win_set_cursor(0, { uline, 0 })
 	end
 end
 
 function M.call(fun)
 	M[fun]()
 end
-
-
-
 
 return M

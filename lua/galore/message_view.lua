@@ -1,13 +1,13 @@
 -- When we view an email, this is the view
 local v = vim.api
 -- local a = require "plenary.async"
-local r = require('galore.render')
+local r = require("galore.render")
 local u = require("galore.util")
 local nm = require("galore.notmuch")
-local gm = require('galore.gmime')
-local Buffer = require('galore.lib.buffer')
-local config = require('galore.config')
-local Path = require('plenary.path')
+local gm = require("galore.gmime")
+local Buffer = require("galore.lib.buffer")
+local config = require("galore.config")
+local Path = require("plenary.path")
 -- local attach_view = require('galore.attach_view')
 local M = {}
 
@@ -21,9 +21,9 @@ local function _view_attachment(filename, kind)
 	kind = kind or "current"
 	if M.parts[filename] then
 		if M.parts[filename][2] then
-			local buf = Buffer.create {
+			local buf = Buffer.create({
 				name = filename,
-				ft = require'plenary.filetype'.detect(filename),
+				ft = require("plenary.filetype").detect(filename),
 				kind = kind,
 				-- ref = ref,
 				cursor = "top",
@@ -32,7 +32,7 @@ local function _view_attachment(filename, kind)
 					v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
 					v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 				end,
-			}
+			})
 			-- attach_view.create(M.attachment[filename], kind)
 		else
 			error("File not viewable")
@@ -45,16 +45,16 @@ end
 local function raw_mode(nm_message, kind)
 	kind = kind or "floating"
 	local filename = nm.message_get_filename(nm_message)
-	local buf = Buffer.create {
+	local buf = Buffer.create({
 		name = filename,
-		ft = 'mail',
+		ft = "mail",
 		kind = "floating",
 		-- ref = ref,
 		cursor = "top",
 		init = function(buffer)
 			vim.cmd("e " .. filename)
 		end,
-	}
+	})
 end
 
 function M._save_attachment(filename, save_path)
@@ -73,7 +73,7 @@ end
 function M.view_attachment()
 	local files = u.collect_keys(M.parts)
 	vim.ui.select(files, {
-		prompt = "View attachment:"
+		prompt = "View attachment:",
 	}, function(item, _)
 		if item then
 			_view_attachment(item)
@@ -83,17 +83,16 @@ function M.view_attachment()
 	end)
 end
 
-
 function M.save_attach()
 	-- switch to telescope later?
 	local files = u.collect_keys(M.parts)
 	vim.ui.select(files, {
-		prompt = "Attachment to save:"
+		prompt = "Attachment to save:",
 	}, function(item, _)
 		if item then
 			vim.ui.input({
 				-- we want to have hints
-				prompt = "Save as: "
+				prompt = "Save as: ",
 			}, function(path)
 				M._save_attachment(item, path)
 			end)
@@ -114,9 +113,9 @@ function M.update(message)
 	if filename then
 		local gmessage = gm.parse_message(filename)
 		if gmessage then
-			M.ns = vim.api.nvim_create_namespace('galore-message-view')
+			M.ns = vim.api.nvim_create_namespace("galore-message-view")
 			M.message = gmessage
-			r.show_header(gmessage, buffer.handle, {ns = M.ns}, message)
+			r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
 			M.parts = r.show_message(gmessage, buffer.handle, {})
 		end
 	end
@@ -141,7 +140,7 @@ function M.create(message, kind, parent)
 		return
 	end
 	-- try to find a buffer first
-	Buffer.create {
+	Buffer.create({
 		name = "galore-message",
 		ft = "mail",
 		kind = kind,
@@ -152,7 +151,7 @@ function M.create(message, kind, parent)
 			M.message_view_buffer = buffer
 			M.update(message)
 		end,
-	}
+	})
 end
 
 function M.close()
@@ -174,7 +173,6 @@ end
 -- 	redraw(message)
 -- end
 
-function M.open_attach()
-end
+function M.open_attach() end
 
 return M

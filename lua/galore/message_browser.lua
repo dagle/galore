@@ -3,10 +3,10 @@
 local M = {}
 
 local v = vim.api
-local nm = require('galore.notmuch')
-local u = require('galore.util')
-local config = require('galore.config')
-local Buffer = require('galore.lib.buffer')
+local nm = require("galore.notmuch")
+local u = require("galore.util")
+local config = require("galore.config")
+local Buffer = require("galore.lib.buffer")
 M.State = {}
 
 M.messages_buffer = nil
@@ -17,7 +17,7 @@ local function get_message(message, i)
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_header(message, "Subject"))
 	local ppdate = os.date("%Y-%m-%d", date)
-	return {message, i, ppdate, from, sub, tags}
+	return { message, i, ppdate, from, sub, tags }
 end
 
 local function get_messages(db_path, search)
@@ -53,7 +53,7 @@ function M.create(search, kind)
 		return
 	end
 
-	Buffer.create {
+	Buffer.create({
 		name = "galore-messages",
 		ft = "galore-threads",
 		kind = kind,
@@ -71,14 +71,14 @@ function M.create(search, kind)
 			v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 
 			for bind, func in pairs(config.values.key_bindings.message_browser) do
-				v.nvim_buf_set_keymap(buffer.handle, 'n', bind, func, { noremap=true, silent=true })
+				v.nvim_buf_set_keymap(buffer.handle, "n", bind, func, { noremap = true, silent = true })
 			end
-		end
-	}
+		end,
+	})
 end
 
 function M:select()
-	local line = vim.fn.line('.')
+	local line = vim.fn.line(".")
 	return self.State[line]
 end
 

@@ -1,9 +1,9 @@
 -- view an attachment in a buffer if the file is considered viewable
 -- maybe this should be called view-part and can be used for any part
 local v = vim.api
-local Buffer = require('galore.lib.buffer')
-local gm = require('galore.gmime')
-local u = require('util')
+local Buffer = require("galore.lib.buffer")
+local gm = require("galore.gmime")
+local u = require("util")
 local M = {}
 
 function M.create(attachment, kind, ft)
@@ -14,7 +14,7 @@ function M.create(attachment, kind, ft)
 		return
 	end
 
-	Buffer.create {
+	Buffer.create({
 		name = "galore-attachment",
 		ft = ft,
 		kind = kind,
@@ -25,7 +25,7 @@ function M.create(attachment, kind, ft)
 			local fixed = u.split_lines(buf)
 			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, fixed)
 			v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
-		end
-	}
+		end,
+	})
 end
-	-- try to find a buffer first
+-- try to find a buffer first

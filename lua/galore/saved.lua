@@ -1,9 +1,9 @@
 -- saved is saved searches, the first view you get when you start notmuch
 local v = vim.api
 -- change everything to galore
-local nm = require('galore.notmuch')
-local Buffer = require('galore.lib.buffer')
-local config = require('galore.config')
+local nm = require("galore.notmuch")
+local Buffer = require("galore.lib.buffer")
+local config = require("galore.config")
 
 local M = {}
 
@@ -17,14 +17,14 @@ M.State = {}
 M.savef_buffer = nil
 
 local function get_tags(db)
-  local box = {}
-  for tag in nm.db_get_all_tags(db) do
-    local search = "tag:".. tag
-    local q = nm.create_query(db,search)
-	local i = nm.query_count_messages(q)
-    table.insert(box, {i, tag, search})
-  end
-  return box
+	local box = {}
+	for tag in nm.db_get_all_tags(db) do
+		local search = "tag:" .. tag
+		local q = nm.create_query(db, search)
+		local i = nm.query_count_messages(q)
+		table.insert(box, { i, tag, search })
+	end
+	return box
 end
 
 local function get_search_info(searches, db)
@@ -32,13 +32,13 @@ local function get_search_info(searches, db)
 	for _, search in pairs(searches) do
 		local q = nm.create_query(db, search[2])
 		local i = nm.query_count_messages(q)
-		table.insert(box, {i, search[1], search[2]})
+		table.insert(box, { i, search[1], search[2] })
 	end
 	return box
 end
 
 local function ppsearch(tag)
-  return string.format("%d %-20s (%s)", unpack(tag))
+	return string.format("%d %-20s (%s)", unpack(tag))
 end
 
 function M.ref()
@@ -61,7 +61,7 @@ function M.create(kind)
 		return
 	end
 	-- try to find a buffer first
-	return Buffer.create {
+	return Buffer.create({
 		name = "galore-saved",
 		ft = "galore-saved",
 		kind = kind,
@@ -76,7 +76,7 @@ function M.create(kind)
 			-- delete last line
 			v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 		end,
-	}
+	})
 end
 
 function M.close()
@@ -85,7 +85,7 @@ end
 
 -- this should actually select stuff
 function M:select()
-	local line = vim.fn.line('.')
+	local line = vim.fn.line(".")
 	return self.State[line]
 end
 

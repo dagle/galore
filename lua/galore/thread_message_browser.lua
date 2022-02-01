@@ -3,11 +3,11 @@
 local M = {}
 
 local v = vim.api
-local nm = require('galore.notmuch')
-local u = require('galore.util')
-local config = require('galore.config')
-local Buffer = require('galore.lib.buffer')
-local gu = require('galore.gmime-util')
+local nm = require("galore.notmuch")
+local u = require("galore.util")
+local config = require("galore.config")
+local Buffer = require("galore.lib.buffer")
+local gu = require("galore.gmime-util")
 M.State = {}
 M.Cache = {}
 M.Line = nil
@@ -22,7 +22,7 @@ local function get_message(message, level, prestring, i, tot)
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_date(message))
 	local ppdate = os.date("%Y-%m-%d ", date)
-	return {level, prestring, i, tot, ppdate, from, sub, tags}
+	return { level, prestring, i, tot, ppdate, from, sub, tags }
 end
 
 local function sort(messages)
@@ -41,7 +41,7 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 		else
 			newstring = prestring .. "├─"
 		end
-		table.insert(box, get_message(message, level, newstring, num+1, tot))
+		table.insert(box, get_message(message, level, newstring, num + 1, tot))
 		table.insert(state, message)
 		if num == 0 then
 			newstring = prestring
@@ -51,7 +51,7 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 			newstring = prestring .. "  "
 		end
 		local sorted = sort(nm.message_get_replies(message))
-		num = show_messages(sorted, level+1, newstring, num+1, tot, box, state)
+		num = show_messages(sorted, level + 1, newstring, num + 1, tot, box, state)
 		j = j + 1
 	end
 	return num
@@ -68,8 +68,7 @@ function M.to_virtualline(threads, linenr)
 end
 
 -- XXX TODO
-function M.to_realline(threads, linenr)
-end
+function M.to_realline(threads, linenr) end
 
 function M:toggle(linenr)
 	local line = self.to_virtualline(self.Threads, linenr)
@@ -102,7 +101,7 @@ local function get_messages(db, search)
 		local messages = nm.thread_get_toplevel_messages(thread)
 		show_messages(messages, 0, "", 0, tot, box, state)
 		stop = stop + tot
-		local threadinfo = {thread, stop=stop, start=start, messages=ppMessage(box), expand=true}
+		local threadinfo = { thread, stop = stop, start = start, messages = ppMessage(box), expand = true }
 		table.insert(threads, threadinfo)
 		start = stop + 1
 	end
@@ -120,7 +119,7 @@ local function threads_to_buffer(threads)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
 			-- i = i + #item.messages
 		else
-			M.threads_buffer:set_lines(-1, -1, true, {item.messages[1]})
+			M.threads_buffer:set_lines(-1, -1, true, { item.messages[1] })
 			-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
 			-- i = i + 1
 		end
@@ -156,7 +155,7 @@ function M.create(search, kind, parent)
 		return
 	end
 
-	Buffer.create {
+	Buffer.create({
 		name = "galore-threads",
 		ft = "galore-threads",
 		kind = kind,
@@ -166,8 +165,8 @@ function M.create(search, kind, parent)
 		init = function(buffer)
 			M.threads_buffer = buffer
 			M.refresh(search)
-		end
-	}
+		end,
+	})
 end
 
 function M:next_thread()
@@ -205,12 +204,12 @@ function M:prev_thread()
 end
 --
 function M:next()
-	self.Line = math.min(self.Line+1, #self.State)
+	self.Line = math.min(self.Line + 1, #self.State)
 	return self.State[self.Line]
 end
 --
 function M:prev()
-	self.Line = math.max(self.Line-1, 1)
+	self.Line = math.max(self.Line - 1, 1)
 	return self.State[self.Line]
 end
 

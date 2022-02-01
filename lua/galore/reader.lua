@@ -1,7 +1,7 @@
-local gm = require('galore.gmime')
-local u = require('galore.util')
-local conf = require('galore.config')
-local ffi = require('ffi')
+local gm = require("galore.gmime")
+local u = require("galore.util")
+local conf = require("galore.config")
+local ffi = require("ffi")
 
 local M = {}
 
@@ -12,11 +12,11 @@ function M.create_attachment(filename)
 	local cat, type = u.get_type(filename)
 	local attachment = gm.new_part(cat, type)
 	gm.set_part_filename(attachment, u.basename(filename))
-	local stream = gm.stream_open(filename, 'r', 0644)
+	local stream = gm.stream_open(filename, "r", 0644)
 
-	local content = gm.data_wrapper(stream, 'default')
+	local content = gm.data_wrapper(stream, "default")
 	gm.set_part_content(attachment, content)
-	gm.set_encoding(attachment, 'base64')
+	gm.set_encoding(attachment, "base64")
 	return attachment
 end
 
@@ -37,7 +37,6 @@ local function make_html(part)
 	gm.wrapper_set_stream(new_content, filter)
 	gm.part_set_content(html_body, new_content)
 	gm.stream_flush(filter)
-
 end
 
 -- encrypt a part and return the multipart
@@ -61,7 +60,6 @@ function M.secure(ctx, part, recipients)
 			print("Error: " .. err)
 		end
 	end
-
 end
 
 -- create a message from strings
@@ -79,10 +77,10 @@ function M.create_message(buf, reply, attachments, mode)
 
 	-- should do this for more headers
 	for name, email in gm.internet_address_list(nil, buf.From) do
-		gm.message_add_mailbox(message, 'from', name, email)
+		gm.message_add_mailbox(message, "from", name, email)
 	end
 	for name, email in gm.internet_address_list(nil, buf.To) do
-		gm.message_add_mailbox(message, 'to', name, email)
+		gm.message_add_mailbox(message, "to", name, email)
 	end
 
 	gm.message_set_subject(message, buf.Subject, nil)
@@ -99,7 +97,7 @@ function M.create_message(buf, reply, attachments, mode)
 
 	current = body
 
-	local secure = M.secure(ctx, body, {buf.To})
+	local secure = M.secure(ctx, body, { buf.To })
 	if secure then
 		current = secure
 	end

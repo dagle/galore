@@ -3,18 +3,18 @@ local M = {}
 
 -- galore is always ../../build, make an abs path depending on this file
 local library_path = (function()
-  local dirname = string.sub(debug.getinfo(1).source, 2, #"/gmime.lua" * -1)
-  if package.config:sub(1, 1) == "\\" then
-    return dirname .. "../../build/libgalore.dll"
-  else
-    return dirname .. "../../build/libgalore.so"
-  end
+	local dirname = string.sub(debug.getinfo(1).source, 2, #"/gmime.lua" * -1)
+	if package.config:sub(1, 1) == "\\" then
+		return dirname .. "../../build/libgalore.dll"
+	else
+		return dirname .. "../../build/libgalore.so"
+	end
 end)()
 
 local ffi = require("ffi")
 local galore = ffi.load(library_path)
 
-ffi.cdef[[
+ffi.cdef([[
 typedef struct {} GObject;
 typedef struct {} GMimeObject;
 typedef struct {} InternetAddressList; 
@@ -239,7 +239,7 @@ void internet_address_list_append (InternetAddressList *list, InternetAddressLis
 gboolean internet_address_list_remove (InternetAddressList *list, InternetAddress *ia);
 gboolean internet_address_list_remove_at (InternetAddressList *list, int index);
 gboolean g_mime_content_type_is_type (GMimeContentType *content_type, const char *type, const char *subtype);
-]]
+]])
 
 -- write an index function so that if M._index doesn't exist, look in galore
 function M.init()
@@ -271,17 +271,17 @@ end
 -- should we tolower the type?
 function M.message_get_address(message, type)
 	local ctype
-	if type == 'sender' then
+	if type == "sender" then
 		ctype = galore.GMIME_ADDRESS_TYPE_SENDER
-	elseif type =='from' then
+	elseif type == "from" then
 		ctype = galore.GMIME_ADDRESS_TYPE_FROM
-	elseif type =='reply_to' then
+	elseif type == "reply_to" then
 		ctype = galore.GMIME_ADDRESS_TYPE_REPLY_TO
-	elseif type =='to' then
+	elseif type == "to" then
 		ctype = galore.GMIME_ADDRESS_TYPE_TO
-	elseif type =='cc' then
+	elseif type == "cc" then
 		ctype = galore.GMIME_ADDRESS_TYPE_CC
-	elseif type =='bcc' then
+	elseif type == "bcc" then
 		ctype = galore.GMIME_ADDRESS_TYPE_BCC
 	end
 	local list = galore.g_mime_message_get_addresses(message, ctype)
@@ -304,7 +304,7 @@ end
 -- void internet_address_list_encode (InternetAddressList *list, GMimeFormatOptions *options, GString *str);
 function M.addresses_iter(list)
 	local i = -1
-	return function ()
+	return function()
 		i = i + 1
 		if i < galore.internet_address_list_length(list) then
 			local ret = galore.internet_address_list_get_address(list, i)
@@ -348,13 +348,13 @@ end
 function M.internet_address_list(opt, str)
 	local list = galore.internet_address_list_parse(opt, str)
 	local i = 0
-	return function ()
+	return function()
 		if i < galore.internet_address_list_length(list) then
 			local addr = galore.internet_address_list_get_address(list, i)
 			local apa = ffi.cast("InternetAddressMailbox *", addr)
 			local email = ffi.string(galore.internet_address_mailbox_get_addr(apa))
 			local name = ffi.string(galore.internet_address_get_name(addr))
-			i = i+1
+			i = i + 1
 			return name, email
 		end
 	end
@@ -370,7 +370,7 @@ end
 
 function M.stream_open(file, mode, perm)
 	local fd = assert(vim.loop.fs_open(file, mode, perm))
-	return galore.g_mime_stream_fs_new(fd);
+	return galore.g_mime_stream_fs_new(fd)
 end
 
 function M.new_multipart(subtype)
@@ -398,19 +398,19 @@ function M.new_text_part(type)
 end
 
 function M.data_wrapper(stream, mode)
-	if mode == 'default' then
+	if mode == "default" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_DEFAULT)
-	elseif mode == '7bit' then
+	elseif mode == "7bit" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_7BIT)
-	elseif mode == '8bit' then
+	elseif mode == "8bit" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_8BIT)
-	elseif mode == 'binary' then
+	elseif mode == "binary" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_BINARY)
-	elseif mode == 'base64' then
+	elseif mode == "base64" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_BASE64)
-	elseif mode == 'quotedprintable' then
+	elseif mode == "quotedprintable" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE)
-	elseif mode == 'uuencode' then
+	elseif mode == "uuencode" then
 		return galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_UUENCODE)
 	end
 end
@@ -428,19 +428,19 @@ function M.wrapper_get_encoding(content)
 end
 
 function M.set_encoding(part, mode)
-	if mode == 'default' then
+	if mode == "default" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_DEFAULT)
-	elseif mode == '7bit' then
+	elseif mode == "7bit" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_7BIT)
-	elseif mode == '8bit' then
+	elseif mode == "8bit" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_8BIT)
-	elseif mode == 'binary' then
+	elseif mode == "binary" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_BINARY)
-	elseif mode == 'base64' then
+	elseif mode == "base64" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_BASE64)
-	elseif mode == 'quotedprintable' then
+	elseif mode == "quotedprintable" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE)
-	elseif mode == 'uuencode' then
+	elseif mode == "uuencode" then
 		galore.g_mime_part_set_content_encoding(part, galore.GMIME_CONTENT_ENCODING_UUENCODE)
 	end
 end
@@ -460,36 +460,39 @@ function M.set_text(part, texts)
 	-- g_mime_charset_init (&mask);
 	-- g_mime_charset_step (&mask, text, len);
 	galore.g_mime_text_part_set_charset(part, charset)
-	local stream = galore.g_mime_stream_mem_new_with_buffer(text, #text);
-    local content = galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_DEFAULT);
-	galore.g_mime_part_set_content (ffi.cast("GMimePart *", part), content);
+	local stream = galore.g_mime_stream_mem_new_with_buffer(text, #text)
+	local content = galore.g_mime_data_wrapper_new_with_stream(stream, galore.GMIME_CONTENT_ENCODING_DEFAULT)
+	galore.g_mime_part_set_content(ffi.cast("GMimePart *", part), content)
 	-- local encoding = galore.g_mime_part_get_content_encoding(ffi.cast("GMimePart *", part))
-	galore.g_mime_part_set_content_encoding (ffi.cast("GMimePart *", part), galore.GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE)
--- 	if (mask.level > 0)
--- 		g_mime_part_set_content_encoding ((GMimePart *) mime_part, GMIME_CONTENT_ENCODING_8BIT);
--- 	else
--- 		g_mime_part_set_content_encoding ((GMimePart *) mime_part, GMIME_CONTENT_ENCODING_7BIT);
+	galore.g_mime_part_set_content_encoding(
+		ffi.cast("GMimePart *", part),
+		galore.GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE
+	)
+	-- 	if (mask.level > 0)
+	-- 		g_mime_part_set_content_encoding ((GMimePart *) mime_part, GMIME_CONTENT_ENCODING_8BIT);
+	-- 	else
+	-- 		g_mime_part_set_content_encoding ((GMimePart *) mime_part, GMIME_CONTENT_ENCODING_7BIT);
 	-- maybe change charset later
 end
 
 function M.message_add_mailbox(message, type, name, addr)
-	if type == 'sender' then
+	if type == "sender" then
 		galore.g_mime_message_add_mailbox(message, galore.GMIME_ADDRESS_TYPE_SENDER, name, addr)
-	elseif type == 'from' then
+	elseif type == "from" then
 		galore.g_mime_message_add_mailbox(message, galore.GMIME_ADDRESS_TYPE_FROM, name, addr)
-	elseif type == 'reply_to' then
+	elseif type == "reply_to" then
 		galore.g_mime_message_add_mailbox(message, galore.GMIME_ADDRESS_TYPE_REPLY_TO, name, addr)
-	elseif type == 'to' then
+	elseif type == "to" then
 		galore.g_mime_message_add_mailbox(message, galore.GMIME_ADDRESS_TYPE_TO, name, addr)
-	elseif type == 'cc' then
+	elseif type == "cc" then
 		galore.g_mime_message_add_mailbox(message, galore.GMIME_ADDRESS_TYPE_CC, name, addr)
-	elseif type == 'bcc' then
+	elseif type == "bcc" then
 		galore.g_mime_message_add_mailbox(message, galore.GMIME_ADDRESS_TYPE_BCC, name, addr)
 	end
 end
 
 function M.get_content(part)
-	return galore.g_mime_part_get_content(ffi.cast("GMimePart *", part));
+	return galore.g_mime_part_get_content(ffi.cast("GMimePart *", part))
 end
 
 function M.get_stream(content)
@@ -539,27 +542,27 @@ function M.stream_to_stream(from, to)
 end
 
 function M.unref(obj)
-	galore.g_object_unref(obj);
+	galore.g_object_unref(obj)
 end
 
 function M.write_message(path, message)
-	local err = ffi.new('GError *[1]')
+	local err = ffi.new("GError *[1]")
 	-- check error
 	local stream = galore.g_mime_stream_file_open(path, "w+", err)
-	galore.g_mime_object_write_to_stream (ffi.cast("GMimeObject *", message), nil, stream);
+	galore.g_mime_object_write_to_stream(ffi.cast("GMimeObject *", message), nil, stream)
 	galore.g_mime_stream_flush(stream)
 end
 
 function M.write_message_mem(message)
 	local stream = M.new_mem_stream()
-	galore.g_mime_object_write_to_stream (ffi.cast("GMimeObject *", message), nil, stream);
+	galore.g_mime_object_write_to_stream(ffi.cast("GMimeObject *", message), nil, stream)
 	galore.g_mime_stream_flush(stream)
 
 	return M.mem_to_string(stream)
 end
 
 function M.mem_to_string(mem)
-	galore.g_mime_stream_flush(mem);
+	galore.g_mime_stream_flush(mem)
 	-- free this or does new_mem_stream free it?
 	local array = galore.g_mime_stream_mem_get_byte_array(ffi.cast("GMimeStreamMem *", mem))
 	return ffi.string(array.data, array.len)
@@ -569,7 +572,7 @@ function M.part_to_buf(part)
 	local content = M.get_content(part)
 	local stream = M.new_mem_stream()
 
-	galore.g_mime_data_wrapper_write_to_stream(content, stream);
+	galore.g_mime_data_wrapper_write_to_stream(content, stream)
 	-- do I need to do any formating on this.
 	return M.mem_to_string(stream)
 end
@@ -582,8 +585,8 @@ function M.save_part(part, filename)
 	local stream = ffi.gc(galore.g_mime_stream_fs_new(fd), galore.g_object_unref)
 	local content = M.get_content(part)
 
-	galore.g_mime_data_wrapper_write_to_stream(content, stream);
-	galore.g_mime_stream_flush(stream);
+	galore.g_mime_data_wrapper_write_to_stream(content, stream)
+	galore.g_mime_stream_flush(stream)
 end
 
 -- use this for testing only
@@ -660,7 +663,6 @@ function M.is_multipart_alt(part)
 	return false
 end
 
-
 function M.is_signed(part)
 	return galore.g_mime_is_multipart_signed(part) ~= 0
 end
@@ -701,7 +703,7 @@ end
 -- dunno if this should actually free it
 function M.reference_iterator(ref)
 	local i = 0
-	return function ()
+	return function()
 		if i < galore.g_mime_references_length(ref) then
 			local ret = ffi.string(galore.g_mime_references_get_message_id(ref, i))
 			i = i + 1
@@ -715,10 +717,10 @@ end
 function M.multipart_foreach(multipart, fun, state)
 	local queue = {}
 	local tmp = ffi.cast("GMimeObject *", multipart)
-	table.insert(queue, {tmp, tmp})
+	table.insert(queue, { tmp, tmp })
 	while #queue > 0 do
 		local parent, part = unpack(table.remove(queue, 1))
-		if (parent ~= part) then
+		if parent ~= part then
 			fun(parent, part, state)
 		end
 		if M.is_multipart(part) then
@@ -727,7 +729,7 @@ function M.multipart_foreach(multipart, fun, state)
 			local j = galore.multipart_len(multi)
 			while i < j do
 				local child = galore.multipart_child(multi, i)
-				table.insert(queue, {part, child})
+				table.insert(queue, { part, child })
 				i = i + 1
 			end
 		end
@@ -777,20 +779,20 @@ function M.message_foreach(message, fun, state)
 	fun(obj, part, state)
 
 	if M.is_multipart(part) then
-	print("bepa")
+		print("bepa")
 		M.multipart_foreach(ffi.cast("GMimeMultipart*", part), fun, state)
 	end
 end
 
 function M.get_signed_part(part)
 	-- local mps = ffi.cast("GMimeMultipartSigned *", part)
-	return galore.g_mime_multipart_get_part(ffi.cast("GMimeMultipart *", part), galore.GMIME_MULTIPART_SIGNED_CONTENT);
+	return galore.g_mime_multipart_get_part(ffi.cast("GMimeMultipart *", part), galore.GMIME_MULTIPART_SIGNED_CONTENT)
 end
 
 local function sig_iterator(siglist)
 	local i = galore.g_mime_signature_list_length(siglist)
 	local j = 0
-	return function ()
+	return function()
 		if j < i then
 			local sig = galore.g_mime_signature_list_get_signature(siglist, j)
 			j = j + 1
@@ -830,15 +832,23 @@ function M.encrypt(ctx, part, id, recipients)
 	for _, rep in pairs(recipients) do
 		galore.g_ptr_array_add(gp_array, ffi.cast("gpointer", rep))
 	end
-	local error = ffi.new('GError*[1]')
+	local error = ffi.new("GError*[1]")
 	local obj = ffi.cast("GMimeObject *", part)
-	local ret = galore.g_mime_multipart_encrypted_encrypt(ctx, obj, true, id, galore.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS, gp_array, error)
+	local ret = galore.g_mime_multipart_encrypted_encrypt(
+		ctx,
+		obj,
+		true,
+		id,
+		galore.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS,
+		gp_array,
+		error
+	)
 	return ret, error
 	-- return ret, ffi.string(galore.print_error(error[0]))
 end
 
 function M.sign(ctx, part, id)
-	local error = ffi.new('GError*[1]')
+	local error = ffi.new("GError*[1]")
 	local obj = ffi.cast("GMimeObject *", part)
 	local ret = galore.g_mime_multipart_signed_sign(ctx, obj, id, error)
 	return ret
@@ -847,10 +857,14 @@ end
 
 function M.verify_signed(part)
 	local signed = ffi.cast("GMimeMultipartSigned *", part)
-	local error = ffi.new('GError*[1]')
+	local error = ffi.new("GError*[1]")
 	local ret
 
-	local signatures = galore.g_mime_multipart_signed_verify(signed, galore.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS, error)
+	local signatures = galore.g_mime_multipart_signed_verify(
+		signed,
+		galore.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS,
+		error
+	)
 	if not signatures then
 		-- XXX convert this into an error
 		print("Failed to verify signed part: " .. error.message)
@@ -866,12 +880,17 @@ end
 
 function M.decrypt_and_verify(part)
 	local encrypted = ffi.cast("GMimeMultipartEncrypted *", part)
-	local error = ffi.new('GError*[1]')
-	local res = ffi.new('GMimeDecryptResult*[1]')
+	local error = ffi.new("GError*[1]")
+	local res = ffi.new("GMimeDecryptResult*[1]")
 	-- do we need to configure a session key?
 	local session = nil
-	local decrypted =
-		galore.g_mime_multipart_encrypted_decrypt(encrypted, galore.GMIME_DECRYPT_ENABLE_KEYSERVER_LOOKUPS, session, res, error)
+	local decrypted = galore.g_mime_multipart_encrypted_decrypt(
+		encrypted,
+		galore.GMIME_DECRYPT_ENABLE_KEYSERVER_LOOKUPS,
+		session,
+		res,
+		error
+	)
 
 	local sign
 	if res then

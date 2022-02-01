@@ -1,8 +1,8 @@
-local nm = require('galore.notmuch')
-local gu = require('galore.gmime-util')
-local u = require('galore.util')
-local conf = require('galore.config')
-local jobs = require('galore.jobs')
+local nm = require("galore.notmuch")
+local gu = require("galore.gmime-util")
+local u = require("galore.util")
+local conf = require("galore.config")
+local jobs = require("galore.jobs")
 
 local M = {}
 
@@ -13,7 +13,7 @@ local M = {}
 function M.message_with_thread(message, f)
 	local id = nm.message_get_thread_id(message)
 	local db = nm.message_get_db(message)
-	local query = nm.create_query(db, "thread:"..id)
+	local query = nm.create_query(db, "thread:" .. id)
 	for thread in nm.query_get_threads(query) do
 		local ret = f(thread)
 		nm.query_destroy(query)
@@ -29,7 +29,7 @@ local function _get_index(messages, m1, i)
 			return true, i
 		end
 		local sorted = nm.message_get_replies(m2)
-		local match, i2 = _get_index(sorted, m1, i+1)
+		local match, i2 = _get_index(sorted, m1, i + 1)
 		if match then
 			return match, i2
 		end
@@ -62,7 +62,7 @@ local function _change_tag(message, str, tags)
 	if start == nil then
 		return
 	end
-	local tag = string.sub(str, start+1, stop)
+	local tag = string.sub(str, start + 1, stop)
 	local status = 0
 	if string.sub(str, start, start) == "+" then
 		if not tags[tag] then
@@ -79,12 +79,12 @@ local function _change_tag(message, str, tags)
 	if stop == #str then
 		return
 	end
-	_change_tag(message, string.sub(str, stop+1, #str))
+	_change_tag(message, string.sub(str, stop + 1, #str))
 end
 
 -- gets a single massage from an unique id
 local function id_get_message(db, id)
-	local q = nm.create_query(db, "id:".. id)
+	local q = nm.create_query(db, "id:" .. id)
 	for m in nm.query_get_messages(q) do
 		return m, q
 	end
@@ -120,7 +120,7 @@ end
 
 local function addr_trim(name, addr)
 	if name ~= nil and name ~= "" then
-		return string.gsub(name,"via .*", "")
+		return string.gsub(name, "via .*", "")
 	end
 	return addr
 end

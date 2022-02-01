@@ -1,4 +1,4 @@
-local ok, cmp = pcall(require, 'cmp')
+local ok, cmp = pcall(require, "cmp")
 if not ok then
 	print("Error can't load cmp needed for address book")
 	return
@@ -8,12 +8,12 @@ local Job = require("plenary.job")
 
 local source = {}
 
-source.query =  "not list and not tag:spam"
+source.query = "not list and not tag:spam"
 
 source.new = function()
-    return setmetatable({cache = {}}, {
-        __index = source,
-    })
+	return setmetatable({ cache = {} }, {
+		__index = source,
+	})
 end
 ---Return this source is available in current context or not. (Optional)
 ---@return boolean
@@ -21,11 +21,10 @@ function source:is_available()
 	return vim.bo.filetype == "mail"
 end
 
-
 ---Return the debug name of this source. (Optional)
 ---@return string
 function source:get_debug_name()
-	return 'notmuch_addr'
+	return "notmuch_addr"
 end
 
 ---Return keyword pattern for triggering completion. (Optional)
@@ -55,25 +54,27 @@ function source:complete(params, callback)
 	if not self.cache[bufnr] then
 		-- add support for custom searches
 		-- remove emails that comes from mailinglist munging
-		Job:new({
-			command = "notmuch",
-			args = {"address", self.query},
-			on_exit = function(j, ret_val)
-				if ret_val ~= 0 then
-					callback(nil)
-					return
-				end
-				local ret = j:result()
-				local tbl = {}
-				for _, mbox in ipairs(ret) do
-					table.insert(tbl, {
-						label = string.format("%s", mbox),
-					})
-				end
-				self.cache[bufnr] = tbl
-				callback(self.cache[bufnr])
-			end
-		}):start()
+		Job
+			:new({
+				command = "notmuch",
+				args = { "address", self.query },
+				on_exit = function(j, ret_val)
+					if ret_val ~= 0 then
+						callback(nil)
+						return
+					end
+					local ret = j:result()
+					local tbl = {}
+					for _, mbox in ipairs(ret) do
+						table.insert(tbl, {
+							label = string.format("%s", mbox),
+						})
+					end
+					self.cache[bufnr] = tbl
+					callback(self.cache[bufnr])
+				end,
+			})
+			:start()
 	else
 		callback(self.cache[bufnr])
 	end
@@ -93,4 +94,4 @@ function source:execute(completion_item, callback)
 	callback(completion_item)
 end
 
-cmp.register_source('notmuch_addr', source.new())
+cmp.register_source("notmuch_addr", source.new())

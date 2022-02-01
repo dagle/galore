@@ -3,8 +3,8 @@
 local v = vim.api
 local u = require("galore.util")
 local nm = require("galore.notmuch")
-local gm = require('galore.gmime')
-local Buffer = require('galore.lib.buffer')
+local gm = require("galore.gmime")
+local Buffer = require("galore.lib.buffer")
 local M = {}
 
 --use vim.split(str, "\n")
@@ -16,10 +16,9 @@ local function split_lines(str)
 	return lines
 end
 
-
 local function collect(iter)
 	local box = {}
-	for k,val in iter do
+	for k, val in iter do
 		box[k] = val
 	end
 	return box
@@ -27,7 +26,7 @@ end
 
 local function filter(func, map)
 	for k, v in pairs(map) do
-		if not func(k,v) then
+		if not func(k, v) then
 			map[k] = nil
 		end
 	end
@@ -36,12 +35,12 @@ end
 local function format(iter)
 	local box = {}
 	for k, val in pairs(iter) do
-		local str = string.gsub(val,"\n", "")
+		local str = string.gsub(val, "\n", "")
 		table.insert(box, k .. ": " .. str)
 	end
 	return box
 end
-local function in_map(k,_)
+local function in_map(k, _)
 	for _, a in ipairs(conf.values.headers) do
 		if a == k then
 			return true
@@ -58,7 +57,7 @@ function M.create(thread, kind)
 		return
 	end
 	-- try to find a buffer first
-	Buffer.create {
+	Buffer.create({
 		name = "galore-message",
 		ft = "mail",
 		kind = kind,
@@ -75,10 +74,10 @@ function M.create(thread, kind)
 
 			-- set keybindings etc, later
 			for bind, func in pairs(conf.values.key_bindings.thread_v) do
-				v.nvim_buf_set_keymap(buffer.handle, 'n', bind, func, { noremap=true, silent=true })
+				v.nvim_buf_set_keymap(buffer.handle, "n", bind, func, { noremap = true, silent = true })
 			end
 		end,
-	}
+	})
 end
 
 -- local function ppMail(message)
@@ -86,28 +85,24 @@ end
 -- end
 
 -- function M.show_message(settings, thread)
-	-- local messages = thread:get_messages()
-	-- for _, message in ipairs(messages) do
-	-- 	local file = messages.get_path(message)
-	-- 	-- feed this into gmime?
-	-- 	for line in io.lines(file) do
-	-- 		print(line)
-	-- 	end
-	-- 	-- print(ppMail())
-	-- end
-	-- -- print(vim.inspect(thread:get_messages()))
+-- local messages = thread:get_messages()
+-- for _, message in ipairs(messages) do
+-- 	local file = messages.get_path(message)
+-- 	-- feed this into gmime?
+-- 	for line in io.lines(file) do
+-- 		print(line)
+-- 	end
+-- 	-- print(ppMail())
+-- end
+-- -- print(vim.inspect(thread:get_messages()))
 -- end
 
-function M.next()
-end
+function M.next() end
 
-function M.prev()
-end
+function M.prev() end
 
-function M.open_attach()
-end
+function M.open_attach() end
 
-function M.save_attach()
-end
+function M.save_attach() end
 
 return M

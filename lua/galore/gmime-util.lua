@@ -1,7 +1,7 @@
-local g = require('galore.gmime')
-local config = require('galore.config')
-local u = require('galore.util')
-local ffi = require('ffi')
+local g = require("galore.gmime")
+local config = require("galore.config")
+local u = require("galore.util")
+local ffi = require("ffi")
 local gm = require("galore.gmime")
 
 local M = {}
@@ -26,25 +26,25 @@ end
 
 -- make a new ref if we a making a reply
 function M.make_ref(message)
-  local ref_str = gm.object_get_header(ffi.cast("GMimeObject *", message), "References")
-  local ref
-  if ref_str then
-    ref = gm.reference_parse(nil, ref_str)
-  else
-    ref = gm.new_ref()
-  end
-  local reply = nil
-  local reply_str = gm.g_mime_object_get_header(ffi.cast("GMimeObject *", message), "Message-ID")
-  if reply_str then
-    reply = gm.reference_parse(nil, reply_str)
-    gm.references_append(ref, reply_str)
-  end
-  return {
-    reference = ref,
-    in_reply_to = reply,
-  }
-  -- add old reply tail of refs
-  -- add set
+	local ref_str = gm.object_get_header(ffi.cast("GMimeObject *", message), "References")
+	local ref
+	if ref_str then
+		ref = gm.reference_parse(nil, ref_str)
+	else
+		ref = gm.new_ref()
+	end
+	local reply = nil
+	local reply_str = gm.g_mime_object_get_header(ffi.cast("GMimeObject *", message), "Message-ID")
+	if reply_str then
+		reply = gm.reference_parse(nil, reply_str)
+		gm.references_append(ref, reply_str)
+	end
+	return {
+		reference = ref,
+		in_reply_to = reply,
+	}
+	-- add old reply tail of refs
+	-- add set
 end
 
 -- Parse a string into a internet_address and then use that to print a string
@@ -91,7 +91,7 @@ end
 
 -- get what email addr we used to recieve this email
 -- useful if you have multiple emails
--- So if you reply to an email, 
+-- So if you reply to an email,
 -- Quite horrible but can't be done in nice way?
 function M.get_from(message)
 	local emails = {}
@@ -169,7 +169,6 @@ local function get_backup(message, list)
 	return nil
 end
 
-
 -- Generate a header for the response
 -- Depending on the mode it will:
 -- Removes our address as reciever
@@ -178,39 +177,39 @@ end
 -- Removes any dups
 function M.respone_headers(message, type)
 	local our = M.get_from(message)
-	local from = get_backup(message, {'reply_to', 'sender', 'from'})
+	local from = get_backup(message, { "reply_to", "sender", "from" })
 	if not type then
 		from = g.show_addresses(from)
 		return {
-			'To: ' .. from,
-			'From: ' .. config.values.from_string(our),
+			"To: " .. from,
+			"From: " .. config.values.from_string(our),
 		}
-	elseif type == 'reply_all' then
-		local to = g.message_get_address(message, 'to')
+	elseif type == "reply_all" then
+		local to = g.message_get_address(message, "to")
 		g.address_list_append(to, from)
 		g.address_list_remove(to, our)
 		-- remove_dups(to)
 
-		local cc = g.message_get_address(message, 'cc')
+		local cc = g.message_get_address(message, "cc")
 		g.address_list_remove(cc, our)
 		-- remove_dups(cc)
 
-		local bcc = g.message_get_address(message, 'bcc')
+		local bcc = g.message_get_address(message, "bcc")
 		g.address_list_remove(bcc, our)
 		-- remove_dups(bcc)
 		return {
-			{'To: ', to},
-			{'Cc: ', cc},
-			{'Bcc: ', bcc},
-			{'From: ', our}
+			{ "To: ", to },
+			{ "Cc: ", cc },
+			{ "Bcc: ", bcc },
+			{ "From: ", our },
 		}
-	elseif type == 'mailinglist' then
+	elseif type == "mailinglist" then
 		local list = get_list()
 		-- maybe return to sender?
 		-- maybe reply_all? (list + to, cc: cc, bcc: bcc)
 		return {
-			{'To: ', list},
-			{'From:', our}
+			{ "To: ", list },
+			{ "From:", our },
 		}
 	end
 	-- remove our from the list of to, cc, and bcc
@@ -219,17 +218,17 @@ end
 
 -- XXX not done
 function M.forward(message, addr)
-		local our = M.get_from(message)
-		-- clean smtp headers
-		-- clear cc and bcc
-		-- clear from
-		-- gm.message_add_mailbox(message, 'from', conf.values.name, our)
+	local our = M.get_from(message)
+	-- clean smtp headers
+	-- clear cc and bcc
+	-- clear from
+	-- gm.message_add_mailbox(message, 'from', conf.values.name, our)
 
-		local sub = gm.message_get_subject(message)
-		sub = u.add_prefix(sub, "Fwd:")
-		gm.message_set_subject(message, sub)
-		-- set message to, to to
-		local message_str = gm.write_message_mem(message)
+	local sub = gm.message_get_subject(message)
+	sub = u.add_prefix(sub, "Fwd:")
+	gm.message_set_subject(message, sub)
+	-- set message to, to to
+	local message_str = gm.write_message_mem(message)
 	-- set the to addr
 end
 

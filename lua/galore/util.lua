@@ -2,7 +2,7 @@ local conf = require("galore.config")
 local M = {}
 
 function M.trim(s)
-   return (s:gsub("^%s*(.-)%s*$", "%1"))
+	return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
 function M.values(iter)
@@ -25,20 +25,20 @@ end
 function M.string_setlength(str, len)
 	local trimmed = vim.fn.strcharpart(str, 0, len)
 	local tlen = vim.fn.strchars(trimmed)
-	return trimmed .. string.rep(" ", len-tlen)
+	return trimmed .. string.rep(" ", len - tlen)
 end
 
 function M.reverse(list)
-	local box= {}
-	for i=#list, 1, -1 do
-		box[#box+1] = list[i]
+	local box = {}
+	for i = #list, 1, -1 do
+		box[#box + 1] = list[i]
 	end
 	return box
 end
 
 function M.upairs(list)
 	local i = 1
-	return function ()
+	return function()
 		if i < #list then
 			local element = list[i]
 			i = i + 1
@@ -48,11 +48,11 @@ function M.upairs(list)
 end
 
 function M.collect(it)
-  local box = {}
-  for v in it do
-    table.insert(box, v)
-  end
-  return box
+	local box = {}
+	for v in it do
+		table.insert(box, v)
+	end
+	return box
 end
 
 function M.add_prefix(str, prefix)
@@ -72,7 +72,7 @@ function M.collect_keys(iter)
 end
 
 function M.basename(path)
-  	return string.gsub(path, ".*/(.*)", "%1")
+	return string.gsub(path, ".*/(.*)", "%1")
 end
 
 function M.save_path(filename, default_path)
@@ -108,7 +108,7 @@ function M.format(part, qoute)
 	return box
 end
 
-M.default_template = function ()
+M.default_template = function()
 	return {
 		"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",
 		"To: ",

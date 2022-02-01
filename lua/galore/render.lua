@@ -1,9 +1,9 @@
-local gm = require('galore.gmime')
-local u = require('galore.util')
-local nm = require('galore.notmuch')
-local ffi = require('ffi')
-local nu = require('galore.notmuch-util')
-local conf = require('galore.config')
+local gm = require("galore.gmime")
+local u = require("galore.util")
+local nm = require("galore.notmuch")
+local ffi = require("ffi")
+local nu = require("galore.notmuch-util")
+local conf = require("galore.config")
 
 local M = {}
 
@@ -25,7 +25,7 @@ end
 
 local function collect(iter)
 	local box = {}
-	for k,val in iter do
+	for k, val in iter do
 		box[k] = val
 	end
 	return box
@@ -36,24 +36,24 @@ local function mark(buffer, ns, content, i)
 	local col_num = 0
 
 	local opts = {
-		virt_text = {{content, "Comment"}},
+		virt_text = { { content, "Comment" } },
 	}
 	vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
 end
 
 local marks = {
-	From = function (buffer, ns, i, nm_message)
+	From = function(buffer, ns, i, nm_message)
 		local tags = table.concat(u.collect(nm.message_get_tags(nm_message)), " ")
 		mark(buffer, ns, "(" .. tags .. ")", i)
 	end,
 	-- this creashes luajit, also it might be a bad idea
 	-- Subject = function (buffer, ns, i, nm_message)
-		-- local count = nu.message_with_thread(nm_message, function (thread)
-		-- 	local tot = nm.thread_get_total_messages(thread)
-		-- 	local current = nu.get_index(thread, nm_message)
-		-- 	return string.format("[%02d/%02d]", current, tot)
-		-- end)
-		-- mark(buffer, ns, count, i)
+	-- local count = nu.message_with_thread(nm_message, function (thread)
+	-- 	local tot = nm.thread_get_total_messages(thread)
+	-- 	local current = nu.get_index(thread, nm_message)
+	-- 	return string.format("[%02d/%02d]", current, tot)
+	-- end)
+	-- mark(buffer, ns, count, i)
 	-- end
 }
 
@@ -63,8 +63,8 @@ function M.show_header(message, buffer, opts, nm_message)
 	local i = 0
 	for _, k in ipairs(conf.values.headers) do
 		if headers[k] then
-			local str = string.gsub(k .. ": " .. headers[k],"\n", "")
-			vim.api.nvim_buf_set_lines(buffer, i, i+1, false, {str})
+			local str = string.gsub(k .. ": " .. headers[k], "\n", "")
+			vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, { str })
 			if marks[k] and opts.ns then
 				marks[k](buffer, opts.ns, i, nm_message)
 			end
@@ -98,7 +98,7 @@ local function part_to_string(part, opts)
 	gm.filter_add(filters, unix)
 
 	if opts.reply then
-		local reply_filter= gm.filter_reply(true)
+		local reply_filter = gm.filter_reply(true)
 		gm.filter_add(filters, reply_filter)
 	end
 
@@ -107,7 +107,6 @@ local function part_to_string(part, opts)
 	return gm.mem_to_string(mem)
 end
 
-
 -- @param message gmime message
 -- @param state table containing the parts
 local function show_message_helper(message, buf, opts, state)
@@ -115,9 +114,9 @@ local function show_message_helper(message, buf, opts, state)
 
 	if opts.reply then
 		local date = gm.message_get_date(message)
-		local author = gm.show_addresses(gm.message_get_address(message, 'from'))
+		local author = gm.show_addresses(gm.message_get_address(message, "from"))
 		local qoute = conf.values.qoute_header(date, author)
-		M.draw(buf, {qoute})
+		M.draw(buf, { qoute })
 	end
 
 	if gm.is_multipart(part) then
@@ -166,12 +165,12 @@ function M.show_part(part, buf, opts, state)
 			local ppart = ffi.cast("GMimePart *", part)
 			local filename = gm.part_filename(ppart)
 			local viewable = gm.part_is_type(part, "text", "*")
-			state.attachments[filename] = {ppart, viewable}
+			state.attachments[filename] = { ppart, viewable }
 			-- table.insert(state.attachments, ppart)
 			-- M.parts[filename] = ppart
 			local str = "- [ " .. filename .. " ]"
 			-- XXX don't do this here!
-			M.draw(buf, {str})
+			M.draw(buf, { str })
 
 			-- -- local str = gm.print_part(part)
 			-- -- v.nvim_buf_set_lines(0, -1, -1, true, split_lines(str))
@@ -225,7 +224,7 @@ function M.show_part(part, buf, opts, state)
 				i = i + 1
 			end
 			M.show_part(saved, buf, opts, state)
-        else
+		else
 			local multi = ffi.cast("GMimeMultipart *", part)
 			local i = 0
 			local j = gm.multipart_len(multi)

@@ -1,7 +1,7 @@
 local M = {}
 
 function M.cb(fun)
-  return string.format("<cmd>lua require'galore.callback'.call('%s')<cr>", fun)
+	return string.format("<cmd>lua require'galore.callback'.call('%s')<cr>", fun)
 end
 -- function M.cb2(fun)
 --   return string.format("<cmd>lua require'galore.callback'.%s<cr>", fun)
@@ -32,26 +32,28 @@ M.values = {
 		return M.values.name .. " <" .. email .. ">"
 	end,
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
-	show_html = function (text) -- maybe it should give you a buffer etc to render better
+	show_html = function(text) -- maybe it should give you a buffer etc to render better
 		return text
 	end,
-	signature = function ()
+	signature = function()
 		return nil
 	end,
-	tag_unread = function (_)
-	end,
+	tag_unread = function(_) end,
 	sign = false,
 	encrypt = false,
 	gpg_id = "Testi McTest",
-	headers = {
-		'From', 'To', 'Cc', 'Date', 'Subject',
+	headers = { -- order is important
+		"From",
+		"To",
+		"Cc",
+		"Date",
+		"Subject",
 	},
 	send_cmd = function(to, from)
-		from = from or 'default'
-		return "msmtp", {"-a", from, to}
+		from = from or "default"
+		return "msmtp", { "-a", from, to }
 	end,
-	show_message_descripiton = function(_, _, _, _, _, _, _)
-	end,
+	show_message_descripiton = function(_, _, _, _, _, _, _) end,
 	-- need to support modes
 	key_bindings = {
 		global = {
@@ -92,7 +94,7 @@ M.values = {
 				["<C-p>"] = M.cb("prev"),
 			},
 		},
-		thread_view= {
+		thread_view = {
 			["r"] = M.cb("message_reply"),
 			["q"] = M.cb("close_message"),
 		},
@@ -102,7 +104,7 @@ M.values = {
 				["<leader>ma"] = M.cb("compose_add_attachment"),
 			},
 		},
-	}
+	},
 }
 
 -- M.runtime = {}
