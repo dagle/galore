@@ -32,8 +32,6 @@ end
 ---If this is ommited, nvim-cmp will use default keyword pattern. See |cmp-config.completion.keyword_pattern|
 ---@return string
 function source:get_keyword_pattern()
-	-- maybe only lines that start with "To:, Cc:" etc
-	-- return [[To:.\+]]
 	return [[\k\+]]
 end
 

@@ -141,8 +141,6 @@ end
 function M.next()
 	local mes = thread_message:next()
 	local ref = thread_message:ref()
-	-- local mes = mb:select()
-	-- local ref = mb:ref()
 	conf.values.tag_unread(mes)
 	message_view.create(mes, conf.values.message_open, ref)
 end
@@ -150,8 +148,6 @@ end
 function M.prev()
 	local mes = thread_message:prev()
 	local ref = thread_message:ref()
-	-- local mes = mb:select()
-	-- local ref = mb:ref()
 	conf.values.tag_unread(mes)
 	message_view.create(mes, conf.values.message_open, ref)
 end

@@ -619,8 +619,6 @@ function M.header_iter(message)
 				return key, value
 			end
 		end
-	else
-		P("Couldn't iterate header")
 	end
 end
 
