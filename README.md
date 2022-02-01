@@ -26,7 +26,7 @@ Other than the basic notmuch features Galore has support for:
 - cmp for address completion
 - telescope for fuzzy searching emails
 - encrypting and decrypting emails
-- singing and verifying emails
+- signing and verifying emails
 
 ## Installation
 WIP, mail galore is under heavy development, expect crashes and thing changing.
