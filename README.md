@@ -54,6 +54,8 @@ use {'
 ```
 You need to install **telescope** and **cmp** if you want support for that
 
+For livesearch support in telescope you need to install [nm-livesearch](https://github.com/dagle/nm-livesearch)
+
 
 ## Usage
 After installing galore, you need to add the following to init:
@@ -72,7 +74,7 @@ or
 
 By default, galore tries to read values from the notmuch config file.
 You can also override options by passing values to setup, look in config.lua
-for default values. (will be documented in the future)
+for default values (will be documented in the future).
 
 ### Telescope
 Galore exports the following telescope functions (require 'galore.telescope' to use them)
