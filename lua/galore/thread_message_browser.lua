@@ -1,4 +1,4 @@
--- A thread view after, after you have done a search this is what is displayed
+-- A thread view after, after ou have done a search this is what is displayed
 
 local M = {}
 
@@ -7,6 +7,7 @@ local nm = require('galore.notmuch')
 local u = require('galore.util')
 local config = require('galore.config')
 local Buffer = require('galore.lib.buffer')
+local gu = require('galore.gmime-util')
 M.State = {}
 M.Cache = {}
 M.Line = nil
@@ -14,27 +15,21 @@ M.Threads = {}
 
 M.threads_buffer = nil
 
+-- stop using M, use self!
 local function get_message(message, level, prestring, i, tot)
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
-	local from = u.string_setlength(nm.message_get_header(message, "From"), 22)
+	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_date(message))
 	local ppdate = os.date("%Y-%m-%d ", date)
 	return {level, prestring, i, tot, ppdate, from, sub, tags}
 end
-
 
 local function sort(messages)
 	return messages
 end
 
 local function show_messages(messages, level, prestring, num, tot, box, state)
-	-- clean this up
-	local show_message = function (lmessage, llevel, lprestring, lnum, ltot, lbox, lstate)
-		local sorted = sort(nm.message_get_replies(lmessage))
-		local k = show_messages(sorted, llevel+1, lprestring, lnum, ltot, lbox, lstate)
-		return k
-	end
 	local collected = u.collect(messages)
 	local j = 1
 	for _, message in ipairs(collected) do
@@ -55,7 +50,8 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 		else
 			newstring = prestring .. "  "
 		end
-		num = show_message(message, level, newstring, num+1, tot, box, state)
+		local sorted = sort(nm.message_get_replies(message))
+		num = show_messages(sorted, level+1, newstring, num+1, tot, box, state)
 		j = j + 1
 	end
 	return num
@@ -71,6 +67,10 @@ function M.to_virtualline(threads, linenr)
 	return i
 end
 
+-- XXX TODO
+function M.to_realline(threads, linenr)
+end
+
 function M:toggle(linenr)
 	local line = self.to_virtualline(self.Threads, linenr)
 	for _, val in ipairs(self.Threads) do
@@ -84,19 +84,9 @@ end
 -- this should be move to config, it needs an easier interface
 local function ppMessage(messages)
 	local box = {}
-	local i = 1
 	for _, message in ipairs(messages) do
-		local  _, prestring, num, tot, date, author, sub, tags = unpack(message)
-		local t = table.concat(tags, " ")
-		local formated = ""
-		if num > 1 then
-			formated = string.format("%s [%02d/%02d] %s; %s▶ (%s)", date, num, tot, author, prestring, t)
-		else
-			formated = string.format("%s [%02d/%02d] %s; %s (%s)", date, num, tot, author, sub, t)
-		end
+		local formated = config.values.show_message_description(unpack(message))
 		table.insert(box, formated)
-	    formated = string.gsub(formated, "\n", "")
-		i = i + 1
 	end
 	return box
 end
@@ -122,17 +112,17 @@ local function get_messages(db, search)
 end
 
 local function threads_to_buffer(threads)
-	local i = 2
+	-- local i = 2
 	M.threads_buffer:clear_sign_group("thread-expand")
 	for _, item in ipairs(threads) do
 		if item.expand then
 			M.threads_buffer:set_lines(-1, -1, true, item.messages)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
-			i = i + #item.messages
+			-- i = i + #item.messages
 		else
 			M.threads_buffer:set_lines(-1, -1, true, {item.messages[1]})
 			-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
-			i = i + 1
+			-- i = i + 1
 		end
 	end
 	M.threads_buffer:set_lines(0, 1, true, {})

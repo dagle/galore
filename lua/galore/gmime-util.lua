@@ -47,6 +47,27 @@ function M.make_ref(message)
   -- add set
 end
 
+-- Parse a string into a internet_address and then use that to print a string
+-- this function should be higher order and that way, the user is in charge of making it look nice
+function M.show_addr(addr, f, maxlen)
+	maxlen = maxlen or 1024
+	local first = true
+	local i = maxlen
+	local names = {}
+	-- local urls = {}
+	for name, mail in gm.internet_address_list(nil, addr) do
+		local item = f(name, mail)
+		if not first and #item > i then
+			break
+		end
+		table.insert(names, item)
+		i = i - #item
+		first = false
+	end
+	return u.string_setlength(table.concat(names, " "), maxlen)
+	-- gm.internet_address_list_parse(nil, str)
+end
+
 function M.viewable(part, control_bits)
 	if gm.part_is_type(part, "text", "*") then
 		return true
