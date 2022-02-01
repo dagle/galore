@@ -187,7 +187,6 @@ M.notmuch_search = function(opts)
 			action_set.select:replace(open_search)
 			return true
 		end,
-		sorter = teleconf.file_sorter(opts),
 	}):find()
 end
 
@@ -216,7 +215,6 @@ local search_builder = function(opts)
 			action_set.select:replace(open_draft)
 			return true
 		end,
-		-- sorter = sorters.get_fzy_sorter,
 	}):find()
 	nm.query_destroy(q)
 end
