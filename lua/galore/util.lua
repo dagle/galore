@@ -5,6 +5,14 @@ function M.trim(s)
    return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
+function M.values(iter)
+	local box = {}
+	for v in iter do
+		box[v] = true
+	end
+	return box
+end
+
 function M.contains(list, item)
 	for _, l in ipairs(list) do
 		if l == item then

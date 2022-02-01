@@ -17,7 +17,6 @@ M.State = {}
 M.savef_buffer = nil
 
 local function get_tags(db)
-  -- local db = nm.db_open(db_path, 0)
   local box = {}
   for tag in nm.db_get_all_tags(db) do
     local search = "tag:".. tag
@@ -25,7 +24,6 @@ local function get_tags(db)
 	local i = nm.query_count_messages(q)
     table.insert(box, {i, tag, search})
   end
-  -- nm.db_close(db)
   return box
 end
 
