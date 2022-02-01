@@ -18,6 +18,7 @@ local r = require("galore.render")
 local gm = require("galore.gmime")
 local nm = require("galore.notmuch")
 local conf = require("galore.config")
+local message_view = require("galore.message_view")
 
 local M = {}
 
@@ -116,11 +117,8 @@ local notmuch_picker = function(opts)
 		})
 end
 
-local function open_path(bufnr, type, path, fun)
-	local message = gm.parse_message(path)
+local function type_to_kind(type)
 	local mode = "replace"
-	actions.close(bufnr)
-
 	if type == "default" then
 		mode = "replace"
 	elseif type == "horizontal" then
@@ -130,6 +128,14 @@ local function open_path(bufnr, type, path, fun)
 	elseif type == "tabedit" then
 		mode = "tab"
 	end
+	return mode
+end
+
+local function open_path(bufnr, type, path, fun)
+	local message = gm.parse_message(path)
+	actions.close(bufnr)
+	local mode = type_to_kind(type)
+
 	fun(mode, message)
 end
 
@@ -138,9 +144,16 @@ local function open_draft(bufnr, type)
 	open_path(bufnr, type, entry.value, compose.create)
 end
 
-local function open_search(bufnr, type)
+local function compose_search(bufnr, type)
 	local entry = action_state.get_selected_entry()
 	open_path(bufnr, type, entry.value.filename, compose.create)
+end
+
+local function open_search(bufnr, type)
+	local entry = action_state.get_selected_entry()
+	actions.close(bufnr)
+	local mode = type_to_kind(type)
+	message_view.create(entry.value.filename, mode)
 end
 
 -- XXX honor opts
@@ -184,6 +197,7 @@ M.notmuch_search = function(opts)
 			end,
 		}),
 		attach_mappings = function()
+			-- action_set.select:replace(compose_search)
 			action_set.select:replace(open_search)
 			return true
 		end,
