@@ -133,9 +133,9 @@ local function remove_dups(list)
 	local tbl = {}
 	for i, addr in g.addresses_iter(list) do
 		for j, addr2 in g.addresses_iter(list) do
-			local apa = g.address_to_string(addr)
-			local bepa = g.address_to_string(addr2)
-			if apa == bepa and i ~= j then
+			local string_addr = g.address_to_string(addr)
+			local string_addr2 = g.address_to_string(addr2)
+			if string_addr == string_addr2 and i ~= j then
 				table.insert(tbl, j)
 			end
 		end

@@ -351,8 +351,8 @@ function M.internet_address_list(opt, str)
 	return function()
 		if i < galore.internet_address_list_length(list) then
 			local addr = galore.internet_address_list_get_address(list, i)
-			local apa = ffi.cast("InternetAddressMailbox *", addr)
-			local email = ffi.string(galore.internet_address_mailbox_get_addr(apa))
+			local mb = ffi.cast("InternetAddressMailbox *", addr)
+			local email = ffi.string(galore.internet_address_mailbox_get_addr(mb))
 			local name = ffi.string(galore.internet_address_get_name(addr))
 			i = i + 1
 			return name, email
@@ -779,7 +779,6 @@ function M.message_foreach(message, fun, state)
 	fun(obj, part, state)
 
 	if M.is_multipart(part) then
-		print("bepa")
 		M.multipart_foreach(ffi.cast("GMimeMultipart*", part), fun, state)
 	end
 end
