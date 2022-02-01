@@ -6,7 +6,7 @@ local u = require("galore.util")
 local nm = require("galore.notmuch")
 local gm = require('galore.gmime')
 local Buffer = require('galore.lib.buffer')
-local conf = require('galore.config')
+local config = require('galore.config')
 local Path = require('plenary.path')
 -- local attach_view = require('galore.attach_view')
 local M = {}
@@ -18,7 +18,6 @@ M.state = {}
 M.parts = {}
 
 local function _view_attachment(filename, kind)
-	-- kind = kind or "floating"
 	kind = kind or "current"
 	if M.parts[filename] then
 		if M.parts[filename][2] then
@@ -43,12 +42,13 @@ local function _view_attachment(filename, kind)
 	print("No attachment with that name")
 end
 
-local function raw_mode(nm_message)
+local function raw_mode(nm_message, kind)
+	kind = kind or "floating"
 	local filename = nm.message_get_filename(nm_message)
 	local buf = Buffer.create {
 		name = filename,
 		ft = 'mail',
-		kind = "popup",
+		kind = "floating",
 		-- ref = ref,
 		cursor = "top",
 		init = function(buffer)
@@ -108,31 +108,36 @@ function M.update(message)
 		return
 	end
 	local buffer = M.message_view_buffer
-	vim.api.nvim_buf_set_option(buffer.handle, "modifiable", true)
+	buffer:unlock()
 	M.message_view_buffer:clear()
 	local filename = nm.message_get_filename(message)
-	-- if filename or filename ~= "" then
 	if filename then
 		local gmessage = gm.parse_message(filename)
 		if gmessage then
-			M.ns = vim.api.nvim_create_namespace('message-view')
+			M.ns = vim.api.nvim_create_namespace('galore-message-view')
 			M.message = gmessage
 			r.show_header(gmessage, buffer.handle, {ns = M.ns}, message)
 			M.parts = r.show_message(gmessage, buffer.handle, {})
-			vim.api.nvim_buf_set_option(buffer.handle, "modifiable", false)
 		end
 	end
+	buffer:lock()
+end
+
+local function redraw(message)
+	M.message_view_buffer:focus()
+	-- this is bad
+	vim.api.nvim_buf_clear_namespace(M.message_view_buffer.handle, M.ns, 0, -1)
+	M.update(message)
 end
 
 -- TODO: How do we make it so it's not global? But still feel nice
 -- should do messages instead of 1 message?
 -- that way it works for threads and single messages
-function M.create(message, kind, ref)
+function M.create(message, kind, parent)
 	M.state = message
 
 	if M.message_view_buffer then
-		M.message_view_buffer:focus()
-		M.update(message)
+		redraw(message)
 		return
 	end
 	-- try to find a buffer first
@@ -140,15 +145,12 @@ function M.create(message, kind, ref)
 		name = "galore-message",
 		ft = "mail",
 		kind = kind,
-		ref = ref,
+		parent = parent,
 		cursor = "top",
+		mappings = config.values.key_bindings.message_view,
 		init = function(buffer)
 			M.message_view_buffer = buffer
 			M.update(message)
-
-			for bind, func in pairs(conf.values.key_bindings.message_view) do
-				v.nvim_buf_set_keymap(buffer.handle, 'n', bind, func, { noremap=true, silent=true })
-			end
 		end,
 	}
 end
@@ -162,11 +164,15 @@ function M.message_ref()
 	return M.message
 end
 
-function M.next()
-end
-
-function M.prev()
-end
+-- function M.next()
+-- 	local message = M.message_view_buffer.parent:next()
+-- 	redraw(message)
+-- end
+--
+-- function M.prev()
+-- 	local message = M.message_view_buffer.parent:prev()
+-- 	redraw(message)
+-- end
 
 function M.open_attach()
 end
