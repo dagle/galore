@@ -102,41 +102,42 @@ function M.save_attach()
 	end)
 end
 
-function M.update(message)
+function M.update(file)
 	if not M.message_view_buffer then
 		return
 	end
 	local buffer = M.message_view_buffer
 	buffer:unlock()
 	M.message_view_buffer:clear()
-	local filename = nm.message_get_filename(message)
-	if filename then
-		local gmessage = gm.parse_message(filename)
+	-- local filename = nm.message_get_filename(file)
+	-- if filename then
+		local gmessage = gm.parse_message(file)
 		if gmessage then
 			M.ns = vim.api.nvim_create_namespace("galore-message-view")
 			M.message = gmessage
-			r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
+			-- r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
+			r.show_header(gmessage, buffer.handle, nil, file)
 			M.parts = r.show_message(gmessage, buffer.handle, {})
 		end
-	end
+	-- end
 	buffer:lock()
 end
 
-local function redraw(message)
+local function redraw(file)
 	M.message_view_buffer:focus()
 	-- this is bad
 	vim.api.nvim_buf_clear_namespace(M.message_view_buffer.handle, M.ns, 0, -1)
-	M.update(message)
+	M.update(file)
 end
 
 -- TODO: How do we make it so it's not global? But still feel nice
 -- should do messages instead of 1 message?
 -- that way it works for threads and single messages
-function M.create(message, kind, parent)
-	M.state = message
+function M.create(file, kind, parent)
+	M.state = file
 
 	if M.message_view_buffer then
-		redraw(message)
+		redraw(file)
 		return
 	end
 	-- try to find a buffer first
@@ -149,7 +150,7 @@ function M.create(message, kind, parent)
 		mappings = config.values.key_bindings.message_view,
 		init = function(buffer)
 			M.message_view_buffer = buffer
-			M.update(message)
+			M.update(file)
 		end,
 	})
 end

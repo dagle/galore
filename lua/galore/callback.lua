@@ -12,6 +12,7 @@ local compose = require("galore.compose")
 local gu = require("galore.gmime-util")
 local nu = require("galore.notmuch-util")
 local tele = require("galore.telescope")
+local nm = require("galore.notmuch")
 
 local M = {}
 
@@ -37,7 +38,8 @@ function M.select_message()
 	-- local mes = mb:select()
 	-- local ref = mb:ref()
 	conf.values.tag_unread(mes)
-	message_view.create(mes, conf.values.message_open, ref)
+	local file = nm.message_get_filename(mes)
+	message_view.create(file, conf.values.message_open, ref)
 end
 
 function M.message_reply()
@@ -138,14 +140,16 @@ function M.next()
 	local mes = thread_message:next()
 	local ref = thread_message:ref()
 	conf.values.tag_unread(mes)
-	message_view.create(mes, conf.values.message_open, ref)
+	local file = nm.message_get_filename(mes)
+	message_view.create(file, conf.values.message_open, ref)
 end
 
 function M.prev()
 	local mes = thread_message:prev()
 	local ref = thread_message:ref()
 	conf.values.tag_unread(mes)
-	message_view.create(mes, conf.values.message_open, ref)
+	local file = nm.message_get_filename(mes)
+	message_view.create(file, conf.values.message_open, ref)
 end
 
 function M.toggle()
