@@ -104,7 +104,6 @@ local notmuch_picker = function(opts)
 		table.insert(data, {m, display})
 	end
 	return query, finders.new_table {
-	-- return finders.new_table {
 		results = data,
 		entry_maker = function (entry)
 			return {
@@ -116,16 +115,13 @@ local notmuch_picker = function(opts)
 	}
 end
 
-local function open_draft(bufnr, type)
-	local entry = action_state.get_selected_entry()
-	-- maybe we can cache this, maybe it's not needed
-	local message = gm.parse_message(entry.value)
-	local mode = "current"
+local function open_path(bufnr, type, path, fun)
+	local message = gm.parse_message(path)
+	local mode = "replace"
 	actions.close(bufnr)
 
-	-- XXX We should merge these to be the same
 	if type == "default" then
-		mode = "current"
+		mode = "replace"
 	elseif type == "horizontal" then
 		mode = "split"
 	elseif type == "vertical" then
@@ -133,10 +129,64 @@ local function open_draft(bufnr, type)
 	elseif type == "tabedit" then
 		mode = "tab"
 	end
-	compose.create(mode, message)
+	fun(mode, message)
+end
+
+local function open_draft(bufnr, type)
+	local entry = action_state.get_selected_entry()
+	open_path(bufnr, type, entry.value, compose.create)
+end
+
+local function open_search(bufnr, type)
+	local entry = action_state.get_selected_entry()
+	open_path(bufnr, type, entry.value.filename, compose.create)
+end
+
+-- XXX honor opts
+local function entry_maker(opts)
+	return function(entry)
+		local data = vim.fn.json_decode(entry)
+		return {
+			value = data,
+			display = data.subject,
+			ordinal = data.subject, -- this is bad
+        }
+	end
 end
 
 M.notmuch_search = function(opts)
+  opts = opts or {}
+  local live_notmucher = finders.new_job(function(prompt)
+    if not prompt or prompt == "" then
+      return nil
+    end
+    return vim.tbl_flatten { "nm-livesearch", "message", prompt}
+  end, entry_maker(opts), opts.max_results, opts.cwd)
+
+  pickers.new(opts, {
+    prompt_title = "Notmuch search",
+    results_title = "Notmuch match",
+	finder = live_notmucher,
+    previewer = previewers.new_buffer_previewer {
+		title = opts.preview_title or "Notmuch preview",
+		-- keep_last_buf = true,
+		define_preview = function(self, entry, status)
+			local filename = entry.value.filename
+			local message = gm.parse_message(filename)
+			r.show_header(message, self.state.bufnr, nil, entry.value)
+			r.show_message(message, self.state.bufnr, {})
+			putils.highlighter(self.state.bufnr, "mail")
+		end,
+	},
+	attach_mappings = function()
+		action_set.select:replace(open_search)
+		return true
+	end,
+    sorter = teleconf.file_sorter(opts),
+  }):find()
+end
+
+local search_builder = function(opts)
   opts = opts or {}
   local q, picker = notmuch_picker(opts)
   pickers.new(opts, {
@@ -161,19 +211,19 @@ M.notmuch_search = function(opts)
 		action_set.select:replace(open_draft)
 		return true
 	end,
-	-- free the query
-    sorter = teleconf.file_sorter(opts),
+    -- sorter = sorters.get_fzy_sorter,
   }):find()
+  nm.query_destroy(q)
 end
 
 M.load_draft = function(opts)
 	opts = opts or {}
 	local search = opts.search or ""
-	opts.search = search-- .. "tag:draft" -- XXX change back
+	opts.search = search .. "tag:draft"
     opts.prompt_title = "Load draft"
 	opts.results_title = "Drafts"
 	opts.preview_title = "Draft preview"
-	M.notmuch_search(opts)
+	search_builder(opts)
 end
 
 M.attach_file = function(opts, func)
