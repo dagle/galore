@@ -21,7 +21,7 @@ M.values = {
 	threads_ratio = 0.6, -- just an idea to make it a bit
 	message_open = "split",
 	bind_prefix = "", -- maybe
-	expand_threads = true,
+	thread_browser = true,
 	make_html = false,
 	autocrypt = true,
 	reverse_thread = true,
@@ -71,8 +71,10 @@ M.values = {
 		},
 		thread_browser = {
 			n = {
-				["<CR>"] = M.cb("select_thread"),
+				["a"] = M.cb("change_tag"),
+				["<CR>"] = M.cb("select_message"),
 				["q"] = M.cb("close_thread"),
+				["<tab>"] = M.cb("toggle"),
 			},
 		},
 		message_browser = {

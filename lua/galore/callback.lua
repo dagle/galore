@@ -2,7 +2,7 @@ local job = require("galore.jobs")
 local u = require("galore.util")
 local util = require("galore.util")
 local saved = require("galore.saved")
-local threads = require("galore.thread_browser")
+-- local threads = require("galore.thread_browser")
 local thread_message = require("galore.thread_message_browser")
 local conf = require("galore.config")
 local mb = require("galore.message_browser")
@@ -19,18 +19,19 @@ local M = {}
 function M.select_search()
 	local search = saved:select()[3]
 	local ref = saved:ref()
-	if conf.values.expand_threads then
+	if conf.values.thread_browser then
 		thread_message.create(search, conf.values.threads_open, ref)
 	else
-		-- threads.create(search, conf.values.threads_open)
+	mb.create(search, conf.values.threads_open)
+	-- remove thread-view, thread-message view is just better(tm)
+	-- threads.create(search, conf.values.threads_open)
 	end
-	-- mb.create(search, "current")
 end
 
-function M.select_thread()
-	local thr = threads:select()
-	thread_view.create(thr[1], "current")
-end
+-- function M.select_thread()
+-- 	local thr = threads:select()
+-- 	thread_view.create(thr[1], "current")
+-- end
 
 function M.select_message()
 	local mes = thread_message:select()
