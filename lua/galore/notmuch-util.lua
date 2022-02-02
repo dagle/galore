@@ -119,6 +119,7 @@ local function tag_unread(message)
 end
 
 local function addr_trim(name, addr)
+	-- return addr
 	if name ~= nil and name ~= "" then
 		return string.gsub(name, "via .*", "")
 	end
@@ -128,7 +129,8 @@ end
 local function message_description(level, tree, thread_num, thread_total, date, from, subtitle, tags)
 	local t = table.concat(tags, " ")
 	local formated
-	from = gu.show_addr(from, addr_trim, 25)
+	-- from = gu.show_addr(from, addr_trim, 25)
+	from = u.string_setlength(from, 25)
 	if thread_num > 1 then
 		formated = string.format("%s [%02d/%02d] %s; %s▶ (%s)", date, thread_num, thread_total, from, tree, t)
 	else
