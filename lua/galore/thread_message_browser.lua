@@ -29,6 +29,7 @@ local function sort(messages)
 	return messages
 end
 
+-- maybe rewrite this is C or rust or something?
 local function show_messages(messages, level, prestring, num, tot, box, state)
 	local collected = u.collect(messages)
 	local j = 1
@@ -120,8 +121,10 @@ local function threads_to_buffer(threads)
 			-- i = i + #item.messages
 		else
 			M.threads_buffer:set_lines(-1, -1, true, { item.messages[1] })
-			-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
-			-- i = i + 1
+			if #item.messages ~= 1 then
+				-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
+				-- i = i + 1
+			end
 		end
 	end
 	M.threads_buffer:set_lines(0, 1, true, {})
@@ -161,7 +164,7 @@ function M.create(search, kind, parent)
 		kind = kind,
 		cursor = "top",
 		parent = parent,
-		mappings = config.values.key_bindings.message_browser,
+		mappings = config.values.key_bindings.thread_browser,
 		init = function(buffer)
 			M.threads_buffer = buffer
 			M.refresh(search)
