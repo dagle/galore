@@ -100,9 +100,9 @@ local notmuch_picker = function(opts)
 	local query = nm.create_query(db, search)
 	for m in nm.query_get_messages(query) do
 		local display = nm.message_get_header(m, "Subject")
-		-- local filename = nm.message_get_filename(m)
+		local filename = nm.message_get_filename(m)
 		-- table.insert(data, {filename, display})
-		table.insert(data, { m, display })
+		table.insert(data, { filename, display })
 	end
 	return query,
 		finders.new_table({
@@ -141,7 +141,9 @@ end
 
 local function open_draft(bufnr, type)
 	local entry = action_state.get_selected_entry()
-	open_path(bufnr, type, entry.value, compose.create)
+	-- local path = nm.message_get_filename(entry.value)
+	local path = entry.value
+	open_path(bufnr, type, path, compose.create)
 end
 
 local function compose_search(bufnr, type)
@@ -168,6 +170,14 @@ local function entry_maker(opts)
 	end
 end
 
+local function mime_preview(buf, path)
+	local message = gm.parse_message(path)
+	-- local ns = vim.api.nvim_create_namespace("message-view")
+	r.show_header(message, buf, nil, nil)
+	r.show_message(message, buf, {})
+	putils.highlighter(buf, "mail")
+end
+
 M.notmuch_search = function(opts)
 	opts = opts or {}
 	local live_notmucher = finders.new_job(function(prompt)
@@ -190,10 +200,7 @@ M.notmuch_search = function(opts)
 			-- keep_last_buf = true,
 			define_preview = function(self, entry, status)
 				local filename = entry.value.filename
-				local message = gm.parse_message(filename)
-				r.show_header(message, self.state.bufnr, nil, entry.value)
-				r.show_message(message, self.state.bufnr, {})
-				putils.highlighter(self.state.bufnr, "mail")
+				mime_preview(self.state.bufnr, filename)
 			end,
 		}),
 		attach_mappings = function()
@@ -215,14 +222,9 @@ local search_builder = function(opts)
 		previewer = previewers.new_buffer_previewer({
 			title = opts.preview_title or "Notmuch preview",
 			keep_last_buf = true,
-			define_preview = function(self, entry, status)
-				local filename = nm.message_get_filename(entry.value)
-				local message = gm.parse_message(filename)
-				-- local message = gm.parse_message(entry.value)
-				local ns = vim.api.nvim_create_namespace("message-view")
-				r.show_header(message, self.state.bufnr, { ns = ns }, entry.value)
-				r.show_message(message, self.state.bufnr, {})
-				putils.highlighter(self.state.bufnr, "mail")
+			define_preview = opts.preview or function(self, entry, status)
+				local filename = entry.value
+				mime_preview(self.state.bufnr, filename)
 			end,
 		}),
 		attach_mappings = function()
@@ -240,6 +242,10 @@ M.load_draft = function(opts)
 	opts.prompt_title = "Load draft"
 	opts.results_title = "Drafts"
 	opts.preview_title = "Draft preview"
+	opts.preview = function (self, entry, status)
+		local filename = entry.value
+		vim.api.nvim_buf_set_lines(self.state.bufnr, 0, 0, true, {"apa"})
+	end
 	search_builder(opts)
 end
 
