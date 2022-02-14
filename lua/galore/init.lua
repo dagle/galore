@@ -1,6 +1,7 @@
 local config = require("galore.config")
 local saved = require("galore.saved")
-local cmp = require("galore.cmp")
+require("galore.cmp_nm")
+require("galore.cmp_vcard")
 local nu = require("galore.notmuch-util")
 require("galore.gmime").init()
 
