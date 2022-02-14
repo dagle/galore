@@ -47,12 +47,25 @@ function M.upairs(list)
 	end
 end
 
-function M.collect(it)
+-- Go over any iterator and just put all the values in an array
+-- This can be slow but great for toying around
+--- @param it function iterator to loop over
+--- @param t? table
+--- @param i? number index
+--- @return array
+function M.collect(it, t, i)
 	local box = {}
-	for v in it do
-		table.insert(box, v)
+	if t == nil then
+		for v in it do
+			table.insert(box, v)
+		end
+		return box
+	else
+		for _, v in it, t, i do
+			table.insert(box, v)
+		end
+		return box
 	end
-	return box
 end
 
 function M.add_prefix(str, prefix)
@@ -75,22 +88,21 @@ function M.basename(path)
 	return string.gsub(path, ".*/(.*)", "%1")
 end
 
-function M.save_path(filename, default_path)
-	local path
+function M.is_absolute(path)
+	return path:sub(1,1) == "/"
+end
+
+function M.save_path(path, default_path)
+	path = vim.fn.expand(path)
 	default_path = default_path or ""
-	if M.is_absolute(filename) then
-		path = filename
-	else
-		path = default_path .. filename
+	if not M.is_absolute(path) then
+		path = default_path .. path
 	end
 	return path
 end
 
 function M.split_lines(str)
 	local lines = {}
-	-- should convert everything to unix from dos.
-	-- that we don't need to look for \r
-	-- for s in str:gmatch("[^\n]+") do
 	for s in str:gmatch("[^\r\n]+") do
 		table.insert(lines, s)
 	end
