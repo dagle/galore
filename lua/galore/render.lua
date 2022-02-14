@@ -169,7 +169,7 @@ function M.show_part(part, buf, opts, state)
 			-- table.insert(state.attachments, ppart)
 			-- M.parts[filename] = ppart
 			local str = "- [ " .. filename .. " ]"
-			-- XXX don't do this here!
+			-- this should be an extmark
 			M.draw(buf, { str })
 
 			-- -- local str = gm.print_part(part)
@@ -189,8 +189,14 @@ function M.show_part(part, buf, opts, state)
 			end
 		end
 	elseif gm.is_multipart(part) then
+		-- Can we get a way to show this
 		if gm.is_multipart_encrypted(part) then
-			-- display as "encrypted part, until it's decrypted, then refresh the renderer"
+			if opts.preview then
+				-- good enough for now
+				-- M.draw(buf, {"Encrypted!"})
+				opts.preview(buf, "Encrypted")
+				return
+			end
 			local de_part, sign = gm.decrypt_and_verify(part)
 			if sign then
 				-- mark("sign confirmed")

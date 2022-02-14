@@ -16,13 +16,18 @@ local action_set = require("telescope.actions.set")
 
 local r = require("galore.render")
 local gm = require("galore.gmime")
+local gu = require("galore.gmime-util")
 local nm = require("galore.notmuch")
 local conf = require("galore.config")
 local message_view = require("galore.message_view")
+local ts_utils = require "telescope.utils"
+local strings = require "plenary.strings"
+
 
 local M = {}
 
 -- parses the tree and outputs the parts
+-- this should use select
 -- XXX todo, a bit over the top atm
 -- M.parts_browser = function (message)
 -- -- function M.show_part(part, buf, opts, state)
@@ -139,16 +144,25 @@ local function open_path(bufnr, type, path, fun)
 	fun(mode, message)
 end
 
+local function load_draft(kind, message)
+	local ref = gu.get_ref(message)
+	compose.create(kind, message, ref)
+end
+
+local function load_compose(kind, message)
+	local ref = gu.make_ref(message)
+	compose.create(kind, message, ref)
+end
+
 local function open_draft(bufnr, type)
 	local entry = action_state.get_selected_entry()
-	-- local path = nm.message_get_filename(entry.value)
 	local path = entry.value
-	open_path(bufnr, type, path, compose.create)
+	open_path(bufnr, type, path, load_draft)
 end
 
 local function compose_search(bufnr, type)
 	local entry = action_state.get_selected_entry()
-	open_path(bufnr, type, entry.value.filename, compose.create)
+	open_path(bufnr, type, entry.value.filename, load_compose)
 end
 
 local function open_search(bufnr, type)
@@ -170,11 +184,53 @@ local function entry_maker(opts)
 	end
 end
 
-local function mime_preview(buf, path)
+-- Something like like this.
+-- Should take a hight because not all of the
+-- email might be encrypted etc
+local function encrypted(buf, winid, message)
+  local height = vim.api.nvim_win_get_height(winid)
+  local width = vim.api.nvim_win_get_width(winid)
+  local fillchar = "╱"
+   vim.api.nvim_buf_set_lines(
+    buf,
+    -1,
+    -1,
+    false,
+    ts_utils.repeated_table(height, table.concat(ts_utils.repeated_table(width, fillchar), ""))
+  )
+  local anon_ns = vim.api.nvim_create_namespace ""
+  local padding = table.concat(ts_utils.repeated_table(#message + 4, " "), "")
+  local lines = {
+    padding,
+    "  " .. message .. "  ",
+    padding,
+  }
+  vim.api.nvim_buf_set_extmark(
+    buf,
+    anon_ns,
+    0,
+    0,
+    { end_line = height, hl_group = "TelescopePreviewMessageFillchar" }
+  )
+  local col = math.floor((width - strings.strdisplaywidth(lines[2])) / 2)
+  for i, line in ipairs(lines) do
+    vim.api.nvim_buf_set_extmark(
+      buf,
+      anon_ns,
+      math.floor(height / 2) - 1 + i,
+      0,
+      { virt_text = { { line, "TelescopePreviewMessage" } }, virt_text_pos = "overlay", virt_text_win_col = col }
+    )
+  end
+  --
+end
+
+local function mime_preview(buf, winid, path)
 	local message = gm.parse_message(path)
-	-- local ns = vim.api.nvim_create_namespace("message-view")
 	r.show_header(message, buf, nil, nil)
-	r.show_message(message, buf, {})
+	r.show_message(message, buf, {preview = function (bufid, str)
+		encrypted(bufid, winid, str)
+	end})
 	putils.highlighter(buf, "mail")
 end
 
@@ -197,10 +253,10 @@ M.notmuch_search = function(opts)
 		finder = live_notmucher,
 		previewer = previewers.new_buffer_previewer({
 			title = opts.preview_title or "Notmuch preview",
-			-- keep_last_buf = true,
+			keep_last_buf = false,
 			define_preview = function(self, entry, status)
 				local filename = entry.value.filename
-				mime_preview(self.state.bufnr, filename)
+				mime_preview(self.state.bufnr, self.state.winid, filename)
 			end,
 		}),
 		attach_mappings = function()
@@ -242,14 +298,14 @@ M.load_draft = function(opts)
 	opts.prompt_title = "Load draft"
 	opts.results_title = "Drafts"
 	opts.preview_title = "Draft preview"
-	opts.preview = function (self, entry, status)
-		local filename = entry.value
-		vim.api.nvim_buf_set_lines(self.state.bufnr, 0, 0, true, {"apa"})
-	end
+	-- opts.preview = function (self, entry, status)
+	-- 	local filename = entry.value
+	-- 	mime_preview(self.state.bufnr, filename)
+	-- end
 	search_builder(opts)
 end
 
-M.attach_file = function(opts, func)
+M.attach_file = function(opts)
 	opts = opts or {}
 	opts.prompt_title = "Attach file"
 	-- is this even the best way? works now tm
@@ -261,8 +317,7 @@ M.attach_file = function(opts, func)
 		end, function()
 			actions.close(prompt_bufnr)
 			local file = action_state.get_selected_entry().path
-			func(file)
-			-- add file to attachment to current compose
+			compose.add_attachment(file)
 		end)
 		return true
 	end
