@@ -239,6 +239,9 @@ void internet_address_list_append (InternetAddressList *list, InternetAddressLis
 gboolean internet_address_list_remove (InternetAddressList *list, InternetAddress *ia);
 gboolean internet_address_list_remove_at (InternetAddressList *list, int index);
 gboolean g_mime_content_type_is_type (GMimeContentType *content_type, const char *type, const char *subtype);
+void g_mime_object_set_header (GMimeObject *object, const char *header, const char *value, const char *charset);
+const char *g_mime_object_get_header (GMimeObject *object, const char *header);
+gboolean g_mime_object_remove_header (GMimeObject *object, const char *header);
 ]])
 
 -- write an index function so that if M._index doesn't exist, look in galore
@@ -347,6 +350,9 @@ end
 
 function M.internet_address_list(opt, str)
 	local list = galore.internet_address_list_parse(opt, str)
+	if list == nil then
+		return nil
+	end
 	local i = 0
 	return function()
 		if i < galore.internet_address_list_length(list) then
@@ -391,6 +397,10 @@ end
 
 function M.set_header(message, header, value)
 	galore.g_mime_object_set_header(ffi.cast("GMimeObject *", message), header, value, nil)
+end
+function M.get_header(message, header)
+	return ffi.string(galore.g_mime_object_get_header(ffi.cast("GMimeObject *", message), header))
+	-- galore.g_mime_object_set_header(ffi.cast("GMimeObject *", message), header, value, nil)
 end
 
 function M.new_text_part(type)
@@ -551,6 +561,7 @@ function M.write_message(path, message)
 	local stream = galore.g_mime_stream_file_open(path, "w+", err)
 	galore.g_mime_object_write_to_stream(ffi.cast("GMimeObject *", message), nil, stream)
 	galore.g_mime_stream_flush(stream)
+	-- return error
 end
 
 function M.write_message_mem(message)
@@ -623,6 +634,10 @@ function M.header_iter(message)
 			end
 		end
 	end
+end
+
+function M.remove_header(message, name)
+	return galore.g_mime_object_remove_header(ffi.cast("GMimeObject *", message), name)
 end
 
 function M.get_message(part)

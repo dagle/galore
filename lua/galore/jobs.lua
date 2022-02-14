@@ -1,5 +1,6 @@
 local conf = require("galore.config")
 local Job = require("plenary.job")
+local u = require('galore.util')
 
 local M = {}
 
@@ -30,7 +31,7 @@ function M.get_type(file)
 			end,
 		})
 		:sync()
-	local mime = M.collect(string.gmatch(ret[1], "([^/]+)"))
+	local mime = u.collect(string.gmatch(ret[1], "([^/]+)"))
 	if #mime ~= 2 then
 		return nil
 	end
@@ -62,10 +63,15 @@ function M.send_mail(to, from, message_str)
 			on_exit = function(j, return_val)
 				-- do something notify the user
 				-- that the mail has fail or not
-				print("mail sent!")
+				  if return_val == 0 then
+					  print("mail sent!")
+				  else
+					  local err = string.format("%s failed with error: %d", cmd, return_val)
+					  print(err)
+				  end
 			end,
 		})
-		:start() -- or start()
+		:start()
 end
 
 return M
