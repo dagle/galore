@@ -6,7 +6,7 @@ setlocal concealcursor=nciv
 syntax region nmThreads		start=/^/ end=/$/					oneline contains=nmDate
 syntax match nmDate		"[0-9A-Za-z.\-]\+\(\s[a-z0-9:.]\+\)\?\(\sago\)\?"	contained nextgroup=nmThreadCount
 syntax match nmThreadCount	"\s\+\[[0-9]\+\/[0-9()]\+\]"				contained nextgroup=nmFrom
-syntax match nmFrom		"\s\+.*;"						contained nextgroup=nmSubject
+syntax match nmFrom		"\s\+[^│]*│"						contained nextgroup=nmSubject
 syntax match nmSubject		/.\{0,}\(([^()]\+)$\)\@=/				contained nextgroup=nmTags
 syntax match nmTags		"(.*)$"							contained
 

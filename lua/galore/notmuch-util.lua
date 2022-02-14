@@ -20,7 +20,7 @@ function M.message_with_thread(message, f)
 		return ret
 	end
 	-- this shouldn't really happen
-	nm.query_destro(query)
+	nm.query_destroy(query)
 end
 
 local function _get_index(messages, m1, i)
@@ -107,10 +107,13 @@ function M.with_message_writer(message, func)
 	end)
 end
 
+-- this should works on messages, not message
 function M.change_tag(message, str)
 	M.with_message_writer(message, function(new_message)
 		local values = u.values(nm.message_get_tags(new_message))
+		nm.message_freeze(new_message)
 		_change_tag(new_message, str, values)
+		nm.message_thaw(new_message)
 	end)
 end
 
@@ -118,23 +121,15 @@ local function tag_unread(message)
 	M.change_tag(message, "-unread")
 end
 
-local function addr_trim(name, addr)
-	-- return addr
-	if name ~= nil and name ~= "" then
-		return string.gsub(name, "via .*", "")
-	end
-	return addr
-end
-
 local function message_description(level, tree, thread_num, thread_total, date, from, subtitle, tags)
 	local t = table.concat(tags, " ")
 	local formated
-	-- from = gu.show_addr(from, addr_trim, 25)
+	-- from = gu.show_addr(from, u.addr_trim, 25)
 	from = u.string_setlength(from, 25)
 	if thread_num > 1 then
-		formated = string.format("%s [%02d/%02d] %s; %s▶ (%s)", date, thread_num, thread_total, from, tree, t)
+		formated = string.format("%s [%02d/%02d] %s│ %s▶ (%s)", date, thread_num, thread_total, from, tree, t)
 	else
-		formated = string.format("%s [%02d/%02d] %s; %s (%s)", date, thread_num, thread_total, from, subtitle, t)
+		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, thread_num, thread_total, from, subtitle, t)
 	end
 	formated = string.gsub(formated, "\n", "")
 	return formated
