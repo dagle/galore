@@ -1,0 +1,21 @@
+local tu = require("galore.test_utils")
+local gu = require("galore.gmime-util")
+local u = require("galore.util")
+
+describe("Gmime tests", function ()
+	local messages = tu.load_rawmessages()
+	it("Normalize a list address", function ()
+		local addr =  "Testie McTest via test-dev-public <test-dev-public@lists.test.org>"
+		local from = gu.show_addr(addr, u.addr_trim, 30)
+		assert.equal(vim.fn.strchars(from), 30)
+	end)
+	it("Normalize a normal addr", function ()
+		local addr =  "Testie McTest <test@test.org>"
+		local from = gu.show_addr(addr, u.addr_trim, 30)
+		assert.equal(vim.fn.strchars(from), 30)
+	end)
+	it("Get a ref from a message", function ()
+	end)
+	it("Make a ref from a message", function ()
+	end)
+end)
