@@ -23,21 +23,12 @@ function M.select_search()
 		thread_message.create(search, conf.values.threads_open, ref)
 	else
 	mb.create(search, conf.values.threads_open)
-	-- remove thread-view, thread-message view is just better(tm)
-	-- threads.create(search, conf.values.threads_open)
 	end
 end
-
--- function M.select_thread()
--- 	local thr = threads:select()
--- 	thread_view.create(thr[1], "current")
--- end
 
 function M.select_message()
 	local mes = thread_message:select()
 	local ref = thread_message:ref()
-	-- local mes = mb:select()
-	-- local ref = mb:ref()
 	conf.values.tag_unread(mes)
 	local file = nm.message_get_filename(mes)
 	message_view.create(file, conf.values.message_open, ref)
@@ -45,14 +36,15 @@ end
 
 function M.message_reply()
 	local message = message_view:message_ref()
-	-- should have a reply-mode
-	compose.create("current", message)
+	local ref = gu.make_ref(message)
+	compose.create("current", message, ref)
 end
 
 function M.message_reply_all()
 	local message = message_view:message_ref()
-	-- should have a reply-mode
-	compose.create("current", message, true)
+	-- how do we a reply_all
+	local ref = gu.make_ref(message)
+	compose.create("current", message, ref)
 end
 
 function M.save_attach()
@@ -63,11 +55,10 @@ function M.view_attach()
 	message_view.view_attachment()
 end
 
--- XXX rethink args to compose?
-function M.compose_template() end
-
--- uses message to create a template
-function M.compose_sender() end
+-- function M.compose_template() end
+--
+-- -- uses message to create a template
+-- function M.compose_sender() end
 
 function M.change_tag(tag)
 	local message = thread_message:select()[1]
