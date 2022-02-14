@@ -68,8 +68,15 @@ function M.to_virtualline(threads, linenr)
 	return i
 end
 
--- XXX TODO
-function M.to_realline(threads, linenr) end
+function M.to_realline(threads, linenr)
+	local i = linenr
+	for _, val in ipairs(threads) do
+		if val.start < i and not val.expand then
+			i = i - #val.messages + 1
+		end
+	end
+	return math.max(i, 1)
+end
 
 function M:toggle(linenr)
 	local line = self.to_virtualline(self.Threads, linenr)
