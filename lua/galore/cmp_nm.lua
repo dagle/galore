@@ -15,6 +15,7 @@ source.new = function()
 		__index = source,
 	})
 end
+
 ---Return this source is available in current context or not. (Optional)
 ---@return boolean
 function source:is_available()
@@ -24,7 +25,7 @@ end
 ---Return the debug name of this source. (Optional)
 ---@return string
 function source:get_debug_name()
-	return "notmuch_addr"
+	return "notmuch_nm"
 end
 
 ---Return keyword pattern for triggering completion. (Optional)
@@ -52,8 +53,6 @@ function source:complete(params, callback)
 		return
 	end
 	if not self.cache[bufnr] then
-		-- add support for custom searches
-		-- remove emails that comes from mailinglist munging
 		Job
 			:new({
 				command = "notmuch",
