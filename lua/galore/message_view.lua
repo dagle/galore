@@ -15,20 +15,20 @@ M.state = {}
 
 -- how do we name parts etc?
 -- for now, parts is just attachments
-M.parts = {}
+M.attachments = {}
 
 local function _view_attachment(filename, kind)
-	kind = kind or "current"
-	if M.parts[filename] then
-		if M.parts[filename][2] then
-			local buf = Buffer.create({
+	kind = kind or "floating"
+	if M.attachments[filename] then
+		if M.attachments[filename][2] then
+			Buffer.create({
 				name = filename,
 				ft = require("plenary.filetype").detect(filename),
 				kind = kind,
 				-- ref = ref,
 				cursor = "top",
 				init = function(buffer)
-					local content = u.format(gm.part_to_buf(M.parts[filename][1]))
+					local content = u.format(gm.part_to_buf(M.attachments[filename][1]))
 					v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
 					v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 				end,
@@ -42,36 +42,38 @@ local function _view_attachment(filename, kind)
 	print("No attachment with that name")
 end
 
-local function raw_mode(nm_message, kind)
+function M.raw_mode(kind)
 	kind = kind or "floating"
-	local filename = nm.message_get_filename(nm_message)
-	local buf = Buffer.create({
-		name = filename,
+	Buffer.create({
+		name = M.state,
+		-- name = "raw_mode",
 		ft = "mail",
 		kind = "floating",
 		-- ref = ref,
 		cursor = "top",
 		init = function(buffer)
-			vim.cmd("e " .. filename)
+			-- need a way to open files in a float
+			vim.cmd(":e " .. M.state)
+			-- vim.api.nvim_set_keymap('n', 'q', "", nil)
 		end,
 	})
 end
 
 function M._save_attachment(filename, save_path)
-	if M.parts[filename] then
+	if M.attachments[filename] then
 		-- better way to do this?
 		local path = Path:new(Path:new(save_path):expand())
 		if path:is_dir() then
 			path = path:joinpath(filename)
 		end
-		gm.save_part(M.parts[filename][1], path:expand())
+		gm.save_part(M.attachments[filename][1], path:expand())
 		return
 	end
 	error("No attachment with that name")
 end
 
 function M.view_attachment()
-	local files = u.collect_keys(M.parts)
+	local files = u.collect_keys(M.attachments)
 	vim.ui.select(files, {
 		prompt = "View attachment:",
 	}, function(item, _)
@@ -85,7 +87,7 @@ end
 
 function M.save_attach()
 	-- switch to telescope later?
-	local files = u.collect_keys(M.parts)
+	local files = u.collect_keys(M.attachments)
 	vim.ui.select(files, {
 		prompt = "Attachment to save:",
 	}, function(item, _)
@@ -109,17 +111,14 @@ function M.update(file)
 	local buffer = M.message_view_buffer
 	buffer:unlock()
 	M.message_view_buffer:clear()
-	-- local filename = nm.message_get_filename(file)
-	-- if filename then
-		local gmessage = gm.parse_message(file)
-		if gmessage then
-			M.ns = vim.api.nvim_create_namespace("galore-message-view")
-			M.message = gmessage
-			-- r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
-			r.show_header(gmessage, buffer.handle, nil, file)
-			M.parts = r.show_message(gmessage, buffer.handle, {})
-		end
-	-- end
+	local gmessage = gm.parse_message(file)
+	if gmessage then
+		M.ns = vim.api.nvim_create_namespace("galore-message-view")
+		M.message = gmessage
+		-- r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
+		r.show_header(gmessage, buffer.handle, nil, file)
+		M.attachments = r.show_message(gmessage, buffer.handle, {})
+	end
 	buffer:lock()
 end
 
