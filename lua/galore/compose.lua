@@ -10,21 +10,30 @@ local config = require("galore.config")
 local reader = require("galore.reader")
 local render = require("galore.render")
 local Path = require("plenary.path")
+local nm = require("galore.notmuch")
+local nu = require("galore.notmuch-util")
 
 local M = {}
 
 M.attachments = {}
 
+M.sent = {}
+
+--- We need a remove function
 function M.add_attachment(file)
-	-- check that compose is opened
-	-- check that the file actually exist
 	table.insert(M.attachments, file)
+end
+
+function M.remove_attachment()
+	vim.ui.select(M.attachments, {prompt = "delete attachment"}, function (_, idx)
+		if idx then
+			table.remove(M.attachments, idx)
+		end
+	end)
 end
 
 -- this should be move to some util function
 -- maybe us virtual lines to split between header and message
--- FIXME: Convert all keys to lower etc, shouldn't force people to write
--- To: instead of to:
 function M.parse_buffer()
 	local box = {}
 	local body = {}
@@ -35,10 +44,14 @@ function M.parse_buffer()
 		-- ignore lines that isn't xzy: abc
 		if start ~= nil then
 			local word = string.sub(lines[i], start, stop - 1)
+			word = string.lower(word)
 			local content = string.sub(lines[i], stop + 1)
 			content = u.trim(content)
 			box[word] = content
 		end
+	end
+	if box.subject ~= nil then
+		box.subject = config.values.empty_topyic
 	end
 
 	for i = body_line + 1, #lines do
@@ -52,33 +65,53 @@ end
 function M.send_message()
 	-- should check for nil
 	local buf = M.parse_buffer()
-	local ref
-	if M.is_reply and M.message then
-		ref = u.make_ref(M.message)
-	else
-		ref = u.get_ref(M.message)
-	end
-	local message = reader.create_message(buf, ref, M.attachments)
+	local message = reader.create_message(buf, M.reply, M.attachments)
 	local to = gm.show_addresses(gm.message_get_address(message, "to"))
 	local from = gm.show_addresses(gm.message_get_address(message, "from"))
+	--- XXX add pre-hooks
 	local message_str = gm.write_message_mem(message)
 	job.send_mail(to, from, message_str)
+	--- XXX add post-hooks
 end
 
+--- Add ability to encrypt the message
+--- we then need to delete these when we load the message
 function M.save_draft()
 	vim.ui.input({
 		prompt = "Save as: ",
 	}, function(filename)
-		-- should warn if you overwrite a file
-		-- path:new(filename)
-		local path = Path:new(config.value.drafts, filename)
+		local path = Path:new(config.value.draftdir, filename)
 		if path:exists() then
 			error("File exist")
 			return
 		end
-		local message = reader.create_message(M.ref, M.attachments)
-		gm.write_message(path:expand(), message)
-		-- XXX we need to add the file into notmuch or we won't find our draft files
+		local buf = M.parse_buffer()
+		local message = reader.create_message(buf, M.ref, M.attachments)
+		if ret ~= nil then
+			print("Failed to parse draft")
+			return ret
+		end
+		--- should we support multiple versions?
+		local id = gu.make_id(message, "draft")
+		gm.set_header(message, "Message-ID", id)
+		gu.insert_current_date(message)
+		local ret = gm.write_message(path:expand(), message)
+		if ret ~= nil then
+			print("Failed to parse draft")
+			return ret
+		end
+		nu.with_db_writer(config.values.db, function (dbwriter)
+			local nm_message = nm.db_index_file(dbwriter, path:expand(), nil)
+			if nm_message == nil then
+				print("Failed to add draft to database")
+				return ret
+			end
+			ret = nm.message_add_tag(nm_message, config.values.drafttag)
+			if ret == nil then
+				print("Failed to add tag")
+				return ret
+			end
+		end)
 		print("draft saved")
 	end)
 end
@@ -91,9 +124,9 @@ local function make_template(message, reply_all)
 	return headers
 end
 
--- this should also not be global
--- We need a way to know if it's a draft or not
-function M.create(kind, message, is_reply)
+local mark_name = "email-compose"
+
+function M.create(kind, message, reply)
 	local template
 	-- local ref = util.get_ref()
 	if message then
@@ -113,12 +146,10 @@ function M.create(kind, message, is_reply)
 		cursor = "top",
 		modifiable = true,
 		mappings = config.values.key_bindings.compose,
-		-- shouldn't be a wipeable?
-		-- ref = ref,
 		init = function(buffer)
 			M.compose = buffer
 			M.message = message
-			M.is_reply = is_reply
+			M.reply = reply
 
 			-- this is a bit meh
 			M.ns = vim.api.nvim_create_namespace("email-compose")
@@ -135,12 +166,7 @@ function M.create(kind, message, is_reply)
 			if message then
 				render.show_message(message, buffer.handle, { reply = true })
 			end
-			M.marks = vim.api.nvim_buf_set_extmark(buffer.handle, M.ns, line_num, col_num, opts)
-			-- local buf = M.parse_buffer()
-			-- local mes = r.create_message(buf, reply, nil)
-			-- gm.write_message("/home/dagle/test.eml", mes)
-			-- local mes = M.create_message(reply, {"/home/dagle/tinywl.c"})
-			-- gm.write_message("/home/dagle/test_email", mes)
+			M.marks = buffer:set_extmark(M.ns, line_num, col_num, opts)
 		end,
 	})
 end
