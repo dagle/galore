@@ -58,8 +58,21 @@ local function gets(db, name)
 	return u.collect(nm.config_get_values_string(db, name))
 end
 
+local special_tags = {
+    draft = true,
+    flagged = true,
+    passed = true,
+    replied = true,
+    unread = true,
+}
+
+--- @param message notmuch.Message
+--- @param str string + adds tag, - removes tag
+--- @param tags string current tags the message has
+--- @return boolean if the change in tags can would trigger a maildir change
 local function _change_tag(message, str, tags)
 	local start, stop = string.find(str, "[+-]%a+")
+	local special = false
 	if start == nil then
 		return
 	end
@@ -75,12 +88,14 @@ local function _change_tag(message, str, tags)
 		end
 	end
 	if status ~= 0 then
-		print("Change tag failed with: " .. status)
+		vim.notify("Change tag failed with: " .. status)
+		return false
 	end
+	special = special_tags[tag]
 	if stop == #str then
 		return
 	end
-	_change_tag(message, string.sub(str, stop + 1, #str))
+	return special or _change_tag(message, string.sub(str, stop + 1, #str))
 end
 
 -- gets a single massage from an unique id
@@ -98,8 +113,7 @@ function M.with_db_writer(db, func)
 	nm.db_atomic_begin(db)
 	func(write_db)
 	nm.db_atomic_end(db)
-	nm.db_close(write_db)
-	-- vim.loop.fs_fsync(path)
+	nm.db_destroy(write_db)
 end
 
 function M.with_message_writer(message, func)
@@ -112,9 +126,24 @@ function M.with_message_writer(message, func)
 	end)
 end
 
+local function _optimize_search(db, messages, str)
+	-- get all the messages
+	local querybuf = {}
+	for message in messages do
+		table.insert(querybuf, "id:" .. nm.message_get_id(message))
+	end
+	local query = table.concat(querybuf, " or ")
+	local q = nm.create_query(db, query)
+	return nm.query_get_messages(q), q
+	-- update the query to only include the ones that needs to be updated
+end
+
 function M.change_tag(db, messages, str)
 	if type(messages) == "table" then
 		M.with_db_writer(db, function(new_db)
+			-- maybe do _optimized_query, so we fetch all the messages and only
+			-- messages that needs to be updated, that we we only need to do one query
+			-- local new_messages = _optimize_search(new_db, messages, str)
 			for _, message in ipairs(messages) do
 				local id = nm.message_get_id(message)
 				local new_message, q = id_get_message(new_db, id)

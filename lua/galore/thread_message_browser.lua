@@ -67,6 +67,8 @@ function M.to_virtualline(threads, linenr)
 	for _, val in ipairs(threads) do
 		if val.start < i and not val.expand then
 			i = i + #val.messages - 1
+		else
+			break
 		end
 	end
 	return i
@@ -77,17 +79,24 @@ function M.to_realline(threads, linenr)
 	for _, val in ipairs(threads) do
 		if val.start < i and not val.expand then
 			i = i - #val.messages + 1
+		else
+			break
 		end
 	end
 	return math.max(i, 1)
 end
 
+-- function M.get_thread(threads, linenr)
+-- end
+
+-- XXX shouldn't loop twice
 function M:toggle(linenr)
 	local line = self.to_virtualline(self.Threads, linenr)
 	for _, val in ipairs(self.Threads) do
 		if val.start <= line and line <= val.stop then
 			val.expand = not val.expand
-			return val.expand, linenr + val.start - line
+			-- return val.expand, linenr + val.start - line
+			return val.expand, linenr + val.start - line, val.stop, val
 		end
 	end
 end
@@ -153,11 +162,26 @@ function M.refresh(search)
 	buffer:lock()
 end
 
-function M:redraw()
+local function tail(list)
+    return {unpack(list, 2)}
+end
+
+-- ugly but works for now
+function M:redraw(expand, to, stop, thread)
 	local buffer = self.threads_buffer
 	buffer:unlock()
-	buffer:clear()
-	threads_to_buffer(self.Threads)
+	if not to then
+		buffer:clear()
+		threads_to_buffer(self.Threads)
+	else
+		if expand then
+		-- buffer:clear()
+		-- threads_to_buffer(self.Threads)
+			buffer:set_lines(to, to, true, tail(thread.messages))
+		else
+			buffer:set_lines(to, stop, true, {})
+		end
+	end
 	buffer:lock()
 end
 

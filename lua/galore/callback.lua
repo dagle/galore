@@ -75,13 +75,13 @@ function M.change_tag(tag)
 	end
 end
 
-function M.archive()
-	M.change_tag("+archive")
-end
-
-function M.delete()
-	M.change_tag("+delete")
-end
+-- function M.archive()
+-- 	M.change_tag("+archive")
+-- end
+--
+-- function M.delete()
+-- 	M.change_tag("+delete")
+-- end
 
 -- a way to get id / filename for piping etc
 
@@ -92,6 +92,7 @@ function M.compose()
 end
 
 function M.compose_send()
+	-- nu.tag_change(config.values.db, message, "+replied")
 	compose.send_message()
 end
 
@@ -109,6 +110,7 @@ function M.forward()
 			return
 		end
 	end)
+	nu.tag_change(config.values.db, message, "+passed")
 end
 
 function M.close_message()
@@ -146,9 +148,10 @@ end
 
 function M.toggle()
 	local line = vim.fn.getpos(".")[2]
-	local type, uline = thread_message:toggle(line)
-	thread_message:redraw()
-	if type then
+	local expand, uline, stop, thread = thread_message:toggle(line)
+	-- vim.notify(string.format("expand: %s, uline: %d stop: %d", tostring(expand), uline, stop))
+	thread_message:redraw(expand, uline, stop, thread)
+	if expand then
 		vim.api.nvim_win_set_cursor(0, { line, 0 })
 	else
 		vim.api.nvim_win_set_cursor(0, { uline, 0 })

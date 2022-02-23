@@ -1,8 +1,16 @@
 local conf = require("galore.config")
+local ffi = require("ffi")
 local M = {}
 
 function M.trim(s)
 	return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
+function M.safestring(ptr)
+	if ptr == nil then
+		return nil
+	end
+	return ffi.string(ptr)
 end
 
 function M.values(iter)

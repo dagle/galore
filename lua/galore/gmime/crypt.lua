@@ -406,105 +406,166 @@ function M.g_mime_signature_new()
 end
 --
 -- void g_mime_signature_set_certificate (GMimeSignature *sig, GMimeCertificate *cert);
+--- @param sig gmime.Signature
+--- @param cert gmime.Certificate
 function M.g_mime_signature_set_certificate(sig, cert)
 	gmime.g_mime_signature_set_certificate(sig, cert)
 end
 -- GMimeCertificate *g_mime_signature_get_certificate (GMimeSignature *sig);
+--- @param sig gmime.Signature
+--- @return gmime.Certificate
 function M.g_mime_signature_get_certificate(sig)
 	return gmime.g_mime_signature_get_certificate(sig)
 end
 --
 -- void g_mime_signature_set_status (GMimeSignature *sig, GMimeSignatureStatus status);
+--- @param sig gmime.Signature
+--- @param status gmime.SignatureStatus
 function M.g_mime_signature_set_status(sig, status)
 	gmime.g_mime_signature_set_status(sig, status)
 end
 -- GMimeSignatureStatus g_mime_signature_get_status (GMimeSignature *sig);
+--- @param sig gmime.Signature
+--- @return gmime.SignatureStatus
 function M.g_mime_signature_get_status(sig)
 	return gmime.g_mime_signature_get_status(sig)
 end
---
+
 -- void g_mime_signature_set_created (GMimeSignature *sig, time_t created);
+--- @param sig gmime.Signature
+--- @param created number
+--- XXX
 function M.g_mime_signature_set_created(sig, created)
 	gmime.g_mime_signature_set_created(sig, created)
 end
+
 -- time_t g_mime_signature_get_created (GMimeSignature *sig);
+--- @param sig gmime.Signature
+--- @return number
+--- XXX
 function M.g_mime_signature_get_created(sig)
 	return gmime.g_mime_signature_get_created(sig)
 end
+
 -- gint64 g_mime_signature_get_created64 (GMimeSignature *sig);
+--- @param sig gmime.Signature
+--- @return number
 function M.g_mime_signature_get_created64(sig)
 	return gmime.g_mime_signature_get_created64(sig)
 end
---
+
+--- @param sig gmime.Signature
+--- @param expire number
+--- XXX
 -- void g_mime_signature_set_expires (GMimeSignature *sig, time_t expires);
 function M.g_mime_signature_set_expires(sig, expire)
 	gmime.g_mime_signature_set_expires(sig, expire)
 end
---
+
+--- @param sig gmime.Signature
+--- @return number
+--- XXX
 -- time_t g_mime_signature_get_expires (GMimeSignature *sig);
 function M.g_mime_signature_get_expires(sig)
 	return gmime.g_mime_signature_get_expires(sig)
 end
+
 -- gint64 g_mime_signature_get_expires64 (GMimeSignature *sig);
+--- @param sig gmime.Signature
+--- @return number
 function M.g_mime_signature_get_expires64(sig)
 	return gmime.g_mime_signature_get_expires64(sig)
 end
---
+
 -- GMimeSignatureList *g_mime_signature_list_new (void);
+--- @return gmime.SignatureList
 function M.g_mime_signature_list_new()
 	return gmime.g_mime_signature_list_new()
 end
---
+
 -- int g_mime_signature_list_length (GMimeSignatureList *list);
+--- @param list gmime.SignatureList
+--- @return number
 function M.g_mime_signature_list_length(list)
 	return gmime.g_mime_signature_list_length(list)
 end
---
+
 -- void g_mime_signature_list_clear (GMimeSignatureList *list);
+--- @param list gmime.SignatureList
 function M.g_mime_signature_list_clear(list)
 	gmime.g_mime_signature_list_clear(list)
 end
---
+
 -- int g_mime_signature_list_add (GMimeSignatureList *list, GMimeSignature *sig);
+--- @param list gmime.SignatureList
+--- @param sig gmime.Signature
+--- @return number
 function M.g_mime_signature_list_add(list, sig)
 	return gmime.g_mime_signature_list_add(list, sig)
 end
+
 -- void g_mime_signature_list_insert (GMimeSignatureList *list, int index, GMimeSignature *sig);
+--- @param list gmime.SignatureList
+--- @param index number
+--- @param sig gmime.Signature
 function M.g_mime_signature_list_insert(list, index, sig)
 	gmime.g_mime_signature_list_insert(list, index, sig)
 end
+
 -- gboolean g_mime_signature_list_remove (GMimeSignatureList *list, GMimeSignature *sig);
+--- @param list gmime.SignatureList
+--- @param sig gmime.Signature
+--- @return boolean
 function M.g_mime_signature_list_remove(list, sig)
 	return gmime.g_mime_signature_list_remove(list, sig)
 end
+
 -- gboolean g_mime_signature_list_remove_at (GMimeSignatureList *list, int index);
+--- @param list gmime.SignatureList
+--- @param index number
+--- @return boolean
 function M.g_mime_signature_list_remove_at(list, index)
 	return gmime.g_mime_signature_list_remove_at(list, index)
 end
---
+
 -- gboolean g_mime_signature_list_contains (GMimeSignatureList *list, GMimeSignature *sig);
+--- @param list gmime.SignatureList
+--- @param sig gmime.Signature
+--- @return boolean
 function M.g_mime_signature_list_contains(list, sig)
 	return gmime.g_mime_signature_list_contains(list, sig)
 end
+
 -- int g_mime_signature_list_index_of (GMimeSignatureList *list, GMimeSignature *sig);
+--- @param list gmime.SignatureList
+--- @param sig gmime.Signature
+--- @return number
 function M.g_mime_signature_list_index_of(list, sig)
 	return gmime.g_mime_signature_list_index_of(list, sig)
 end
---
+
 -- GMimeSignature *g_mime_signature_list_get_signature (GMimeSignatureList *list, int index);
+--- @param list gmime.SignatureList
+--- @param index number
+--- @return gmime.Signature
 function M.g_mime_signature_list_get_signature(list, index)
 	return gmime.g_mime_signature_list_get_signature(list, index)
 end
--- void g_mime_signature_list_set_signature (GMimeSignatureList *list, int index, GMimeSignature *sig);
-function M.g_mime_signature_list_set_signature(list, sig)
-	gmime.g_mime_signature_list_set_signature(list, sig)
-end
---
+
 -- GMimeCryptoContext *g_mime_pkcs7_context_new (void);
-function M.g_mime_pkcs7_context_new()
-	return gmime.g_mime_pkcs7_context_new()
+--- @return gmime.CryptoContext
+function M.g_mime_pkcs7_context_new(list, sig)
+	return gmime.g_mime_pkcs7_context_new(list, sig)
 end
---
+
+-- void g_mime_signature_list_set_signature (GMimeSignatureList *list, int index, GMimeSignature *sig);
+--- @param list gmime.SignatureList
+--- @param index number
+--- @param sig gmime.Signature
+function M.g_mime_signature_list_set_signature(list, index, sig)
+	gmime.g_mime_signature_list_set_signature(list, index, sig)
+end
+
 -- GMimeApplicationPkcs7Mime *g_mime_application_pkcs7_mime_new (GMimeSecureMimeType type);
 function M.g_mime_application_pkcs7_mime_new(type)
 	return gmime.g_mime_application_pkcs7_mime_new(type)

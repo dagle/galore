@@ -134,7 +134,7 @@ end
 local function redraw(file)
 	M.message_view_buffer:focus()
 	-- this is bad
-	vim.api.nvim_buf_clear_namespace(M.message_view_buffer.handle, M.ns, 0, -1)
+	-- vim.api.nvim_buf_clear_namespace(M.message_view_buffer.handle, M.ns, 0, -1)
 	M.update(file)
 end
 

@@ -37,11 +37,12 @@ local galore = ffi.load(library_path)
 --- @class gmime.CryptoContext
 --- @class gmime.AutocryptHeader
 --- @class gmime.AutocryptHeaderList
---- @class gmime.SignatureList
 --- @class gmime.DecryptResult
---- @class gmime.SignatureList
+--- @class gmime.Certificate
 --- @class gmime.CertificateList
 --- @class gmime.Signature
+--- @class gmime.SignatureList
+--- @class gmime.SignatureStatus
 
 --- @class gmime.ContentEncoding
 
