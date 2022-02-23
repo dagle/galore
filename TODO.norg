@@ -7,27 +7,57 @@
     version: 0.1
 @end
 
+Not now, dunno how to use this even:
+- Make it possible to open a group of messages 
+-- Even if possible, some navigation tools etc would be needed, like how do you know what part of a message to respond to
+-- Jumping to the next message in a thread etc 
+- Telescope parts_browser (and being able to pass it to render)
+
+Today:
+- Begin exploring a modular UI
+- Why do we get bad filenames sometimes? (seems like other clients get them too, doing a double notmuch new seems to help)
+- Fix gmime.lua, split up the string and sort stuff
+- Never assert in notmuch!
+- Figure out the feature!
+- Toy with casting!
+- Fix the maildir 
+
+Next:
+  - Do exmarks to show different parts
+  - Do we actually get bools
 0.1
 ===
 
-* Escape newlines //  render bad emails.
-  Kind works, need to write tests etc
+* Handling bad emails
+ - [ ] Correctly handling emails enters in the topic (not just replace it with ^M)
+
+* Gmime lib
+  - [ ] Make full lua bindings
+  - [ ] Make the bindings lua-ish
+  - [ ] Make helpers.
+  - [ ] Update function names in the client
+
+* Documentation
+  - [ ] Writing in help pages
+  - [ ] Writing documentation for functions
 
 * Reader
   - [x] generate email
-  - [-]  gpg
+  - [x]  gpg
   -- [x] signing email
   -- [x] encrypt email
-  -- [ ] encrypt the whole email and not just parts
+  -- [x] encrypt the whole email and not just parts
   - [x] send email using sendmail interface
   - [x] Use an exmark line seperate the header from the message
   - [x] Support reply-all
 
 * Compose
   - [ ] An command for adding attachments :AddAttachment file
-  - [ ] Solve the draft issue. A draft should have a message but it isn't a reply
+  - [x] Solve the draft issue. A draft should have a message but it isn't a reply
+  - [ ] A real template system to generate new and responses
+  - [x] Remove attachment
 
-* Reply
+* Reply  
   - [x] Get a way to autoset the from (you want to use the same addr as the recieved)
 
 * Render
@@ -44,11 +74,24 @@
   - [ ] reading and composing the same buffer over and over shouldn't change the content
   - [ ] reading and writing part shouldn't change the content (also for attachments)
   - [ ] writing tests for the ffi code to make sure it doesn't leak/segfault
+  - [ ] Make it easy for users to test hooks etc
+  - [-] Testframework
+  -- [x] Create a helper functions: createdb, test_setup(), add messages, etc
+  -- [-] Make tests simular to emacs
+  --- [ ] Forwarding, 
+  --- [ ] Encrypting/decrypting a message doesn't change content
+  --- [x] tags
+
+* UI code
+  - [ ] Being able to update the UI on new messages
+  -- [ ] Can we do this without "breaking" the current session
+  -- [ ] Ask if we want to reload?
+  -- [ ] Can we do partial reloading?
+
 
 * Fix a build system
   - [x] Build project
   - [x] Being able to run tests
-
 
 * Decouple logic and gui, for easier reuse and testing
   - [x] Render
@@ -63,7 +106,8 @@
   - [x] don't display filename but subject (or to:subject)
   - [x] Add attachments
   - [x] Load draft and save drafts
-  - [ ] Something like loading messages like 
+  - [x] Make a real previewer for encrypted mails
+  - [ ] Different selecting: compose, view etc
 
 * ffi bugs
   - [ ] Add a logger, to easier detect error
@@ -72,31 +116,32 @@
   - [ ] notmuch go through the code and check for leaks
   -- [ ] Fix destroying queries before we are done with them.
   - [ ] gmime leaks memory
+  -- [ ] Fix the memory model. We should handle memory on a query level
   - [ ] gmime segfaults 
-  - [ ] gmime can't be reloaded?
+  - [x] gmime can't be reloaded, ffi-can't but we don't need to, just start a new session to debug.
 
 * Complete the different view models (thread, threadmessages, and messages)
-  - [ ] threadmessage_view
-  -- [ ] Make it support folding
-  -- [ ] Make it possible to open a group
-  -- [ ] drop the other views?
+  - [-] threadmessage_view
+  -- [x] Make it support folding
+  -- [ ] Make a match-mode in thread view, were only matched messages are shown.
+  -- [-] Make it possible to open a group
+  -- [x] drop the other views? Pure thread mode is dropped
   - [ ] thread_view
   - [ ] message_view
  ** Missing from all
 
 * respect the notmuch config
   - [x] Read config values for basic values (name, account, dir, etc)
-  - [ ] Use othe custom settings.
-
-Missing:
-Reply, no message
-Reply, template?
+  - [ ] Use other custom settings.
 
 * Fix the whole buffer system
-  - [ ] Add float
-  - [ ] Add cleanup
+  - [x] Add float
+  - [x] Add cleanup
+  - [ ] Easy way to refresh the whole stack
   - [ ] Update function
-  - [ ] More OO
+  - [-] More OO
+  - [ ] Easier to keep track of parents and children
+  - [ ] Move/add following to the buffer: extmark, caching, update, render (update but with cache), cleanup, focus, lock/unlock
 
 * Functions 
  ** view
@@ -106,26 +151,30 @@ Reply, template?
 	-- [ ] respond-list
 	-- [ ] respond-sender(?)
 	-- [ ] respond-forward (include an email as an attachment in the response)
-	- [-] Forward email (what should it do?)
-	 -- [ ] Forward as attachment
+	- [-] Forward email, mostly done
+	-- [-] Being able to edit the forwarded email
 	- [x] message movement
 	-- [x] view-next email (+prev)
 	-- [x] view-next thread (+prev)
 	- [ ] save-attachments
-	- [ ] view raw
-	- [ ] preview
-	- [ ] treview
+	- [-] view raw
+	- [-] preview
+	- [ ] tree-view
+	- [ ] Delete
+	- [ ] callbacks (user config stuff, like when notmuch new is ran, on delete, send, etc)
+	- [ ] autocmds (it's a part of the UI overhaul)
+	- [x] Make a read message read
+	- [ ] Make a way to jump between views?
  ** browser
  ** search
- ** gloabal
-	- [x] Make a read message read
+ ** global
 
 0.2 
 ===
 * A way to save searches (0.1 will just use the config)
 
 * Get tagviewer
-  - [ ] Set the tags with exmarks
+  - [x] Set the tags with exmarks
 
 * Clean up the code
 
@@ -134,17 +183,28 @@ Reply, template?
 * Archiving
 
 * Attachments
-  - [ ] Be able to load attachments into quickfix
+  - [ ] Be able to load the attachment-list into quickfix
 
 * Folds
   - [ ] Fold message / replies
   - [ ] Fold parts of the message
-  - [ ] Fold threads 
+  - [x] Fold threads 
 
 * Adress book support
-  - [ ] Easy way to add and delete addresses
-  - [ ] Support for notmuch-address
-  - [ ] cmp support
+  - [x] Vcard support
+  - [x] Ordering
+  - [x] Support for notmuch-address
+  -- [ ] notmuch-addrlookup (https://github.com/bremner/notmuch-addrlookup-c)
+  - [x] cmp support
+
+* A gpg browser interface
+  - [ ] Do gpg password callbacks in vim
+  - [ ] Be able to use a password manager? Do I need one, I'm only asking for a password, not how to handle it? You would connect a gpg-easy client to a password manager
+  - [ ] Make a interface for gpg-tui
+  - [ ] Do input for password in nvim.
+
+* Lazy loading or atleast partial loading
+  - [ ] Don't load everything on setup. (shouldn't load anything tbh)
 
 0.3
 ===
