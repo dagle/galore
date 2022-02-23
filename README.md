@@ -108,5 +108,17 @@ Telescope
 
 <img src="res/telescope.png" width=315>
 
+## Customize
+
+config values
+-------------
+
+views
+-----
+If you wanna customize how galore looks, you need to not only customize the 
+the print functions but also the syntax files.
+So if you want to customize the thread-viewer, you need to create your own
+syntax/galore-threads.vim that matches your syntax.
+
 ## TODO:
 See the todo-file, even the todo has stuff missing.
