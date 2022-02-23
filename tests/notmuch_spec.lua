@@ -4,32 +4,44 @@ local tu = require("galore.test_utils")
 local u = require("galore.util")
 
 describe("Testing notmuch", function ()
-	local db = tu.setup()
+	local testname = "test01"
+	local db = tu.setup(testname)
 
-	local messages = tu.load_messages()
 	it("Add tags", function ()
-		local query = nm.create_query(db, "")
+		local query = nm.create_query(db, "tag:inbox")
+		local messages = u.collect(nm.query_get_messages(query))
+		nu.change_tag(db, messages, "+testtag")
+		nm.query_destroy(query)
+	end)
+	it("Read tags", function ()
+		local query = nm.create_query(db, "tag:inbox")
 		local messages = nm.query_get_messages(query)
 		for message in messages do
-			nu.change_tag(message, "+testtag")
+			local includes = false
+			for tag in nm.message_get_tags(message) do
+				if tag == "testtag" then
+					includes = true
+				end
+			end
+			assert.equals(true, includes)
 		end
-		-- messages = nm.query_get_messages(query)
-		for message in messages do
-			local tags = u.collect(nm.message_get_tags(message))
-			--- check if messages contains testtag
-		end
+		nm.query_destroy(query)
 	end)
 	it("Remove tags", function ()
-		local query = nm.create_query(db, "")
-		local messages = nm.query_get_messages(query)
-		for message in messages do
-			nu.change_tag(message, "-testtag")
+		local query = nm.create_query(db, "tag:inbox")
+		local messages = u.collect(nm.query_get_messages(query))
+		nu.change_tag(db, messages, "+testtag")
+		for _, message in ipairs(messages) do
+			local includes = false
+			for tag in nm.message_get_tags(message) do
+				if tag == "testtag" then
+					includes = true
+				end
+			end
+			assert.is_not_equal(true, includes)
 		end
-		for message in messages do
-			local tags = u.collect(nm.message_get_tags(message))
-			--- check if messages do not contain testtag
-		end
+		nm.query_destroy(query)
 	end)
 
-	tu.cleanup()
+	tu.cleanup(testname)
 end)

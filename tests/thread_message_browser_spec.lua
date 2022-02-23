@@ -15,7 +15,7 @@ describe("Test the logic in the tmb", function ()
 		
 	end)
 	it("toggle virtual", function ()
-		local line = 6
+		local line = 8
 		local virt = tmb.to_virtualline(threads, line)
 		local real = tmb.to_realline(threads, virt)
 		assert.equal(real, line)
