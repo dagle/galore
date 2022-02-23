@@ -12,6 +12,7 @@ M.State = {}
 M.Cache = {}
 M.Line = nil
 M.Threads = {}
+-- M.filenames = {}
 
 M.threads_buffer = nil
 
@@ -20,7 +21,7 @@ local function get_message(message, level, prestring, i, tot)
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
-	local date = tonumber(nm.message_get_date(message))
+	local date = nm.message_get_date(message)
 	local ppdate = os.date("%Y-%m-%d ", date)
 	return { level, prestring, i, tot, ppdate, from, sub, tags }
 end
@@ -30,6 +31,7 @@ local function sort(messages)
 end
 
 -- maybe rewrite this is C or rust or something?
+-- local function show_messages(messages, level, prestring, num, tot, box, state, filenames)
 local function show_messages(messages, level, prestring, num, tot, box, state)
 	local collected = u.collect(messages)
 	local j = 1
@@ -44,6 +46,8 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 		end
 		table.insert(box, get_message(message, level, newstring, num + 1, tot))
 		table.insert(state, message)
+		-- local file = nm.message_get_filename(message)
+		-- table.insert(filenames, file)
 		if num == 0 then
 			newstring = prestring
 		elseif #collected > j then
@@ -101,12 +105,14 @@ end
 local function get_messages(db, search)
 	local state = {}
 	local threads = {}
+	-- local filenames = {}
 	local start, stop = 1, 0
 	local query = nm.create_query(db, search)
 	for thread in nm.query_get_threads(query) do
 		local box = {}
 		local tot = nm.thread_get_total_messages(thread)
 		local messages = nm.thread_get_toplevel_messages(thread)
+		-- show_messages(messages, 0, "", 0, tot, box, state, filenames)
 		show_messages(messages, 0, "", 0, tot, box, state)
 		stop = stop + tot
 		local threadinfo = { thread, stop = stop, start = start, messages = ppMessage(box), expand = true }
@@ -115,6 +121,7 @@ local function get_messages(db, search)
 	end
 	M.Threads = threads
 	M.State = state
+	-- M.filenames = filenames
 	return threads
 end
 
@@ -179,9 +186,11 @@ function M.create(search, kind, parent)
 	})
 end
 
-function M:next_thread()
-	local line = vim.fn.getpos(".")[2]
-	local vline = self.to_virtualline(self.Threads, line[1])
+function M:go_thread_next()
+	local pos = vim.api.nvim_win_get_cursor(0)
+	local line = pos[1]
+	local col = pos[2]
+	local vline = self.to_virtualline(self.Threads, line)
 
 	local ret
 	for _, val in ipairs(self.Threads) do
@@ -192,13 +201,33 @@ function M:next_thread()
 	end
 	if ret ~= nil and ret < #self.State then
 		self.Line = ret
+		vim.api.nvim_win_set_cursor(0, {ret, col})
 		return self.State[ret]
 	end
 end
+-- hmmm.
+-- function M:next_thread()
+-- 	local line = vim.fn.getpos(".")[2]
+-- 	local vline = self.to_virtualline(self.Threads, line[1])
+--
+-- 	local ret
+-- 	for _, val in ipairs(self.Threads) do
+-- 		if val.start <= vline and vline <= val.stop then
+-- 			ret = val.stop + 1
+-- 			break
+-- 		end
+-- 	end
+-- 	if ret ~= nil and ret < #self.State then
+-- 		self.Line = ret
+-- 		return self.State[ret]
+-- 	end
+-- end
 
-function M:prev_thread()
-	local line = vim.fn.getpos(".")[2]
-	local vline = self.to_virtualline(self.Threads, line[1])
+function M:go_thread_prev()
+	local pos = vim.api.nvim_win_get_cursor(0)
+	local line = pos[1]
+	local col = pos[2]
+	local vline = self.to_virtualline(self.Threads, line)
 
 	local ret
 	for _, val in ipairs(self.Threads) do
@@ -209,6 +238,7 @@ function M:prev_thread()
 	end
 	if ret ~= nil and ret > 0 then
 		self.Line = ret
+		vim.api.nvim_win_set_cursor(0, {ret, col})
 		return self.State[ret]
 	end
 end
@@ -231,6 +261,7 @@ function M:select()
 	local line = v.nvim_win_get_cursor(0)
 	local virt_line = self.to_virtualline(self.Threads, line[1])
 	self.Line = virt_line
+	-- return self.State[virt_line], self.filenames[virt_line]
 	return self.State[virt_line]
 end
 

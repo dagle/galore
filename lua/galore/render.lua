@@ -1,4 +1,7 @@
 local gm = require("galore.gmime")
+local gp = require("galore.gmime.parts")
+local gi = require("galore.gmime.gmime_ffi")
+local gc = require("galore.gmime.content")
 local u = require("galore.util")
 local nm = require("galore.notmuch")
 local ffi = require("ffi")
@@ -107,19 +110,20 @@ local function part_to_string(part, opts)
 	return gm.mem_to_string(mem)
 end
 
--- @param message gmime message
+-- @param message gmime.Message
 -- @param state table containing the parts
 local function show_message_helper(message, buf, opts, state)
-	local part = gm.mime_part(message)
+	-- local part = gm.mime_part(message)
+	local part = gp.message_get_mime_part(message)
 
 	if opts.reply then
-		local date = gm.message_get_date(message)
-		local author = gm.show_addresses(gm.message_get_address(message, "from"))
+		local date = gp.message_get_date(message)
+		local author = gc.internet_address_list_to_string(gp.message_get_address(message, "from"), nil, false)
 		local qoute = conf.values.qoute_header(date, author)
 		M.draw(buf, { qoute })
 	end
 
-	if gm.is_multipart(part) then
+	if gp.is_multipart(part) then
 		M.show_part(part, buf, opts, state)
 	else
 		local str = part_to_string(part, opts)
@@ -127,7 +131,7 @@ local function show_message_helper(message, buf, opts, state)
 	end
 end
 
--- @param message gmime message
+-- @param message gmime.Message
 -- @param reply bool if this should be qouted
 -- @param opts
 -- @return a {body, attachments}, where body is a string and attachments is GmimePart
@@ -150,21 +154,21 @@ local function rate(part)
 	return 1
 end
 
-function M.show_part(part, buf, opts, state)
-	if gm.is_message_part(part) then
-		local message = gm.get_message(part)
+function M.show_part(object, buf, opts, state)
+	if gp.is_message_part(object) then
+		local message = gm.get_message(object)
 		-- do we want to show that it's a new message?
 		show_message_helper(message, buf, opts, state)
-	elseif gm.is_partial(part) then
-		local full = gm.partial_collect(part)
+	elseif gp.is_partial(object) then
+		local full = gm.partial_collect(object)
 		-- do we want to show that it's a collected message?
 		show_message_helper(full, buf, opts, state)
-	elseif gm.is_part(part) then
+	elseif gp.is_part(object) then
 		-- if gm.is_attachment(part) then
-		if gm.get_disposition(part) == "attachment" then
-			local ppart = ffi.cast("GMimePart *", part)
+		if gm.get_disposition(object) == "attachment" then
+			local ppart = ffi.cast("GMimePart *", object)
 			local filename = gm.part_filename(ppart)
-			local viewable = gm.part_is_type(part, "text", "*")
+			local viewable = gm.part_is_type(object, "text", "*")
 			state.attachments[filename] = { ppart, viewable }
 			-- table.insert(state.attachments, ppart)
 			-- M.parts[filename] = ppart
@@ -177,51 +181,51 @@ function M.show_part(part, buf, opts, state)
 		else
 			-- should contain more stuff
 			-- should push some filetypes into attachments
-			local ct = gm.get_content_type(part)
+			local ct = gm.get_content_type(object)
 			local type = gm.get_mime_type(ct)
 			if type == "text/plain" then
-				local str = part_to_string(part, opts)
+				local str = part_to_string(object, opts)
 				M.draw(buf, format(str))
 			elseif type == "text/html" then
-				local str = part_to_string(part, opts)
+				local str = part_to_string(object, opts)
 				local html = conf.values.show_html(str)
 				M.draw(buf, html)
 			end
 		end
-	elseif gm.is_multipart(part) then
+	elseif gp.is_multipart(object) then
 		-- Can we get a way to show this
-		if gm.is_multipart_encrypted(part) then
+		if gp.is_multipart_encrypted(object) then
 			if opts.preview then
 				-- good enough for now
 				-- M.draw(buf, {"Encrypted!"})
 				opts.preview(buf, "Encrypted")
 				return
 			end
-			local de_part, sign = gm.decrypt_and_verify(part)
+			local de_part, sign = gm.decrypt_and_verify(object)
 			if sign then
 				-- mark("sign confirmed")
 				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
 			M.show_part(de_part, buf, opts, state)
 			return
-		elseif gm.is_multipart_signed(part) then
+		elseif gp.is_multipart_signed(object) then
 			-- maybe apply some colors etc if the sign is correct or not
-			if gm.verify_signed(part) then
+			if gm.verify_signed(object) then
 				-- mark("sign confirmed")
 				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
-			local se_part = gm.get_signed_part(part)
+			local se_part = gm.get_signed_part(object)
 			M.show_part(se_part, buf, opts, state)
 			-- return something
 			return
-		elseif conf.values.alt_mode == 1 and gm.is_multipart_alt(part) then
-			local multi = ffi.cast("GMimeMultipart *", part)
+		elseif conf.values.alt_mode == 1 and gm.is_multipart_alt(object) then
+			local multi = ffi.cast("GMimeMultipart *", object)
 			local saved
 			local rating = 0
 			local i = 0
-			local j = gm.multipart_len(multi)
+			local j = gp.multipart_get_count(multi)
 			while i < j do
-				local child = gm.multipart_child(multi, i)
+				local child = gp.multipart_get_part(multi, i)
 				local r = rate(child)
 				if r > rating then
 					rating = r
@@ -231,13 +235,13 @@ function M.show_part(part, buf, opts, state)
 			end
 			M.show_part(saved, buf, opts, state)
 		else
-			local multi = ffi.cast("GMimeMultipart *", part)
+			local multi = ffi.cast("GMimeMultipart *", object)
 			local i = 0
-			local j = gm.multipart_len(multi)
+			local j = gp.multipart_get_count(multi)
 			-- for i = 0, j-1 do
 			-- end
 			while i < j do
-				local child = gm.multipart_child(multi, i)
+				local child = gp.multipart_get_part(multi, i)
 				M.show_part(child, buf, opts, state)
 				i = i + 1
 			end

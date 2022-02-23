@@ -80,6 +80,8 @@ M.values = {
 		},
 		thread_browser = {
 			n = {
+				["J"] = '<cmd>lua require("galore.thread_message_browser"):go_thread_next()<cr>',
+				["K"] = '<cmd>lua require("galore.thread_message_browser"):go_thread_prev()<cr>',
 				["a"] = M.cb("change_tag"),
 				["<CR>"] = M.cb("select_message"),
 				["q"] = M.cb("close_thread"),

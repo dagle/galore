@@ -3,6 +3,7 @@ local gu = require("galore.gmime-util")
 local u = require("galore.util")
 local conf = require("galore.config")
 local jobs = require("galore.jobs")
+local Job = require("plenary.job")
 
 local M = {}
 
@@ -90,11 +91,15 @@ local function id_get_message(db, id)
 	end
 end
 
+-- can I make a async version of these
 function M.with_db_writer(db, func)
 	local path = nm.db_get_path(db)
 	local write_db = nm.db_open(path, 1)
+	nm.db_atomic_begin(db)
 	func(write_db)
+	nm.db_atomic_end(db)
 	nm.db_close(write_db)
+	-- vim.loop.fs_fsync(path)
 end
 
 function M.with_message_writer(message, func)
@@ -107,19 +112,49 @@ function M.with_message_writer(message, func)
 	end)
 end
 
--- this should works on messages, not message
-function M.change_tag(message, str)
-	M.with_message_writer(message, function(new_message)
-		local values = u.values(nm.message_get_tags(new_message))
-		nm.message_freeze(new_message)
-		_change_tag(new_message, str, values)
-		nm.message_thaw(new_message)
-	end)
+function M.change_tag(db, messages, str)
+	if type(messages) == "table" then
+		M.with_db_writer(db, function(new_db)
+			for _, message in ipairs(messages) do
+				local id = nm.message_get_id(message)
+				local new_message, q = id_get_message(new_db, id)
+				local values = u.values(nm.message_get_tags(new_message))
+				nm.message_freeze(new_message)
+				_change_tag(new_message, str, values)
+				nm.message_thaw(new_message)
+				nm.message_tags_to_maildir_flags(new_message)
+				nm.query_destroy(q)
+			end
+		end)
+	else
+		M.with_db_writer(db, function(new_db)
+			nm.db_atomic_begin(new_db)
+			local id = nm.message_get_id(messages)
+			local new_message, q = id_get_message(new_db, id)
+			local values = u.values(nm.message_get_tags(new_message))
+			nm.message_freeze(new_message)
+			_change_tag(new_message, str, values)
+			nm.message_thaw(new_message)
+			nm.message_tags_to_maildir_flags(new_message)
+			nm.query_destroy(q)
+		end)
+	end
 end
 
 local function tag_unread(message)
-	M.change_tag(message, "-unread")
+	M.change_tag(conf.values.db, message, "-unread")
 end
+
+-- local function M_change_tag_job(db, messages, str)
+-- 	if type(messages) == "table" then
+-- 		P(nil)
+-- 	else
+--
+-- 		Job:new({
+--
+-- 		)
+-- 	end
+-- end
 
 local function message_description(level, tree, thread_num, thread_total, date, from, subtitle, tags)
 	local t = table.concat(tags, " ")

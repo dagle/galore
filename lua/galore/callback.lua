@@ -4,7 +4,7 @@ local util = require("galore.util")
 local saved = require("galore.saved")
 -- local threads = require("galore.thread_browser")
 local thread_message = require("galore.thread_message_browser")
-local conf = require("galore.config")
+local config = require("galore.config")
 local mb = require("galore.message_browser")
 local thread_view = require("galore.thread_view")
 local message_view = require("galore.message_view")
@@ -19,32 +19,32 @@ local M = {}
 function M.select_search()
 	local search = saved:select()[3]
 	local ref = saved:ref()
-	if conf.values.thread_browser then
-		thread_message.create(search, conf.values.threads_open, ref)
+	if config.values.thread_browser then
+		thread_message.create(search, config.values.threads_open, ref)
 	else
-	mb.create(search, conf.values.threads_open)
+	mb.create(search, config.values.threads_open)
 	end
 end
 
 function M.select_message()
 	local mes = thread_message:select()
 	local ref = thread_message:ref()
-	conf.values.tag_unread(mes)
+	config.values.tag_unread(mes)
 	local file = nm.message_get_filename(mes)
-	message_view.create(file, conf.values.message_open, ref)
+	message_view.create(file, config.values.message_open, ref)
 end
 
 function M.message_reply()
 	local message = message_view:message_ref()
 	local ref = gu.make_ref(message)
-	compose.create("current", message, ref)
+	compose.create("replace", message, ref)
 end
 
 function M.message_reply_all()
 	local message = message_view:message_ref()
 	-- how do we a reply_all
 	local ref = gu.make_ref(message)
-	compose.create("current", message, ref)
+	compose.create("replace", message, ref)
 end
 
 function M.save_attach()
@@ -67,7 +67,7 @@ function M.change_tag(tag)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				nu.change_tag(message, itag)
+				nu.change_tag(config.values.db, message, itag)
 			else
 				error("No tag")
 			end
@@ -131,17 +131,17 @@ end
 function M.next()
 	local mes = thread_message:next()
 	local ref = thread_message:ref()
-	conf.values.tag_unread(mes)
+	config.values.tag_unread(mes)
 	local file = nm.message_get_filename(mes)
-	message_view.create(file, conf.values.message_open, ref)
+	message_view.create(file, config.values.message_open, ref)
 end
 
 function M.prev()
 	local mes = thread_message:prev()
 	local ref = thread_message:ref()
-	conf.values.tag_unread(mes)
+	config.values.tag_unread(mes)
 	local file = nm.message_get_filename(mes)
-	message_view.create(file, conf.values.message_open, ref)
+	message_view.create(file, config.values.message_open, ref)
 end
 
 function M.toggle()

@@ -1,37 +1,30 @@
+local Job = require("plenary.job")
 local nm = require("galore.notmuch")
 
 local M = {}
 -- lets do it like this for now
--- local db_path = (function()
--- 	local dirname = string.sub(debug.getinfo(1).source, 2, #"/gmime.lua" * -1)
--- 	return dirname .. "/../../tests/data/.notmuch"
--- end)()
+local test_path = (function()
+	local dirname = string.sub(debug.getinfo(1).source, 2, #"/test_utils.lua" * -1)
+	return dirname .. "/../../tests/"
+end)()
 
-local path = "/home/dagle/code/galore/tests/data/"
-local db_path = path .. ".notmuch"
+local script = test_path .. "nm_init.sh"
 
-
-M.db_path = db_path
-
--- should make a testconfig
-function M.setup()
-	-- make directory
-	vim.fn.mkdir(db_path, "")
-	local db = nm.db_create(db_path)
-	return db
+function M.setup(testname)
+	local db_path = test_path .. testname .. "/mail/.notmuch"
+	Job:new({
+		command = script,
+		args = {testname}
+	}):sync()
+	return nm.db_open(db_path, 0)
 end
 
--- load all testing emails into the db
-function M.load_messages()
+function M.cleanup(testname)
+	local test = test_path .. testname
+	vim.fn.delete(test, "rf")
 end
 
--- load all gmime test messages (doesn't use nm)
 function M.load_rawmessages()
 end
-
--- function M.cleanup()
--- 	vim.fn.delete(db_path, flags: any)
--- 	-- delete db_path
--- end
 
 return M

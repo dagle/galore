@@ -12,6 +12,7 @@ local M = {}
 local function create_attachment(filename)
 	local cat, type = jobs.get_type(filename)
 	local attachment = gm.new_part(cat, type)
+	--- XXX part_set__filename
 	gm.set_part_filename(attachment, u.basename(filename))
 	local stream = gm.stream_open(filename, "r", 0644)
 
@@ -32,6 +33,7 @@ local function make_html(part)
 
 	local filter = gm.filter_html(flags, color)
 	gm.filter_add(filters, filter)
+	-- XXX update
 	local html_body = gm.new_text_part("html")
 	local new_content = gm.get_content(html_body)
 	gm.wrapper_set_stream(new_content, filter)
@@ -102,7 +104,9 @@ function M.create_message(buf, reply, attachments, mode)
 		gm.set_header(message, "In-Reply-To", reply.in_reply_to)
 	end
 
+	-- XXX update
 	local body = gm.new_text_part("plain")
+	-- XXX update
 	gm.set_text(body, buf.body)
 	current = body
 
@@ -110,7 +114,9 @@ function M.create_message(buf, reply, attachments, mode)
 		-- we make another body and then filter it through html
 		local alt = gm.new_multipart("alternative")
 
+		-- XXX update
 		local html_body = gm.new_text_part("plain")
+		-- XXX update
 		gm.set_text(html_body, buf.body)
 		local html = make_html(html_body)
 		gm.multipart_add(alt, body)

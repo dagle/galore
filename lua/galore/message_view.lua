@@ -3,11 +3,12 @@ local v = vim.api
 -- local a = require "plenary.async"
 local r = require("galore.render")
 local u = require("galore.util")
-local nm = require("galore.notmuch")
+-- local nm = require("galore.notmuch")
 local gm = require("galore.gmime")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
+local context_manager = require("plenary.context_manager")
 -- local attach_view = require('galore.attach_view')
 local M = {}
 
@@ -53,6 +54,14 @@ function M.raw_mode(kind)
 		cursor = "top",
 		init = function(buffer)
 			-- need a way to open files in a float
+			-- local with = context_manager.with
+			-- local open = context_manager.open
+			--
+			-- local result = with(open(M.state), function(reader)
+			-- 	return reader:read()
+			-- end)
+			-- P(result)
+			-- vim.api.nvim_buf_set_lines(buffer.handle, 0, 0, true, u.split_lines(result))
 			vim.cmd(":e " .. M.state)
 			-- vim.api.nvim_set_keymap('n', 'q', "", nil)
 		end,

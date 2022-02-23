@@ -11,9 +11,9 @@ function M.new()
 			args = { "new" },
 			on_exit = function(_, ret_val)
 				if ret_val == 0 then
-					print("Notmuch updated successfully")
+					vim.notify("Notmuch updated successfully")
 				else
-					print("Notmuch update failed")
+					vim.notify("Notmuch update failed", vim.log.levels.ERROR)
 				end
 			end,
 		})
@@ -61,13 +61,11 @@ function M.send_mail(to, from, message_str)
 			args = args,
 			writer = message_str,
 			on_exit = function(j, return_val)
-				-- do something notify the user
-				-- that the mail has fail or not
 				  if return_val == 0 then
-					  print("mail sent!")
+					vim.notify("Mail sent")
 				  else
-					  local err = string.format("%s failed with error: %d", cmd, return_val)
-					  print(err)
+					local err = string.format("%s failed with error: %d", cmd, return_val)
+					vim.notify(err, vim.log.levels.ERROR)
 				  end
 			end,
 		})
