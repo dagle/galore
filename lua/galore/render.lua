@@ -1,4 +1,5 @@
 local gm = require("galore.gmime")
+local gmime = require("galore.gmime.init")
 local gp = require("galore.gmime.parts")
 local gi = require("galore.gmime.gmime_ffi")
 local gc = require("galore.gmime.content")
@@ -118,7 +119,7 @@ local function show_message_helper(message, buf, opts, state)
 
 	if opts.reply then
 		local date = gp.message_get_date(message)
-		local author = gc.internet_address_list_to_string(gp.message_get_address(message, "from"), nil, false)
+		local author = gc.internet_address_list_to_string(gp.message_get_address(message, gi.GMIME_ADDRESS_TYPE_FROM), nil, false)
 		local qoute = conf.values.qoute_header(date, author)
 		M.draw(buf, { qoute })
 	end

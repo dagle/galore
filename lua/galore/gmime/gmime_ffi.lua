@@ -1,8 +1,6 @@
 -- XXX (Not needed!) Missing: Part-iter, stream-gio
 -- TODO sort enums!
 
--- XXX Maybe these files:
--- Filter, crypto, parts, stream, ...
 local library_path = (function()
 	local dirname = string.sub(debug.getinfo(1).source, 2, #"/gmime_ffi.lua" * -1)
 	if package.config:sub(1, 1) == "\\" then
@@ -11,6 +9,8 @@ local library_path = (function()
 		return dirname .. "../../../build/libgalore.so"
 	end
 end)()
+
+
 
 local ffi = require("ffi")
 local galore = ffi.load(library_path)
@@ -28,11 +28,38 @@ local galore = ffi.load(library_path)
 
 --- @class gmime.Filter
 --- @class gmime.FilterBest
-
---- @class gmime.InternetAddressList
---- @class gmime.InternetAddressMailbox
+--- @class gmime.FilterGZip
+--- @class gmime.FilterYenc
+--- @class gmime.FilterOpenPGP
+--- @class gmime.OpenPGPData
+--- @class gmime.FilterWindows
+--- @class gmime.FilterChecksum
 
 --- @class gmime.Stream
+--- @class gmime.Parser
+--- @class gmime.Format
+--- @class gmime.ParserOptions
+--- @class gmime.SeekWhence
+--- @class gmime.StreamCat
+--- @class gmime.StreamMmap
+--- @class gmime.StreamNull
+--- @class gmime.StreamPipe
+--- @class gmime.StreamFilter
+
+--- @class gmime.Header
+--- @class gmime.HeaderList
+--- @class gmime.InternetAddress
+--- @class gmime.InternetAddressList
+--- @class gmime.InternetAddressMailbox
+--- @class gmime.InternetAddressGroup
+--- @class gmime.ContentDisposition
+
+--- @class gmime.FormatOptions
+--- @class gmime.Param
+--- @class gmime.ParamList
+--- @class gmime.ContentType
+--- @class gmime.References
+--- @class gmime.EncodingState
 
 --- @class gmime.CryptoContext
 --- @class gmime.AutocryptHeader
@@ -43,13 +70,47 @@ local galore = ffi.load(library_path)
 --- @class gmime.Signature
 --- @class gmime.SignatureList
 --- @class gmime.SignatureStatus
+--- @class gmime.ApplicationPkcs7Mime
 
 --- @class gmime.ContentEncoding
+
+--- @class gmime.Option
 
 --- @class gmime.Filter
 
 --- TODO should it be an error or can we do "better" / more lua-ish?
 --- @class gmime.Error
+--- @class iconv
+
+---- enums
+--- @class gmime.AddressType
+
+--- @class gmime.ChecksumType
+
+--- @class gmime.StreamBufferMode
+
+--- @class gmime.DecryptFlags
+--- @class gmime.EncryptFlags
+--- @class gmime.VerifyFlags
+
+--- @class gmime.FilterBestFlags
+--- @class gmime.EncodingConstraint
+--- @class gmime.FilterFromMode
+--- @class gmime.FilterGZipMode
+
+--- @class gmime.ParserWarning
+--- @class gmime.NewLineFormat
+--- @class gmime.ParamEncodingMethod
+--- @class gmime.RfcComplianceMode
+--- @class gmime.Trust
+--- @class gmime.Validity
+--- @class gmime.PubKeyAlgo
+--- @class gmime.SecureMimeType
+--- @class gmime.DigestAlgo
+--- @class gmime.CipherAlgo
+--- @class gmime.AutocryptPreferEncrypt
+--- @class gmime.SecureMimeType
+
 
 ffi.cdef([[
 /* Messages */
@@ -138,8 +199,10 @@ typedef struct {} GPtrArray;
 typedef struct {} GDateTime;
 typedef struct {} GBytes;
 typedef struct {} GString;
+typedef unsigned char guint8;
 typedef int gboolean;
 typedef int ssize_t;
+typedef long time_t;
 
 /* callbacks, these are slow */
 typedef GMimeCryptoContext * (* GMimeCryptoContextNewFunc) (void);
@@ -165,11 +228,10 @@ typedef int guint;
 typedef int gchar;
 typedef unsigned int guint32;
 typedef signed long gint64;
-typedef void *iconv_t;
+typedef void* *iconv_t;
 
 // old stuff
 typedef struct {} GObject;
-
 typedef enum {
 	GMIME_WARN_DUPLICATED_HEADER = 1U,
 	GMIME_WARN_DUPLICATED_PARAMETER,
@@ -451,8 +513,8 @@ GMimeAutocryptHeaderList *g_mime_message_get_autocrypt_gossip_headers_from_inner
 
 GMimeObject *g_mime_message_get_body (GMimeMessage *message);
 
-// void g_mime_part_set_openpgp_data (GMimePart *mime_part, GMimeOpenPGPData data);
-// GMimeOpenPGPData g_mime_part_get_openpgp_data (GMimePart *mime_part);
+void g_mime_part_set_openpgp_data (GMimePart *mime_part, GMimeOpenPGPData data);
+GMimeOpenPGPData g_mime_part_get_openpgp_data (GMimePart *mime_part);
 
 GMimePart *g_mime_part_new (void);
 GMimePart *g_mime_part_new_with_type (const char *type, const char *subtype);
@@ -785,8 +847,8 @@ GMimeContentEncoding g_mime_data_wrapper_get_encoding (GMimeDataWrapper *wrapper
 ssize_t g_mime_data_wrapper_write_to_stream (GMimeDataWrapper *wrapper, GMimeStream *stream);
 
 /* Encryption */
-// void g_mime_crypto_context_register (const char *protocol, GMimeCryptoContextNewFunc callback);
-// void g_mime_crypto_context_set_request_password (GMimeCryptoContext *ctx, GMimePasswordRequestFunc request_passwd);
+void g_mime_crypto_context_register (const char *protocol, GMimeCryptoContextNewFunc callback);
+void g_mime_crypto_context_set_request_password (GMimeCryptoContext *ctx, GMimePasswordRequestFunc request_passwd);
 
 GMimeCryptoContext *g_mime_crypto_context_new (const char *protocol);
 
@@ -1326,7 +1388,6 @@ ssize_t g_mime_object_write_content_to_stream (GMimeObject *object, GMimeFormatO
 char *g_mime_object_to_string (GMimeObject *object, GMimeFormatOptions *options);
 
 void g_mime_object_encode (GMimeObject *object, GMimeEncodingConstraint constraint);
-void g_object_unref (gpointer object);
 
 /* Helper functions, these are in parts atm */
 int gmime_is_message_part(GMimeObject *obj);
@@ -1341,8 +1402,12 @@ gint64              g_date_time_to_unix                 (GDateTime *datetime);
 GPtrArray*          g_ptr_array_sized_new               (guint reserved_size);
 void                g_ptr_array_add                     (GPtrArray *array, gpointer data);
 gpointer*           g_ptr_array_free                    (GPtrArray *array, gboolean free_seg);
+GByteArray*         g_byte_array_new                    (void);
+guint8*             g_byte_array_free                   (GByteArray *array, gboolean free_segment);
 void                g_date_time_unref                   (GDateTime *datetime);
 void                g_ptr_array_unref                   (GPtrArray *array);
+void g_object_unref (gpointer object);
+gpointer            g_object_ref                        (gpointer object);
 
 
 // GMimeObject *message_part(GMimeMessage *message);
