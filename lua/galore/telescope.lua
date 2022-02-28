@@ -7,12 +7,12 @@ end
 local pickers = require("telescope.pickers")
 local teleconf = require("telescope.config").values
 local previewers = require("telescope.previewers")
-local compose = require("galore.compose")
 local actions = require("telescope.actions")
 local putils = require("telescope.previewers.utils")
 local finders = require("telescope.finders")
 local action_state = require("telescope.actions.state")
 local action_set = require("telescope.actions.set")
+local compose = require("galore.compose")
 
 local r = require("galore.render")
 local gm = require("galore.gmime")
@@ -24,7 +24,7 @@ local ts_utils = require "telescope.utils"
 local strings = require "plenary.strings"
 
 
-local M = {}
+local Telescope = {}
 
 -- parses the tree and outputs the parts
 -- this should use select
@@ -234,7 +234,7 @@ local function mime_preview(buf, winid, path)
 	putils.highlighter(buf, "mail")
 end
 
-M.notmuch_search = function(opts)
+Telescope.notmuch_search = function(opts)
 	opts = opts or {}
 	local live_notmucher = finders.new_job(function(prompt)
 		if not prompt or prompt == "" then
@@ -291,7 +291,7 @@ local search_builder = function(opts)
 	nm.query_destroy(q)
 end
 
-M.load_draft = function(opts)
+Telescope.load_draft = function(opts)
 	opts = opts or {}
 	local search = opts.search or ""
 	opts.search = search .. "tag:draft"
@@ -305,7 +305,7 @@ M.load_draft = function(opts)
 	search_builder(opts)
 end
 
-M.attach_file = function(opts)
+Telescope.attach_file = function(compose, opts)
 	opts = opts or {}
 	opts.prompt_title = "Attach file"
 	-- is this even the best way? works now tm
@@ -317,10 +317,10 @@ M.attach_file = function(opts)
 		end, function()
 			actions.close(prompt_bufnr)
 			local file = action_state.get_selected_entry().path
-			compose.add_attachment(file)
+			compose:add_attachment(file)
 		end)
 		return true
 	end
 	require("telescope").extensions.file_browser.file_browser(opts)
 end
-return M
+return Telescope

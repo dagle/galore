@@ -13,18 +13,31 @@ Not now, dunno how to use this even:
 -- Jumping to the next message in a thread etc 
 - Telescope parts_browser (and being able to pass it to render)
 
-Today:
-- Begin exploring a modular UI
-- Why do we get bad filenames sometimes? (seems like other clients get them too, doing a double notmuch new seems to help)
+Done:
+- Why do we get bad filenames sometimes? 
+-- It's because we sync tags and that can change filenames etc
 - Fix gmime.lua, split up the string and sort stuff
-- Never assert in notmuch!
+- Do we actually get bools
+- Begin exploring a modular UI
+
+Today:
 - Figure out the feature!
+- Never assert in notmuch!
 - Toy with casting!
 - Fix the maildir 
+=======
+- Fix the maildir
+- Can we propegate to tags?
+- Add draft flagged passed replied tags
+- Add a way to handle children and having sticky buffers
+- Folds message
+
+---
+- Convert 64bit number to date
+- Boolean stuff
 
 Next:
   - Do exmarks to show different parts
-  - Do we actually get bools
 0.1
 ===
 
@@ -32,10 +45,11 @@ Next:
  - [ ] Correctly handling emails enters in the topic (not just replace it with ^M)
 
 * Gmime lib
-  - [ ] Make full lua bindings
-  - [ ] Make the bindings lua-ish
-  - [ ] Make helpers.
-  - [ ] Update function names in the client
+  - [x] Make full lua bindings
+  - [ ] Make enum functions take string, string[] or enum
+  - [-] Make the bindings lua-ish
+  - [-] Make helpers.
+  - [-] Update function names in the client
 
 * Documentation
   - [ ] Writing in help pages
@@ -52,10 +66,10 @@ Next:
   - [x] Support reply-all
 
 * Compose
-  - [ ] An command for adding attachments :AddAttachment file
   - [x] Solve the draft issue. A draft should have a message but it isn't a reply
   - [ ] A real template system to generate new and responses
   - [x] Remove attachment
+  - [ ] Show filenames of attachments
 
 * Reply  
   - [x] Get a way to autoset the from (you want to use the same addr as the recieved)
@@ -113,11 +127,11 @@ Next:
   - [ ] Add a logger, to easier detect error
   - [-] Add a real debug script, to do real debugging
   - [ ] Do we really need to convert to strings back and forward?
-  - [ ] notmuch go through the code and check for leaks
-  -- [ ] Fix destroying queries before we are done with them.
-  - [ ] gmime leaks memory
-  -- [ ] Fix the memory model. We should handle memory on a query level
-  - [ ] gmime segfaults 
+  - [-] notmuch go through the code and check for leaks
+  -- [-] Fix destroying queries before we are done with them.
+  - [x] gmime leaks memory
+  -- [x] Fix the memory model. We should handle memory on a query level
+  - [-] gmime segfaults 
   - [x] gmime can't be reloaded, ffi-can't but we don't need to, just start a new session to debug.
 
 * Complete the different view models (thread, threadmessages, and messages)
@@ -201,7 +215,7 @@ Next:
   - [ ] Do gpg password callbacks in vim
   - [ ] Be able to use a password manager? Do I need one, I'm only asking for a password, not how to handle it? You would connect a gpg-easy client to a password manager
   - [ ] Make a interface for gpg-tui
-  - [ ] Do input for password in nvim.
+  - [-] Do input for password in nvim.
 
 * Lazy loading or atleast partial loading
   - [ ] Don't load everything on setup. (shouldn't load anything tbh)

@@ -5,16 +5,8 @@ local nm = require("galore.notmuch")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 
-local M = {}
-
--- Maybe make an easy way to add tags
-
--- is this a good idea?
--- figure out how to do state in a good way
--- Should I have a presitant db connection?
-M.State = {}
-
-M.savef_buffer = nil
+local Saved = Buffer:new()
+Saved.num = 0
 
 local function get_tags(db)
 	local box = {}
@@ -41,52 +33,45 @@ local function ppsearch(tag)
 	return string.format("%d %-20s (%s)", unpack(tag))
 end
 
-function M.ref()
-	return M.saved_buffer
+function Saved:select()
+	local line = vim.fn.line(".")
+	return self.state[line]
 end
 
-local function get_searches()
+function Saved:get_searches()
 	local search = get_search_info(config.values.saved_search, config.values.db)
 	if config.values.show_tags then
 		local tags = get_tags(config.values.db)
 		search = vim.tbl_extend("keep", search, tags)
 	end
-	M.State = search
+	self.state = search
 	return search
 end
 
-function M.create(kind)
-	if M.saved_buffer and M.saved_buffer:is_open() then
-		M.saved_buffer:focus()
-		return
+local function gen_name(num)
+	if num == 1 then
+		return "galore-saved"
 	end
-	-- try to find a buffer first
+	return string.format("galore-saved-%d", num)
+end
+
+
+function Saved:create(kind)
+	self.num = self.num + 1
 	return Buffer.create({
-		name = "galore-saved",
+		name = gen_name(self.num),
 		ft = "galore-saved",
 		kind = kind,
 		cursor = "top",
 		mappings = config.values.key_bindings.search,
 		init = function(buffer)
-			M.saved_buffer = buffer
 
-			local search = get_searches()
+			local search = buffer:get_searches()
 			local formated = vim.tbl_map(ppsearch, search)
 			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, formated)
-			-- delete last line
 			v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 		end,
-	})
+	}, Saved)
 end
 
-function M.close()
-	M.saved_buffer:close()
-end
-
--- this should actually select stuff
-function M:select()
-	local line = vim.fn.line(".")
-	return self.State[line]
-end
-
-return M
+return Saved

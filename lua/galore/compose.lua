@@ -13,32 +13,27 @@ local Path = require("plenary.path")
 local nm = require("galore.notmuch")
 local nu = require("galore.notmuch-util")
 
-local M = {}
+local Compose = Buffer:new()
 
-M.attachments = {}
-
-M.sent = {}
-
---- We need a remove function
-function M.add_attachment(file)
-	table.insert(M.attachments, file)
+function Compose:add_attachment(file)
+	table.insert(self.attachments, file)
 end
 
-function M.remove_attachment()
-	vim.ui.select(M.attachments, {prompt = "delete attachment"}, function (_, idx)
+function Compose:remove_attachment()
+	vim.ui.select(self.attachments, {prompt = "delete attachment"}, function (_, idx)
 		if idx then
-			table.remove(M.attachments, idx)
+			table.remove(self.attachments, idx)
 		end
 	end)
 end
 
 -- this should be move to some util function
 -- maybe us virtual lines to split between header and message
-function M.parse_buffer()
+function Compose:parse_buffer()
 	local box = {}
 	local body = {}
 	local lines = v.nvim_buf_get_lines(0, 0, -1, true)
-	local body_line = vim.api.nvim_buf_get_extmark_by_id(M.compose.handle, M.ns, M.marks, {})[1]
+	local body_line = vim.api.nvim_buf_get_extmark_by_id(self.compose.handle, self.ns, self.marks, {})[1]
 	for i = 1, body_line do
 		local start, stop = string.find(lines[i], "^%a+:")
 		-- ignore lines that isn't xzy: abc
@@ -62,10 +57,10 @@ function M.parse_buffer()
 end
 
 -- Tries to send what is in the current buffer
-function M.send_message()
+function Compose:send_message()
 	-- should check for nil
-	local buf = M.parse_buffer()
-	local message = reader.create_message(buf, M.reply, M.attachments)
+	local buf = self.parse_buffer()
+	local message = reader.create_message(buf, self.reply, self.attachments)
 	local to = gm.show_addresses(gm.message_get_address(message, "to"))
 	local from = gm.show_addresses(gm.message_get_address(message, "from"))
 	--- XXX add pre-hooks
@@ -76,7 +71,7 @@ end
 
 --- Add ability to encrypt the message
 --- we then need to delete these when we load the message
-function M.save_draft()
+function Compose:save_draft()
 	vim.ui.input({
 		prompt = "Save as: ",
 	}, function(filename)
@@ -85,8 +80,8 @@ function M.save_draft()
 			error("File exist")
 			return
 		end
-		local buf = M.parse_buffer()
-		local message = reader.create_message(buf, M.ref, M.attachments)
+		local buf = self.parse_buffer()
+		local message = reader.create_message(buf, self.reply, self.attachments)
 		if ret ~= nil then
 			print("Failed to parse draft")
 			return ret
@@ -126,7 +121,7 @@ end
 
 local mark_name = "email-compose"
 
-function M.create(kind, message, reply)
+function Compose.create(kind, message, reply)
 	local template
 	-- local ref = util.get_ref()
 	if message then
@@ -134,11 +129,6 @@ function M.create(kind, message, reply)
 	else
 		template = u.default_template()
 	end
-	-- if M.compose then
-	-- M.compose:focus()
-	-- return
-	-- end
-	-- try to find a buffer first
 	Buffer.create({
 		name = "galore-compose",
 		ft = "mail",
@@ -147,12 +137,12 @@ function M.create(kind, message, reply)
 		modifiable = true,
 		mappings = config.values.key_bindings.compose,
 		init = function(buffer)
-			M.compose = buffer
-			M.message = message
-			M.reply = reply
+			buffer.message = message
+			buffer.reply = reply
+			buffer.attachments = {}
 
 			-- this is a bit meh
-			M.ns = vim.api.nvim_create_namespace("email-compose")
+			buffer.ns = vim.api.nvim_create_namespace("email-compose")
 
 			local line_num = #template
 			local col_num = 0
@@ -160,15 +150,16 @@ function M.create(kind, message, reply)
 			local opts = {
 				virt_lines = { { { "Email body", "Comment" } } },
 			}
-			M.compose:clear()
+			buffer:clear()
 
-			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, template)
+			-- v.nvim_buf_set_lines(buffer.handle, 0, 0, true, template)
+			buffer:set_lines(0, 0, true, template)
 			if message then
 				render.show_message(message, buffer.handle, { reply = true })
 			end
-			M.marks = buffer:set_extmark(M.ns, line_num, col_num, opts)
+			buffer.marks = buffer:set_extmark(buffer.ns, line_num, col_num, opts)
 		end,
-	})
+	}, Compose)
 end
 
-return M
+return Compose

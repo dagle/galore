@@ -1,23 +1,18 @@
-package.loaded["neogit.buffer"] = nil
-
 __BUFFER_AUTOCMD_STORE = {}
 
-local Buffer = {
-	handle = nil,
-}
-Buffer.__index = Buffer
+local Buffer = {}
 
-function Buffer:new(handle)
-	local this = {
-		handle = handle,
-		border = nil,
-		kind = nil,
-		parent = nil,
-		cache = nil,
-	}
+function Buffer:new(this)
+	this = this or {}
+	-- local this = {
+	-- 	handle = handle,
+	-- 	border = nil,
+	-- 	kind = nil,
+	-- 	parent = nil,
+	-- 	cache = nil,
+	-- }
 
-	-- this.ui = Ui.new(this)
-
+	self.__index = self
 	setmetatable(this, self)
 
 	return this
@@ -60,7 +55,7 @@ function Buffer:close(delete)
 	if self.cleanup then
 		self.cleanup(self)
 	end
-	if self.kind == "replace" then
+	if self.kind == "replace" and self.part then
 		vim.api.nvim_win_set_buf(0, self.parent.handle)
 	else
 		if self.parent then
@@ -243,33 +238,34 @@ function Buffer:del_extmark(ns, id)
 	return vim.api.nvim_buf_del_extmark(self.handle, ns, id)
 end
 
-function Buffer:render()
-	if self.cache then
-		Buffer:set_lines(0, 0, true, self.cache)
-	end
-	self.cache = self:update()
-end
+-- function Buffer:render()
+-- 	if self.cache then
+-- 		Buffer:set_lines(0, 0, true, self.cache)
+-- 	end
+-- 	self.cache = self:update()
+-- end
 
-function Buffer.create(config)
+function Buffer.create(config, class)
 	config = config or {}
 	local kind = config.kind or "split"
 	local buffer = nil
+	class = class or Buffer
 
 	if kind == "replace" then
 		vim.cmd("enew")
-		buffer = Buffer:new(vim.api.nvim_get_current_buf())
+		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "tab" then
 		vim.cmd("tabnew")
-		buffer = Buffer:new(vim.api.nvim_get_current_buf())
+		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "split" then
 		vim.cmd("below new")
-		buffer = Buffer:new(vim.api.nvim_get_current_buf())
+		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "split_above" then
 		vim.cmd("top new")
-		buffer = Buffer:new(vim.api.nvim_get_current_buf())
+		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "vsplit" then
 		vim.cmd("bot vnew")
-		buffer = Buffer:new(vim.api.nvim_get_current_buf())
+		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "floating" then
 		-- Creates the border window
 		local vim_height = vim.api.nvim_eval([[&lines]])
@@ -323,7 +319,7 @@ function Buffer.create(config)
 		})
 
 		vim.api.nvim_win_set_cursor(content_window, { 1, 0 })
-		buffer = Buffer:new(content_buffer)
+		buffer = Buffer:new({handle = content_buffer})
 		buffer.border_buffer = border_buffer
 	else
 		assert("Wrong buffer mode!")
@@ -350,10 +346,14 @@ function Buffer.create(config)
 		buffer:set_filetype(config.ft)
 	end
 
+	--- What arguments should a callback have?
 	if config.mappings then
 		for mode, val in pairs(config.mappings) do
 			for key, cb in pairs(val) do
-				vim.api.nvim_buf_set_keymap(buffer.handle, mode, key, cb, { noremap = true, silent = true })
+				local cbfunc = function()
+					cb(buffer)
+				end
+				vim.keymap.set(mode, key, cbfunc, { noremap = true, silent = true, buffer = buffer.handle})
 			end
 		end
 	end
@@ -388,7 +388,6 @@ function Buffer.create(config)
 		buffer:set_option("readonly", true)
 	end
 
-	-- This sets fold styling for Neogit windows without overriding user styling
 	-- buffer:call(function()
 	--   local hl = vim.wo.winhl
 	--   if hl ~= "" then

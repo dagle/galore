@@ -1,21 +1,12 @@
 -- A thread view after, after ou have done a search this is what is displayed
-
-local M = {}
-
 local v = vim.api
 local nm = require("galore.notmuch")
 local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
-local gu = require("galore.gmime-util")
-M.State = {}
-M.Cache = {}
-M.Line = nil
-M.Threads = {}
 
-M.threads_buffer = nil
+local Tmb = Buffer:new()
 
--- stop using M, use self!
 local function get_message(message, level, prestring, i, tot)
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
@@ -29,7 +20,6 @@ local function sort(messages)
 	return messages
 end
 
--- maybe rewrite this is C or rust or something?
 local function show_messages(messages, level, prestring, num, tot, box, state)
 	local collected = u.collect(messages)
 	local j = 1
@@ -58,7 +48,7 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 	return num
 end
 
-function M.to_virtualline(threads, linenr)
+function Tmb.to_virtualline(threads, linenr)
 	local i = linenr
 	for _, val in ipairs(threads) do
 		if val.start < i and not val.expand then
@@ -67,8 +57,7 @@ function M.to_virtualline(threads, linenr)
 	end
 	return i
 end
-
-function M.to_realline(threads, linenr)
+function Tmb.to_realline(threads, linenr)
 	local i = linenr
 	for _, val in ipairs(threads) do
 		if val.start < i and not val.expand then
@@ -78,7 +67,8 @@ function M.to_realline(threads, linenr)
 	return math.max(i, 1)
 end
 
-function M:toggle(linenr)
+-- XXX shouldn't loop twice
+function Tmb:toggle(linenr)
 	local line = self.to_virtualline(self.Threads, linenr)
 	for _, val in ipairs(self.Threads) do
 		if val.start <= line and line <= val.stop then
@@ -88,7 +78,6 @@ function M:toggle(linenr)
 	end
 end
 
--- this should be move to config, it needs an easier interface
 local function ppMessage(messages)
 	local box = {}
 	for _, message in ipairs(messages) do
@@ -98,7 +87,7 @@ local function ppMessage(messages)
 	return box
 end
 
-local function get_messages(db, search)
+function Tmb:get_messages(db, search)
 	local state = {}
 	local threads = {}
 	local start, stop = 1, 0
@@ -113,75 +102,68 @@ local function get_messages(db, search)
 		table.insert(threads, threadinfo)
 		start = stop + 1
 	end
-	M.Threads = threads
-	M.State = state
+	self.Threads = threads
+	self.State = state
 	return threads
 end
 
-local function threads_to_buffer(threads)
-	-- local i = 2
-	M.threads_buffer:clear_sign_group("thread-expand")
-	for _, item in ipairs(threads) do
+function Tmb:threads_to_buffer()
+	-- Tmb.threads_buffer:clear_sign_group("thread-expand")
+	for _, item in ipairs(self.Threads) do
 		if item.expand then
-			M.threads_buffer:set_lines(-1, -1, true, item.messages)
+			self:set_lines(-1, -1, true, item.messages)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
 			-- i = i + #item.messages
 		else
-			M.threads_buffer:set_lines(-1, -1, true, { item.messages[1] })
+			self:set_lines(-1, -1, true, { item.messages[1] })
 			if #item.messages ~= 1 then
 				-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
 				-- i = i + 1
 			end
 		end
 	end
-	M.threads_buffer:set_lines(0, 1, true, {})
+	self:set_lines(0, 1, true, {})
 end
 
-function M.refresh(search)
-	local buffer = M.threads_buffer
-	buffer:unlock()
-	buffer:clear()
-	local results = get_messages(config.values.db, search)
-	threads_to_buffer(results)
-	buffer:lock()
+function Tmb:refresh(search)
+	self:unlock()
+	self:clear()
+	self:get_messages(config.values.db, search)
+	self:threads_to_buffer()
+	self:lock()
 end
 
-function M:redraw()
-	local buffer = self.threads_buffer
-	buffer:unlock()
-	buffer:clear()
-	threads_to_buffer(self.Threads)
-	buffer:lock()
+local function tail(list)
+    return {unpack(list, 2)}
 end
 
-function M.ref()
-	return M.threads_buffer
+-- Being able to to do a partial update
+-- XXX
+function Tmb:update()
 end
 
-function M.create(search, kind, parent)
-	if M.threads_buffer then
-		M.refresh(search)
-		M.threads_buffer:focus()
-		return
+-- ugly but works for now
+-- not general enough
+function Tmb:redraw(expand, to, stop, thread)
+	self:unlock()
+	if not to then
+		self:clear()
+		self:threads_to_buffer()
+	else
+		if expand then
+			self:set_lines(to, to, true, tail(thread.messages))
+		else
+			self:set_lines(to, stop, true, {})
+		end
 	end
-
-	Buffer.create({
-		name = "galore-threads",
-		ft = "galore-threads",
-		kind = kind,
-		cursor = "top",
-		parent = parent,
-		mappings = config.values.key_bindings.thread_browser,
-		init = function(buffer)
-			M.threads_buffer = buffer
-			M.refresh(search)
-		end,
-	})
+	self:lock()
 end
 
-function M:next_thread()
-	local line = vim.fn.getpos(".")[2]
-	local vline = self.to_virtualline(self.Threads, line[1])
+function Tmb:go_thread_next()
+	local pos = vim.api.nvim_win_get_cursor(0)
+	local line = pos[1]
+	local col = pos[2]
+	local vline = self.to_virtualline(self.Threads, line)
 
 	local ret
 	for _, val in ipairs(self.Threads) do
@@ -196,9 +178,11 @@ function M:next_thread()
 	end
 end
 
-function M:prev_thread()
-	local line = vim.fn.getpos(".")[2]
-	local vline = self.to_virtualline(self.Threads, line[1])
+function Tmb:go_thread_prev()
+	local pos = vim.api.nvim_win_get_cursor(0)
+	local line = pos[1]
+	local col = pos[2]
+	local vline = self.to_virtualline(self.Threads, line)
 
 	local ret
 	for _, val in ipairs(self.Threads) do
@@ -212,26 +196,40 @@ function M:prev_thread()
 		return self.State[ret]
 	end
 end
+
 --
-function M:next()
+function Tmb:next()
 	self.Line = math.min(self.Line + 1, #self.State)
-	return self.State[self.Line]
+	local nm_message = self.State[self.Line]
+	return nm.message_get_filename(nm_message)
 end
+
 --
-function M:prev()
+function Tmb:prev()
 	self.Line = math.max(self.Line - 1, 1)
-	return self.State[self.Line]
+	local nm_message = self.State[self.Line]
+	return nm.message_get_filename(nm_message)
 end
 
-function M.close()
-	M.threads_buffer:close()
-end
-
-function M:select()
+function Tmb:select()
 	local line = v.nvim_win_get_cursor(0)
 	local virt_line = self.to_virtualline(self.Threads, line[1])
 	self.Line = virt_line
 	return self.State[virt_line]
 end
 
-return M
+function Tmb.create(search, kind, parent)
+	Buffer.create({
+		name = "galore-threads",
+		ft = "galore-threads",
+		kind = kind,
+		cursor = "top",
+		parent = parent,
+		mappings = config.values.key_bindings.thread_browser,
+		init = function(buffer)
+			buffer:refresh(search)
+		end,
+	}, Tmb)
+end
+
+return Tmb

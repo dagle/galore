@@ -2,7 +2,6 @@ local nm = require("galore.notmuch")
 local gu = require("galore.gmime-util")
 local u = require("galore.util")
 local conf = require("galore.config")
-local jobs = require("galore.jobs")
 
 local M = {}
 
@@ -117,7 +116,7 @@ function M.change_tag(message, str)
 	end)
 end
 
-local function tag_unread(message)
+function M.tag_unread(message)
 	M.change_tag(message, "-unread")
 end
 
@@ -147,8 +146,6 @@ function M.gen_config(path, config, profile)
 	conf.values.primary_email = primary_email
 	conf.values.other_email = other_email
 	conf.values.exclude_tags = exclude_tags
-	conf.values.show_html = jobs.html
-	conf.values.tag_unread = tag_unread
 	conf.values.show_message_description = message_description
 end
 return M

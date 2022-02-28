@@ -10,7 +10,7 @@ function galore.open(opts)
 	vim.fn.sign_define("uncollapsed", { text = "v" })
 	vim.fn.sign_define("collapsed", { text = ">>" })
 	galore.connect()
-	return saved.create("replace")
+	return saved:create("replace")
 end
 
 function galore.connect(reconnect)
@@ -26,12 +26,10 @@ function galore.connect(reconnect)
 	galore.connected = true
 end
 
-
--- should global functions try to connect?
 function galore.setup(opts)
 	galore.user_config = opts
 	for bind, func in pairs(config.values.key_bindings.global) do
-		vim.api.nvim_set_keymap("n", bind, func, { noremap = true, silent = true })
+		vim.keymap.set("n", bind, func, { noremap = true, silent = true})
 	end
 end
 
