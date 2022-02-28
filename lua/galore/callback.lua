@@ -49,7 +49,7 @@ function M.change_tag(tmb, tag)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				nu.change_tag(message, itag)
+				nu.change_tag(config.values.db, message, itag)
 			else
 				error("No tag")
 			end
@@ -67,6 +67,7 @@ function M.forward()
 			return
 		end
 	end)
+	nu.tag_change(config.values.db, message, "+passed")
 end
 
 function M.toggle(tmb)

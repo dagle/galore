@@ -3,7 +3,7 @@ local v = vim.api
 -- local a = require "plenary.async"
 local r = require("galore.render")
 local u = require("galore.util")
-local nm = require("galore.notmuch")
+-- local nm = require("galore.notmuch")
 local gm = require("galore.gmime")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
@@ -11,9 +11,6 @@ local Path = require("plenary.path")
 local Message = Buffer:new()
 
 Message.state = {}
-
--- how do we name parts etc?
--- for now, parts is just attachments
 
 local function _view_attachment(filename, kind)
 	kind = kind or "floating"

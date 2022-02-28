@@ -56,8 +56,21 @@ local function gets(db, name)
 	return u.collect(nm.config_get_values_string(db, name))
 end
 
+local special_tags = {
+    draft = true,
+    flagged = true,
+    passed = true,
+    replied = true,
+    unread = true,
+}
+
+--- @param message notmuch.Message
+--- @param str string + adds tag, - removes tag
+--- @param tags string current tags the message has
+--- @return boolean if the change in tags can would trigger a maildir change
 local function _change_tag(message, str, tags)
 	local start, stop = string.find(str, "[+-]%a+")
+	local special = false
 	if start == nil then
 		return
 	end
@@ -73,12 +86,14 @@ local function _change_tag(message, str, tags)
 		end
 	end
 	if status ~= 0 then
-		print("Change tag failed with: " .. status)
+		vim.notify("Change tag failed with: " .. status)
+		return false
 	end
+	special = special_tags[tag]
 	if stop == #str then
 		return
 	end
-	_change_tag(message, string.sub(str, stop + 1, #str))
+	return special or _change_tag(message, string.sub(str, stop + 1, #str))
 end
 
 -- gets a single massage from an unique id
@@ -89,11 +104,14 @@ local function id_get_message(db, id)
 	end
 end
 
+-- can I make a async version of these
 function M.with_db_writer(db, func)
 	local path = nm.db_get_path(db)
 	local write_db = nm.db_open(path, 1)
+	nm.db_atomic_begin(db)
 	func(write_db)
-	nm.db_close(write_db)
+	nm.db_atomic_end(db)
+	nm.db_destroy(write_db)
 end
 
 function M.with_message_writer(message, func)
@@ -106,19 +124,64 @@ function M.with_message_writer(message, func)
 	end)
 end
 
--- this should works on messages, not message
-function M.change_tag(message, str)
-	M.with_message_writer(message, function(new_message)
-		local values = u.values(nm.message_get_tags(new_message))
-		nm.message_freeze(new_message)
-		_change_tag(new_message, str, values)
-		nm.message_thaw(new_message)
-	end)
+local function _optimize_search(db, messages, str)
+	-- get all the messages
+	local querybuf = {}
+	for message in messages do
+		table.insert(querybuf, "id:" .. nm.message_get_id(message))
+	end
+	local query = table.concat(querybuf, " or ")
+	local q = nm.create_query(db, query)
+	return nm.query_get_messages(q), q
+	-- update the query to only include the ones that needs to be updated
+end
+
+function M.change_tag(db, messages, str)
+	if type(messages) == "table" then
+		M.with_db_writer(db, function(new_db)
+			-- maybe do _optimized_query, so we fetch all the messages and only
+			-- messages that needs to be updated, that we we only need to do one query
+			-- local new_messages = _optimize_search(new_db, messages, str)
+			for _, message in ipairs(messages) do
+				local id = nm.message_get_id(message)
+				local new_message, q = id_get_message(new_db, id)
+				local values = u.values(nm.message_get_tags(new_message))
+				nm.message_freeze(new_message)
+				_change_tag(new_message, str, values)
+				nm.message_thaw(new_message)
+				nm.message_tags_to_maildir_flags(new_message)
+				nm.query_destroy(q)
+			end
+		end)
+	else
+		M.with_db_writer(db, function(new_db)
+			nm.db_atomic_begin(new_db)
+			local id = nm.message_get_id(messages)
+			local new_message, q = id_get_message(new_db, id)
+			local values = u.values(nm.message_get_tags(new_message))
+			nm.message_freeze(new_message)
+			_change_tag(new_message, str, values)
+			nm.message_thaw(new_message)
+			nm.message_tags_to_maildir_flags(new_message)
+			nm.query_destroy(q)
+		end)
+	end
 end
 
 function M.tag_unread(message)
-	M.change_tag(message, "-unread")
+	M.change_tag(conf.values.db, message, "-unread")
 end
+
+-- local function M_change_tag_job(db, messages, str)
+-- 	if type(messages) == "table" then
+-- 		P(nil)
+-- 	else
+--
+-- 		Job:new({
+--
+-- 		)
+-- 	end
+-- end
 
 local function message_description(level, tree, thread_num, thread_total, date, from, subtitle, tags)
 	local t = table.concat(tags, " ")
