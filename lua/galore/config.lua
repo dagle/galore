@@ -172,7 +172,7 @@ config.values = {
 		},
 		compose = {
 			n = {
-				function (compose)
+				["<leader>ms"] = function (compose)
 					compose:send()
 				end,
 				["<leader>ma"] = function (compose)
