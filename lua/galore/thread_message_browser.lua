@@ -4,6 +4,7 @@ local nm = require("galore.notmuch")
 local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
+local nu = require("galore.notmuch-util")
 
 local Tmb = Buffer:new()
 
@@ -20,14 +21,6 @@ local function sort(messages)
 	return messages
 end
 
-local function line_info(message)
-	return {
-		nm.message_get_id(message),
-		nm.message_get_filename(message),
-		u.collect(nm.message_get_tags(message)),
-	}
-end
-
 local function show_messages(messages, level, prestring, num, tot, box, state)
 	local collected = u.collect(messages)
 	local j = 1
@@ -42,7 +35,7 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 		end
 		table.insert(box, get_message(message, level, newstring, num + 1, tot))
 		-- table.insert(state, message)
-		table.insert(state, line_info(message))
+		table.insert(state, nu.line_info(message))
 		if num == 0 then
 			newstring = prestring
 		elseif #collected > j then
@@ -134,7 +127,7 @@ function Tmb:get_thread_message(vline)
 			break
 		end
 	end
-	return messages[vline-start]
+	return messages[vline-start+1]
 end
 
 function Tmb:threads_to_buffer()
@@ -171,17 +164,21 @@ local function tail(list)
     return {unpack(list, 2)}
 end
 
+local function render_message(tmb, message, line)
+	local formated = config.values.show_message_description(unpack(message))
+	tmb:unlock()
+	tmb:set_lines(line-1, line, true, {formated})
+	tmb:lock()
+end
 --- Being able to to do a partial update
 --- Only works for a single line atm, easy fix
 -- XXX
 function Tmb:update(start, values)
 	local value = values[1]
 	self.State[start] = value
-	-- P(self.Threads)
 	local tm = self:get_thread_message(start)
-	tm.tags = value[3]
-	-- self.Threads[start].tags = value[3]
-	-- self:set_lines
+	tm[8] = value[3]
+	render_message(self, tm, start)
 end
 
 -- ugly but works for now

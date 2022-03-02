@@ -2,9 +2,19 @@ local conf = require("galore.config")
 local ffi = require("ffi")
 local M = {}
 
+local function collect_keys(t)
+	local box = {}
+	for k, _ in pairs(t) do
+		table.insert(box, k)
+	end
+	return box
+end
+
 function M.trim(s)
 	return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
+
+M.collect_keys = collect_keys
 
 function M.safestring(ptr)
 	if ptr == nil then
@@ -13,12 +23,20 @@ function M.safestring(ptr)
 	return ffi.string(ptr)
 end
 
-function M.values(iter)
+function M.make_keys(iter)
 	local box = {}
 	for v in iter do
 		box[v] = true
 	end
 	return box
+end
+
+--- @param t table
+--- @param sep string
+--- @param i? number
+--- @param j? number
+function M.keys_concat(t, sep, i ,j)
+	return table.concat(collect_keys(t), sep, i, j)
 end
 
 function M.contains(list, item)
@@ -82,14 +100,6 @@ function M.add_prefix(str, prefix)
 		str = prefix .. " " .. str
 	end
 	return str
-end
-
-function M.collect_keys(iter)
-	local box = {}
-	for k, _ in pairs(iter) do
-		table.insert(box, k)
-	end
-	return box
 end
 
 function M.basename(path)
