@@ -80,7 +80,7 @@ config.values = {
 					cb.select_search(saved, "replace")
 				end,
 				["q"] = function (saved)
-					saved:close(false)
+					saved:close(true)
 				end,
 				["<C-v>"] = function (saved)
 					local cb = require("galore.callback")
@@ -117,7 +117,7 @@ config.values = {
 					cb.select_message(tmb, "split")
 				end,
 				["q"] = function (tmb)
-					tmb:close(false)
+					tmb:close(true)
 				end,
 				["<tab>"] = function (tmb)
 					local cb = require("galore.callback")
@@ -136,7 +136,7 @@ config.values = {
 					cb.select_message(mb, "replace")
 				end,
 				["q"] = function (mb)
-					mb:close(false)
+					mb:close(true)
 				end,
 			},
 		},
@@ -157,7 +157,7 @@ config.values = {
 					message_view:view_attach()
 				end,
 				["q"] = function (message_view)
-					message_view:close(false)
+					message_view:close(true)
 				end,
 				["<leader>mh"] = function (message_view)
 					message_view:raw_mode()
