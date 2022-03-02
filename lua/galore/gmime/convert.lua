@@ -175,6 +175,23 @@ function M.to_pub_algo(algo)
 	end
 end
 
+function M.to_param_encoding(param)
+	if type(param) == "string" then
+		param = param:lower()
+		if param == "default" then
+			return gmime.GMIME_PARAM_ENCODING_METHOD_DEFAULT
+		elseif param == "rfc2231" then
+			return gmime.GMIME_PARAM_ENCODING_METHOD_RFC2231
+		elseif param == "rfc2047" then
+			return gmime.GMIME_PARAM_ENCODING_METHOD_RFC2047
+		end
+	elseif type(param) == "table" then
+		return bit_mask(param, M.to_param_encoding)
+	else
+		return param
+	end
+end
+
 function M.to_encryption_flags(flags)
 	if type(flags) == "string" then
 		flags = flags:lower()
@@ -216,6 +233,24 @@ function M.to_decrytion_flag(flags)
 		return flags
 	end
 end
+
+function M.to_verify_flags(flags)
+	if type(flags) == "string" then
+		flags = flags:lower()
+		if flags == "none" then
+			return gmime.GMIME_VERIFY_NONE
+		elseif flags == "keyserver" then
+			return gmime.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS
+		elseif flags == "certificate" then
+			return gmime.GMIME_VERIFY_ENABLE_ONLINE_CERTIFICATE_CHECKS
+		end
+	elseif type(flags) == "table" then
+		return bit_mask(flags, M.to_verify_flags)
+	else
+		return flags
+	end
+end
+
 
 function M.to_filter_from(mode)
 	if type(mode) == "string" then
