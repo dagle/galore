@@ -22,8 +22,10 @@ function M.message_with_thread(message, f)
 	nm.query_destroy(query)
 end
 
+
+--- XXX removal
 local function _get_index(messages, m1, i)
-	for m2 in messages do
+	for m2 in ipairs(messages) do
 		if nm.message_get_id(m1) == nm.message_get_id(m2) then
 			return true, i
 		end
@@ -79,10 +81,12 @@ local function _change_tag(message, str, tags, state)
 	if string.sub(str, start, start) == "+" then
 		if not tags[tag] then
 			status = nm.message_add_tag(message, tag)
+			-- state[3][tag] = true
 		end
 	else
 		if tags[tag] then
 			status = nm.message_remove_tag(message, tag)
+			-- state[3][tag] = nil
 		end
 	end
 	if status ~= 0 then
@@ -93,7 +97,7 @@ local function _change_tag(message, str, tags, state)
 	if stop == #str then
 		return
 	end
-	return special or _change_tag(message, string.sub(str, stop + 1, #str))
+	return special or _change_tag(message, string.sub(str, stop + 1, #str), tags, state)
 end
 
 -- gets a single massage from an unique id
@@ -145,13 +149,24 @@ local function _optimize_search(db, messages, str)
 	-- update the query to only include the ones that needs to be updated
 end
 
+function M.line_info(message)
+	return {
+		nm.message_get_id(message),
+		nm.message_get_filename(message),
+		u.collect(nm.message_get_tags(message)),
+	}
+end
+
+
+--- do a deep copy now, test to do in place copy later
 local function update_message(message, str)
-	local values = u.values(nm.message_get_tags(message))
+	-- local state = vim.deepcopy(line_info)
+	local keys = u.make_keys(nm.message_get_tags(message))
 	nm.message_freeze(message)
-	local change = _change_tag(message, str, values)
+	_change_tag(message, str, keys)
 	nm.message_thaw(message)
 	nm.message_tags_to_maildir_flags(message)
-	return change
+	return M.line_info(message)
 end
 
 function M.change_tag(db, line_infos, str)
@@ -170,12 +185,13 @@ function M.change_tag(db, line_infos, str)
 			return rets
 		end)
 	else
+		local ret
 		M.with_db_writer(db, function(new_db)
 			local new_message, q = id_get_message(new_db, line_infos[1])
-			local change = update_message(new_message, str)
+			ret = update_message(new_message, str)
 			nm.query_destroy(q)
-			return change
 		end)
+		return ret
 	end
 end
 

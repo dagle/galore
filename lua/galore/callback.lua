@@ -47,7 +47,6 @@ function M.select_message(tmb, mode)
 	local vline, line_info = tmb:select()
 	local update = config.values.tag_unread(line_info)
 	update_line(tmb, vline, update)
-	-- local file = nm.message_get_filename(line_info)
 	message_view.create(line_info[2], mode, tmb)
 end
 
