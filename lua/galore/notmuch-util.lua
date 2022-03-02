@@ -68,7 +68,7 @@ local special_tags = {
 --- @param str string + adds tag, - removes tag
 --- @param tags string current tags the message has
 --- @return boolean if the change in tags can would trigger a maildir change
-local function _change_tag(message, str, tags)
+local function _change_tag(message, str, tags, state)
 	local start, stop = string.find(str, "[+-]%a+")
 	local special = false
 	if start == nil then
@@ -108,11 +108,19 @@ end
 function M.with_db_writer(db, func)
 	local path = nm.db_get_path(db)
 	local write_db = nm.db_open(path, 1)
-	nm.db_atomic_begin(db)
+	nm.db_atomic_begin(write_db)
 	func(write_db)
-	nm.db_atomic_end(db)
+	nm.db_atomic_end(write_db)
 	nm.db_destroy(write_db)
 end
+
+-- function M.with_db_writer(db, func)
+-- 	nm.db_reopen(db, 1)
+-- 	nm.db_atomic_begin(db)
+-- 	func(db)
+-- 	nm.db_atomic_end(db)
+-- 	nm.db_reopen(db, 0)
+-- end
 
 function M.with_message_writer(message, func)
 	local id = nm.message_get_id(message)
@@ -124,6 +132,7 @@ function M.with_message_writer(message, func)
 	end)
 end
 
+-- XXX this might be a bad idea since it makes it harder to re-render?
 local function _optimize_search(db, messages, str)
 	-- get all the messages
 	local querybuf = {}
@@ -136,40 +145,42 @@ local function _optimize_search(db, messages, str)
 	-- update the query to only include the ones that needs to be updated
 end
 
-function M.change_tag(db, messages, str)
-	if type(messages) == "table" then
+local function update_message(message, str)
+	local values = u.values(nm.message_get_tags(message))
+	nm.message_freeze(message)
+	local change = _change_tag(message, str, values)
+	nm.message_thaw(message)
+	nm.message_tags_to_maildir_flags(message)
+	return change
+end
+
+function M.change_tag(db, line_infos, str)
+	if type(line_infos[1]) == "table" then
 		M.with_db_writer(db, function(new_db)
 			-- maybe do _optimized_query, so we fetch all the messages and only
 			-- messages that needs to be updated, that we we only need to do one query
 			-- local new_messages = _optimize_search(new_db, messages, str)
-			for _, message in ipairs(messages) do
-				local id = nm.message_get_id(message)
-				local new_message, q = id_get_message(new_db, id)
-				local values = u.values(nm.message_get_tags(new_message))
-				nm.message_freeze(new_message)
-				_change_tag(new_message, str, values)
-				nm.message_thaw(new_message)
-				nm.message_tags_to_maildir_flags(new_message)
+			local rets = {}
+			for _, line_info in ipairs(line_infos) do
+				local new_message, q = id_get_message(new_db, line_info[1])
+				local ret = update_message(new_message, str)
+				table.insert(rets, ret)
 				nm.query_destroy(q)
 			end
+			return rets
 		end)
 	else
 		M.with_db_writer(db, function(new_db)
-			nm.db_atomic_begin(new_db)
-			local id = nm.message_get_id(messages)
-			local new_message, q = id_get_message(new_db, id)
-			local values = u.values(nm.message_get_tags(new_message))
-			nm.message_freeze(new_message)
-			_change_tag(new_message, str, values)
-			nm.message_thaw(new_message)
-			nm.message_tags_to_maildir_flags(new_message)
+			local new_message, q = id_get_message(new_db, line_infos[1])
+			local change = update_message(new_message, str)
 			nm.query_destroy(q)
+			return change
 		end)
 	end
 end
 
-function M.tag_unread(message)
-	M.change_tag(conf.values.db, message, "-unread")
+function M.tag_unread(line_info)
+	return M.change_tag(conf.values.db, line_info, "-unread")
 end
 
 -- local function M_change_tag_job(db, messages, str)

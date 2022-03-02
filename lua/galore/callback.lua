@@ -16,6 +16,18 @@ local nm = require("galore.notmuch")
 
 local M = {}
 
+-- local function message_cb(id, func)
+-- 	local message, q = nu.id_get_message(config.vaules.db, id)
+-- 	func(message)
+-- 	nm.query_destroy(q)
+-- end
+--
+-- local function message_cb_write(id, func)
+-- 	local message, q = nu.id_get_message(config.vaules.db, id)
+-- 	func(message)
+-- 	nm.query_destroy(q)
+-- end
+
 function M.select_search(saved, mode)
 	local search = saved:select()[3]
 	if config.values.thread_browser then
@@ -25,11 +37,18 @@ function M.select_search(saved, mode)
 	end
 end
 
+local function update_line(tmb, line, update)
+	if update then
+		tmb:update(line, {update})
+	end
+end
+
 function M.select_message(tmb, mode)
-	local mes = tmb:select()
-	config.values.tag_unread(mes)
-	local file = nm.message_get_filename(mes)
-	message_view.create(file, mode, tmb)
+	local vline, line_info = tmb:select()
+	local update = config.values.tag_unread(line_info)
+	update_line(tmb, vline, update)
+	-- local file = nm.message_get_filename(line_info)
+	message_view.create(line_info[2], mode, tmb)
 end
 
 function M.message_reply(message_view)
@@ -42,14 +61,17 @@ function M.message_reply_all(message_view)
 	compose.create("replace", message_view.message, ref)
 end
 
+
 function M.change_tag(tmb, tag)
-	local message = tmb:select()[1]
+	local line, line_info = tmb:select()
 	if tag then
-		nu.tag_change(tag)
+		local update = nu.change_tag(config.values.db, line_info, tag)
+		update_line(tmb, line, update)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				nu.change_tag(config.values.db, message, itag)
+				local update = nu.change_tag(config.values.db, line_info, itag)
+				update_line(tmb, line, update)
 			else
 				error("No tag")
 			end
