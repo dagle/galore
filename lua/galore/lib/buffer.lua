@@ -1,5 +1,3 @@
-__BUFFER_AUTOCMD_STORE = {}
-
 local Buffer = {}
 
 function Buffer:new(this)
@@ -92,9 +90,8 @@ end
 --   end
 -- end
 
-function Buffer:define_autocmd(events, script)
-	vim.cmd(string.format("au %s <buffer=%d> %s", events, self.handle, script))
-end
+-- function Buffer:define_autocmd(events, script)
+-- end
 
 function Buffer:get_lines(first, last, strict)
 	return vim.api.nvim_buf_get_lines(self.handle, first, last, strict)
@@ -370,12 +367,16 @@ function Buffer.create(config, class)
 	--   buffer.ui:render(unpack(config.render(buffer)))
 	-- end
 
+	--- BufDelete
+	--- BufWipeout
 	if config.autocmds then
+		-- vim.api.nvim_create_augroup("") -- unique id?
 		for event, cb in pairs(config.autocmds) do
-			table.insert(__BUFFER_AUTOCMD_STORE, cb)
-			local id = #__BUFFER_AUTOCMD_STORE
-			buffer:define_autocmd(event, string.format("lua __BUFFER_AUTOCMD_STORE[%d]()", id))
+			vim.api.nvim_create_autocmd(event, {callback = cb, buffer = buffer.handle})
 		end
+		-- for event, cb in pairs(config.autocmds) do
+			-- buffer:define_autocmd(event, string.format("lua __BUFFER_AUTOCMD_STORE[%d]()", id))
+		-- end
 	end
 
 	-- buffer.mmanager.register()
