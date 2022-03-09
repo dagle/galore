@@ -1,21 +1,22 @@
 -- local gmime = require("galore.gmime.gmime_ffi")
 local gs = require("galore.gmime.stream")
+local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
 local ge = require("galore.gmime.extra")
-local f = require("galore.gmime.funcs")
+local go = require("galore.gmime.object")
+-- local f = require("galore.gmime.funcs")
 local convert = require("galore.gmime.content")
 -- local gmime = require("galore.gmime.stream")
 local ffi = require("ffi")
 
 local M = {}
 
--- XXX Move this
-
 --- @param ctx gmime.CryptoContext
 --- @param uid string
 --- @param prompt string
 --- @param reprompt boolean
 --- @param response_stream gmime.Stream
+-- XXX Move this
 function M.get_password(ctx, uid, prompt, reprompt, response_stream)
 	--- use ctx? uid?
 	if reprompt then
@@ -43,22 +44,34 @@ function M.parser_warning(offset, error, item, _)
 	vim.notify(notification, level)
 end
 
-function M.internet_address_list(opt, str)
+function M.internet_address_list_iter(opt, str)
+	-- local list = galore.internet_address_list_parse(opt, str)
 	local list = gc.internet_address_list_parse(opt, str)
-	if not list then
-		return
+	if list == nil then
+		return nil
 	end
 	local i = 0
 	return function()
 		if i < gc.internet_address_list_length(list) then
 			local addr = gc.internet_address_list_get_address(list, i)
 			local mb = ffi.cast("InternetAddressMailbox *", addr)
-			local email = f.safestring(gc.internet_address_mailbox_get_addr(mb))
-			local name = f.safestring(gc.internet_address_get_name(addr))
+			local email = gc.internet_address_mailbox_get_addr(mb)
+			local name = gc.internet_address_get_name(addr)
 			i = i + 1
 			return name, email
 		end
 	end
+end
+
+function M.part_is_type(part, type, subtype)
+	local content = go.object_get_content_type(part)
+	return gc.content_type_is_type(content, type, subtype)
+end
+
+function M.part_mime_type(object)
+	local ct = go.object_get_content_type(object)
+	local type = gc.content_type_get_mime_type(ct)
+	return type
 end
 
 --- @param path string
@@ -74,16 +87,26 @@ function M.parse_message(path)
 	return message
 end
 
+function M.get_content(part)
+	return gp.part_get_content(ffi.cast("GMimePart *", part))
+end
+
 function M.save_part(part, filename)
 	local stream = assert(gs.stream_file_open(filename, "w"), "can't open file: " .. filename)
 	local content = M.get_content(part)
-	gs.g_mime_data_wrapper_write_to_stream(content, stream)
-	gs.g_mime_stream_flush(stream)
+	gs.data_wrapper_write_to_stream(content, stream)
+	gs.stream_flush(stream)
+end
+
+function M.mem_to_string(mem)
+	gs.stream_flush(mem)
+	local array = gs.stream_mem_get_byte_array(ffi.cast("GMimeStreamMem *", mem))
+	return ffi.string(array.data, array.len)
 end
 
 function M.header_iter(message)
 	-- local ls = galore.header_list(message)
-	local ls = ge.object_get_header_list(ffi.cast("GMimeObject *", message))
+	local ls = go.object_get_header_list(ffi.cast("GMimeObject *", message))
 	if ls then
 		local j = gc.header_list_get_count(ls)
 		local i = 0
@@ -99,10 +122,9 @@ function M.header_iter(message)
 	end
 end
 
-function M.is_multipart_alt(part)
+function M.is_multipart_alt(object)
 	-- local ct = ge.get_content_type(part)
-	local ct = ge.object_get_content_type(part)
-	local type = M.get_mime_type(ct)
+	local type = M.part_mime_type(object)
 	if type == "multipart/alternative" then
 		return true
 	end

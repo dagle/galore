@@ -9,15 +9,19 @@ end
 
 return {
 	init = init,
-	content = require("galore.gmime.content"),
-	convert = require("galore.gmime.convert"),
-	crypt = require("galore.gmime.crypt"),
-	extra = require("galore.gmime.extra"),
-	filter = require("galore.gmime.filter"),
-	funcs = require("galore.gmime.funcs"),
-	ffi = galore,
-	option = require("galore.gmime.option"),
-	parts = require("galore.gmime.parts"),
-	stream = require("galore.gmime.stream"),
-	util = require("galore.gmime.util"),
 }
+
+-- return {
+-- 	init = init,
+-- 	content = require("galore.gmime.content"),
+-- 	convert = require("galore.gmime.convert"),
+-- 	crypt = require("galore.gmime.crypt"),
+-- 	extra = require("galore.gmime.extra"),
+-- 	filter = require("galore.gmime.filter"),
+-- 	funcs = require("galore.gmime.funcs"),
+-- 	ffi = galore,
+-- 	option = require("galore.gmime.option"),
+-- 	parts = require("galore.gmime.parts"),
+-- 	stream = require("galore.gmime.stream"),
+-- 	util = require("galore.gmime.util"),
+-- }

@@ -9,22 +9,23 @@ local M = {}
 --- @param multipart gmime.Multipart
 --- @param fun fun(parent, part, state: table)
 --- @param state table
-function M.multipart_foreach(multipart, fun, state)
+function M.multipart_foreach(multipart, fun, level, state)
 	local queue = {}
 	local tmp = ffi.cast("GMimeObject *", multipart)
-	table.insert(queue, { tmp, tmp })
+	table.insert(queue, { tmp, tmp, level })
 	while #queue > 0 do
-		local parent, part = unpack(table.remove(queue, 1))
+		local parent, part, new_level = unpack(table.remove(queue, 1))
 		if parent ~= part then
-			fun(parent, part, state)
+			fun(parent, part, new_level, state)
 		end
 		if M.is_multipart(part) then
 			local multi = ffi.cast("GMimeMultipart *", part)
 			local i = 0
 			local j = gmime.g_mime_multipart_get_count(multi)
+			new_level = new_level + 1
 			while i < j do
 				local child = gmime.g_mime_multipart_get_part(multi, i)
-				table.insert(queue, { part, child })
+				table.insert(queue, { part, child, new_level})
 				i = i + 1
 			end
 		end
@@ -34,17 +35,18 @@ end
 --- @param multipart gmime.Multipart
 --- @param fun fun(parent, part, state: table)
 --- @param state table
-function M.multipart_foreach_dfs(multipart, parent, fun, state)
+function M.multipart_foreach_dfs(multipart, parent, fun, level, state)
 	if parent ~= multipart then
-		fun(parent, multipart, state)
+		fun(parent, multipart, level, state)
 	end
 	if M.is_multipart(multipart) then
 		local multi = ffi.cast("GMimeMultipart *", multipart)
 		local i = 0
 		local j = gmime.g_mime_multipart_get_count(multi)
+		level = level + 1
 		while i < j do
 			local child = gmime.g_mime_multipart_get_part(multi, i)
-			M.multipart_foreach_dfs(child, multipart, fun, state)
+			M.multipart_foreach_dfs(child, multipart, fun, level, state)
 			i = i + 1
 		end
 	end
@@ -55,15 +57,16 @@ end
 --- @param state table
 --- A message walker that applies fun and does depth first search
 function M.message_foreach_dfs(message, fun, state)
+	local level = 1
 	if not message or not fun then
 		return
 	end
 	local part = gmime.g_mime_message_get_mime_part(message)
 	local obj = ffi.cast("GMimeObject *", message)
-	fun(obj, part, state)
+	fun(obj, part, level, state)
 
 	if M.is_multipart(part) then
-		M.multipart_foreach_dfs(part, part, fun, state)
+		M.multipart_foreach_dfs(part, part, fun, level, state)
 	end
 end
 
@@ -72,21 +75,22 @@ end
 --- @param state table
 --- A message walker that applies fun and does breath first search
 function M.message_foreach(message, fun, state)
+	local level = 1
 	if not message or not fun then
 		return
 	end
 	local part = gmime.g_mime_message_get_mime_part(message)
 	local obj = ffi.cast("GMimeObject *", message)
-	fun(obj, part, state)
+	fun(obj, part, level, state)
 
 	if M.is_multipart(part) then
-		M.multipart_foreach(ffi.cast("GMimeMultipart*", part), fun, state)
+		M.multipart_foreach(ffi.cast("GMimeMultipart*", part), fun, level, state)
 	end
 end
 
 --- @param message gmime.Message
 --- @return fun() current gmime.MimeObject, parent gmime.MimeObject
---- XXX untested
+--- XXX untested, add level to it?
 function M.part_iter(message)
 	if message == nil then
 		return
@@ -187,8 +191,8 @@ end
 --- @param type gmime.AddressType
 --- @return gmime.InternetAddressList
 function M.message_get_address(message, type)
-	-- local ctype = convert.address_type(type)
-	local list = gmime.g_mime_message_get_addresses(message, type)
+	local ctype = convert.to_address_type(type)
+	local list = gmime.g_mime_message_get_addresses(message, ctype)
 	return list
 end
 

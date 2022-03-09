@@ -48,3 +48,4 @@ function M.safestring(ptr)
 	return ffi.string(ptr)
 end
 
+return M

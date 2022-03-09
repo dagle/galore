@@ -790,24 +790,135 @@ function M.certificate_list_set_certificate(list, index, cert)
 	return gmime.g_mime_certificate_list_set_certificate(list, index, cert)
 end
 
---
--- local function verify(sig)
--- 	-- XXX fix this, what should we accept?
--- 	return gmime.g_mime_signature_get_status(sig) == gmime.GMIME_SIGNATURE_STATUS_GREEN
+---- XXX FIX THIS
+
+
+function M.get_signed_part(part)
+	-- local mps = ffi.cast("GMimeMultipartSigned *", part)
+	return galore.g_mime_multipart_get_part(ffi.cast("GMimeMultipart *", part), galore.GMIME_MULTIPART_SIGNED_CONTENT)
+end
+
+local function sig_iterator(siglist)
+	local i = gmime.g_mime_signature_list_length(siglist)
+	local j = 0
+	return function()
+		if j < i then
+			local sig = gmime.g_mime_signature_list_get_signature(siglist, j)
+			j = j + 1
+			return sig
+		end
+	end
+end
+
+local function verify(sig)
+	-- XXX fix this, what should we accept?
+	return gmime.g_mime_signature_get_status(sig) == gmime.GMIME_SIGNATURE_STATUS_GREEN
+end
+
+local function verify_list(siglist)
+	if siglist == nil or gmime.g_mime_signature_list_length(siglist) < 1 then
+		return false
+	end
+	-- local ret = true
+
+	for sig in sig_iterator(siglist) do
+		if verify(sig) then
+			return false
+		end
+	end
+	return true
+end
+
+-- function M.new_gpg_contex()
+-- 	return galore.g_mime_gpg_context_new()
 -- end
 
--- local function verify_list(siglist)
--- 	if siglist == nil or gmime.g_mime_signature_list_length(siglist) < 1 then
--- 		return false
--- 	end
--- 	-- local ret = true
---
--- 	for sig in sig_iterator(siglist) do
--- 		if verify(sig) then
--- 			return false
--- 		end
--- 	end
--- 	return true
+--- XXX DONE
+-- @param recipients An array of recipient key ids and/or email addresses
+function M.encrypt(ctx, part, id, recipients)
+	-- convert a table to a C array
+	-- we need to free this
+	local gp_array = gmime.g_ptr_array_sized_new(#recipients)
+	for _, rep in pairs(recipients) do
+		gmime.g_ptr_array_add(gp_array, ffi.cast("gpointer", rep))
+	end
+	local error = ffi.new("GError*[1]")
+	local obj = ffi.cast("GMimeObject *", part)
+	local ret = gmime.g_mime_multipart_encrypted_encrypt(
+		ctx,
+		obj,
+		true,
+		id,
+		gmime.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS,
+		gp_array,
+		error
+	)
+	return ret, error
+	-- return ret, ffi.string(galore.print_error(error[0]))
+end
+
+function M.sign(ctx, part, id)
+	local error = ffi.new("GError*[1]")
+	local obj = ffi.cast("GMimeObject *", part)
+	local ret = gmime.g_mime_multipart_signed_sign(ctx, obj, id, error)
+	return ret
+	-- return ret, ffi.string(galore.print_error(error[0]))
+end
+
+function M.verify_signed(part)
+	local signed = ffi.cast("GMimeMultipartSigned *", part)
+	local error = ffi.new("GError*[1]")
+	local ret
+
+	local signatures = gmime.g_mime_multipart_signed_verify(
+		signed,
+		gmime.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS,
+		error
+	)
+	if not signatures then
+		-- XXX convert this into an error
+		print("Failed to verify signed part: " .. error.message)
+	else
+		ret = verify_list(signatures)
+	end
+	return ret
+end
+
+function M.filter_reply(add)
+	return galore.g_mime_filter_reply_new(add)
+end
+
+--- XXX DONE
+function M.decrypt_and_verify(part)
+	local encrypted = ffi.cast("GMimeMultipartEncrypted *", part)
+	local error = ffi.new("GError*[1]")
+	local res = ffi.new("GMimeDecryptResult*[1]")
+	-- do we need to configure a session key?
+	local session = nil
+	local decrypted = gmime.g_mime_multipart_encrypted_decrypt(
+		encrypted,
+		gmime.GMIME_DECRYPT_ENABLE_KEYSERVER_LOOKUPS,
+		session,
+		res,
+		error
+	)
+
+	local sign
+	if res then
+		sign = verify_list(gmime.g_mime_decrypt_result_get_signatures(res[0]))
+	end
+
+	return decrypted, sign
+end
+
+-- function M.multipart_get_count(multipart)
+-- 	return galore.g_mime_multipart_get_count(multipart)
 -- end
+-- function M.multipart_get_part(multipart, index)
+-- 	return galore.g_mime_multipart_get_part(multipart, index)
+-- end
+--
+
+
 
 return M

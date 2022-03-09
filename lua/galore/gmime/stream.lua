@@ -327,11 +327,12 @@ end
 -- 	return gmime.g_mime_stream_mem_new_with_buffer(buf, len)
 -- end
 -- --
--- -- GByteArray *g_mime_stream_mem_get_byte_array (GMimeStreamMem *mem);
--- --- XXX
--- function M.stream_mem_get_byte_array()
--- 	return gmime.g_mime_stream_mem_get_byte_array()
--- end
+-- GByteArray *g_mime_stream_mem_get_byte_array (GMimeStreamMem *mem);
+--- @param mem gmime.StreamMem
+--- @return gmime.ByteArray
+function M.stream_mem_get_byte_array(mem)
+	return gmime.g_mime_stream_mem_get_byte_array(mem)
+end
 --
 -- -- void g_mime_stream_mem_set_byte_array (GMimeStreamMem *mem, GByteArray *array);
 -- --- XXX
@@ -340,16 +341,17 @@ end
 -- end
 --
 -- -- gboolean g_mime_stream_mem_get_owner (GMimeStreamMem *mem);
--- --- XXX
--- function M.stream_mem_get_owner()
--- 	gmime.g_mime_stream_mem_get_owner()
--- end
+--- @param mem gmime.StreamMem
+function M.stream_mem_get_owner(mem)
+	gmime.g_mime_stream_mem_get_owner(mem)
+end
 --
 -- -- void g_mime_stream_mem_set_owner (GMimeStreamMem *mem, gboolean owner);
--- --- XXX
--- function M.stream_mem_set_owner()
--- 	gmime.g_mime_stream_mem_set_owner()
--- end
+--- @param mem gmime.StreamMem
+--- @param owner boolean
+function M.stream_mem_set_owner(mem, owner)
+	gmime.g_mime_stream_mem_set_owner(mem, owner)
+end
 --
 -- --- XXX
 -- -- GMimeStream *g_mime_stream_file_new (FILE *fp);

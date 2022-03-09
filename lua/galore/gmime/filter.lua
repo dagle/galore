@@ -206,7 +206,7 @@ end
 --- @param encode boolean
 --- @return gmime.Filter
 function M.filter_basic_new(encoding, encode)
-	return ffi.gc(gmime.g_mime_filter_basic_new(encoding, encode), gmime.safe_unref)
+	return ffi.gc(gmime.g_mime_filter_basic_new(encoding, encode), gmime.g_object_unref)
 end
 
 --
@@ -229,7 +229,7 @@ end
 -- GMimeFilter *g_mime_filter_openpgp_new (void);
 --- @return gmime.Filter
 function M.filter_openpgp_new()
-	return ffi.gc(gmime.g_mime_filter_openpgp_new(), gmime.safe_unref)
+	return ffi.gc(gmime.g_mime_filter_openpgp_new(), gmime.g_object_unref)
 end
 
 --

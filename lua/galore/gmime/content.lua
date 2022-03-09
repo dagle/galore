@@ -86,7 +86,7 @@ end
 --- @param header gmime.Header
 --- @return string
 function M.header_get_name(header)
-	return ffi.string(gmime.constg_mime_header_get_name(header))
+	return ffi.string(gmime.g_mime_header_get_name(header))
 end
 
 -- const char *g_mime_header_get_raw_name (GMimeHeader *header);
@@ -458,7 +458,7 @@ end
 --- @param mb gmime.InternetAddressMailbox
 --- @return string
 function M.internet_address_mailbox_get_addr(mb)
-	ffi.string(gmime.internet_address_mailbox_get_addr(mb))
+	return ffi.string(gmime.internet_address_mailbox_get_addr(mb))
 end
 
 -- const char *internet_address_mailbox_get_idn_addr (InternetAddressMailbox *mailbox);

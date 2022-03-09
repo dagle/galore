@@ -41,10 +41,12 @@ local galore = ffi.load(library_path)
 --- @class gmime.ParserOptions
 --- @class gmime.SeekWhence
 --- @class gmime.StreamCat
+--- @class gmime.StreamMem
 --- @class gmime.StreamMmap
 --- @class gmime.StreamNull
 --- @class gmime.StreamPipe
 --- @class gmime.StreamFilter
+--- @class gmime.ByteArray
 
 --- @class gmime.Header
 --- @class gmime.HeaderList
@@ -83,18 +85,18 @@ local galore = ffi.load(library_path)
 --- @class iconv
 
 ---- enums
---- @class gmime.AddressType
+--- @class gmime.AddressType [x]
 
---- @class gmime.ChecksumType
+--- @class gmime.ChecksumType [x]
 
 --- @class gmime.StreamBufferMode
 
---- @class gmime.DecryptFlags
---- @class gmime.EncryptFlags
---- @class gmime.VerifyFlags
+--- @class gmime.DecryptFlags [x]
+--- @class gmime.EncryptFlags [x]
+--- @class gmime.VerifyFlags [x]
 
 --- @class gmime.FilterBestFlags
---- @class gmime.EncodingConstraint
+--- @class gmime.EncodingConstraint [x]
 --- @class gmime.FilterFromMode
 --- @class gmime.FilterGZipMode
 
@@ -102,9 +104,9 @@ local galore = ffi.load(library_path)
 --- @class gmime.NewLineFormat
 --- @class gmime.ParamEncodingMethod
 --- @class gmime.RfcComplianceMode
---- @class gmime.Trust
---- @class gmime.Validity
---- @class gmime.PubKeyAlgo
+--- @class gmime.Trust [x]
+--- @class gmime.Validity [x]
+--- @class gmime.PubKeyAlgo [x]
 --- @class gmime.SecureMimeType
 --- @class gmime.DigestAlgo
 --- @class gmime.CipherAlgo
@@ -142,10 +144,9 @@ typedef struct {} GMimeFilterEnriched;
 typedef struct {} GMimeFilterSmtpData;
 typedef struct {} GMimeFilterReply;
 
-/* where to? Maybe just put this in streams?*/
-typedef struct {} GMimeParser;
 
 /* Streams */
+typedef struct {} GMimeParser;
 typedef struct {} GMimeStream;
 typedef struct {} GMimeStreamFs;
 typedef struct {} GMimeStreamCat;
