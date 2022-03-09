@@ -1,16 +1,15 @@
 -- When we view an email, this is the view
 local v = vim.api
--- local a = require "plenary.async"
 local r = require("galore.render")
 local u = require("galore.util")
--- local nm = require("galore.notmuch")
-local gm = require("galore.gmime")
+local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
 local Message = Buffer:new()
 
-Message.state = {}
+-- Message.state = {}
+Message.num = 0
 
 local function _view_attachment(filename, kind)
 	kind = kind or "floating"
@@ -68,7 +67,7 @@ function Message:_save_attachment(filename, save_path)
 		if path:is_dir() then
 			path = path:joinpath(filename)
 		end
-		gm.save_part(self.attachments[filename][1], path:expand())
+		gu.save_part(self.attachments[filename][1], path:expand())
 		return
 	end
 	error("No attachment with that name")
@@ -98,7 +97,7 @@ function Message:save_attach()
 				-- we want to have hints
 				prompt = "Save as: ",
 			}, function(path)
-				Message:_save_attachment(item, path)
+				self:_save_attachment(item, path)
 			end)
 		else
 			error("No file selected")
@@ -109,13 +108,14 @@ end
 function Message:update(file)
 	self:unlock()
 	self:clear()
-	local gmessage = gm.parse_message(file)
+	local gmessage = gu.parse_message(file)
 	if gmessage then
 		-- Message.ns = vim.api.nvim_create_namespace("galore-message-view")
 		self.message = gmessage
 		-- r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
 		r.show_header(gmessage, self.handle, nil, file)
 		self.attachments = r.show_message(gmessage, self.handle, {})
+	-- self:set_lines(1,1, true, {file})
 	end
 	self:lock()
 end
@@ -125,9 +125,22 @@ function Message:redraw(file)
 	self:update(file)
 end
 
-function Message.create(file, kind, parent)
+function Message:next()
+	local file, vline = self.parent:next(self.vline)
+	self.vline = vline
+	self:redraw(file)
+end
+--
+function Message:prev()
+	local file, vline = self.parent:prev(self.vline)
+	self.vline = vline
+	self:redraw(file)
+end
+
+function Message:create(file, kind, parent, vline)
+	self.num = self.num + 1
 	Buffer.create({
-		name = "galore-message",
+		name = u.gen_name("galore-message", self.num),
 		ft = "mail",
 		kind = kind,
 		parent = parent,
@@ -136,19 +149,10 @@ function Message.create(file, kind, parent)
 		init = function(buffer)
 			buffer.file = file
 			buffer.parent = parent
+			buffer.vline = vline
 			buffer:update(file)
 		end,
 	}, Message)
-end
-
-function Message:next()
-	local file = self.parent:next()
-	self:redraw(file)
-end
---
-function Message:prev()
-	local file = self.parent:prev()
-	self:redraw(file)
 end
 
 function Message.open_attach() end
