@@ -1,12 +1,14 @@
-local gm = require("galore.gmime")
-local gmime = require("galore.gmime.init")
 local gp = require("galore.gmime.parts")
 local gi = require("galore.gmime.gmime_ffi")
 local gc = require("galore.gmime.content")
+local gu = require("galore.gmime.util")
+local go = require("galore.gmime.object")
+local ge = require("galore.gmime.crypt")
+local gs = require("galore.gmime.stream")
+local gf = require("galore.gmime.filter")
 local u = require("galore.util")
 local nm = require("galore.notmuch")
 local ffi = require("ffi")
-local nu = require("galore.notmuch-util")
 local conf = require("galore.config")
 
 local M = {}
@@ -27,6 +29,7 @@ function M.draw(buffer, input)
 	vim.api.nvim_buf_set_lines(buffer, -1, -1, true, input)
 end
 
+--- move this
 local function collect(iter)
 	local box = {}
 	for k, val in iter do
@@ -63,7 +66,7 @@ local marks = {
 
 function M.show_header(message, buffer, opts, nm_message)
 	opts = opts or {}
-	local headers = collect(gm.header_iter(message))
+	local headers = collect(gu.header_iter(message))
 	local i = 0
 	for _, k in ipairs(conf.values.headers) do
 		if headers[k] then
@@ -78,44 +81,45 @@ function M.show_header(message, buffer, opts, nm_message)
 end
 
 -- applies filters and writes it to memory
--- @param part a gmime part
+-- @param part gmime.Part
 -- @return string of the part
 local function part_to_string(part, opts)
-	local content = gm.get_content(part)
-	local stream = gm.get_stream(content)
-	gm.stream_reset(stream)
-	local filters = gm.new_filter_stream(stream)
+	local datawrapper = gp.part_get_content(part)
+	local stream = gs.data_wrapper_get_stream(datawrapper)
+	gs.stream_reset(stream)
+	local filters = gs.stream_filter_new(stream)
+	local streamfilter = ffi.cast("GMimeStreamFilter *", filters)
 
-	local enc = gm.wrapper_get_encoding(content)
+	local enc = gs.data_wrapper_get_encoding(datawrapper)
 	if enc then
-		local basic = gm.filter_basic(enc, false)
-		gm.filter_add(filters, basic)
+		local basic = gf.filter_basic_new(enc, false)
+		gs.stream_filter_add(streamfilter, basic)
 	end
 
-	local charset = gm.get_content_type_parameter(part, "charset")
+	local object = ffi.cast("GMimeObject *", part)
+	local charset = go.object_get_content_type_parameter(object, "charset")
 	if charset then
-		local utf = gm.filter_charset(charset, "UTF-8")
-		gm.filter_add(filters, utf)
+		local utf = gf.filter_charset_new(charset, "UTF-8")
+		gs.stream_filter_add(streamfilter, utf)
 	end
 
-	local unix = gm.filter_dos2unix(false)
-	gm.filter_add(filters, unix)
+	local unix = gf.filter_dos2unix_new(false)
+	gs.stream_filter_add(streamfilter, unix)
 
 	if opts.reply then
-		local reply_filter = gm.filter_reply(true)
-		gm.filter_add(filters, reply_filter)
+		local reply_filter = gf.filter_reply_new(true)
+		gs.stream_filter_add(streamfilter, reply_filter)
 	end
 
-	local mem = gm.new_mem_stream()
-	gm.stream_to_stream(filters, mem)
-	return gm.mem_to_string(mem)
+	local mem = gs.stream_mem_new()
+	gs.stream_write_to_stream(filters, mem)
+	return gu.mem_to_string(mem)
 end
 
 -- @param message gmime.Message
 -- @param state table containing the parts
 local function show_message_helper(message, buf, opts, state)
-	-- local part = gm.mime_part(message)
-	local part = gp.message_get_mime_part(message)
+	local object = gp.message_get_mime_part(message)
 
 	if opts.reply then
 		local date = gp.message_get_date(message)
@@ -124,9 +128,10 @@ local function show_message_helper(message, buf, opts, state)
 		M.draw(buf, { qoute })
 	end
 
-	if gp.is_multipart(part) then
-		M.show_part(part, buf, opts, state)
+	if gp.is_multipart(object) then
+		M.show_part(object, buf, opts, state)
 	else
+		local part = ffi.cast("GMimePart *", object)
 		local str = part_to_string(part, opts)
 		M.draw(buf, format(str))
 	end
@@ -144,9 +149,8 @@ function M.show_message(message, buf, opts)
 end
 
 -- something like this
-local function rate(part)
-	local ct = gm.get_content_type(part)
-	local type = gm.get_mime_type(ct)
+local function rate(object)
+	local type = gu.part_mime_type(object)
 	if type == "text/plain" then
 		return 5
 	elseif type == "text/html" then
@@ -157,69 +161,51 @@ end
 
 function M.show_part(object, buf, opts, state)
 	if gp.is_message_part(object) then
-		local message = gm.get_message(object)
-		-- do we want to show that it's a new message?
+		local mp = ffi.cast("GMimeMessagePart *", object)
+		local message = gp.message_part_get_message(mp)
 		show_message_helper(message, buf, opts, state)
 	elseif gp.is_partial(object) then
-		local full = gm.partial_collect(object)
+		--- XXX todo, handle partial
+		-- local mp = ffi.cast("GMimeMessagePartial *", object)
+		-- local full = gm.partial_collect(object)
 		-- do we want to show that it's a collected message?
-		show_message_helper(full, buf, opts, state)
+		-- show_message_helper(full, buf, opts, state)
 	elseif gp.is_part(object) then
-		-- if gm.is_attachment(part) then
-		if gm.get_disposition(object) == "attachment" then
-			local ppart = ffi.cast("GMimePart *", object)
-			local filename = gm.part_filename(ppart)
-			local viewable = gm.part_is_type(object, "text", "*")
-			state.attachments[filename] = { ppart, viewable }
-			-- table.insert(state.attachments, ppart)
-			-- M.parts[filename] = ppart
+		local part = ffi.cast("GMimePart *", object)
+		if gp.part_is_attachment(part) then
+			local filename = gp.part_get_filename(part)
+			local viewable = gu.part_is_type(object, "text", "*")
+			state.attachments[filename] = { part, viewable }
 			local str = "- [ " .. filename .. " ]"
 			-- this should be an extmark
 			M.draw(buf, { str })
-
-			-- -- local str = gm.print_part(part)
-			-- -- v.nvim_buf_set_lines(0, -1, -1, true, split_lines(str))
 		else
-			-- should contain more stuff
-			-- should push some filetypes into attachments
-			local ct = gm.get_content_type(object)
-			local type = gm.get_mime_type(ct)
+			local type = gu.part_mime_type(object)
 			if type == "text/plain" then
-				local str = part_to_string(object, opts)
+				local str = part_to_string(part, opts)
 				M.draw(buf, format(str))
 			elseif type == "text/html" then
-				local str = part_to_string(object, opts)
+				local str = part_to_string(part, opts)
 				local html = conf.values.show_html(str)
 				M.draw(buf, html)
 			end
 		end
 	elseif gp.is_multipart(object) then
+		local mp = ffi.cast("GMimeMultipart *", object)
 		-- Can we get a way to show this
 		if gp.is_multipart_encrypted(object) then
-			if opts.preview then
-				-- good enough for now
-				-- M.draw(buf, {"Encrypted!"})
-				opts.preview(buf, "Encrypted")
-				return
-			end
-			local de_part, sign = gm.decrypt_and_verify(object)
+			local de_part, sign = ge.decrypt_and_verify(object)
 			if sign then
-				-- mark("sign confirmed")
-				-- table.insert(state.parts, "--- sign confirmed! ---")
 			end
 			M.show_part(de_part, buf, opts, state)
 			return
 		elseif gp.is_multipart_signed(object) then
-			-- maybe apply some colors etc if the sign is correct or not
-			if gm.verify_signed(object) then
-				-- mark("sign confirmed")
-				-- table.insert(state.parts, "--- sign confirmed! ---")
+			if ge.verify_signed(object) then
 			end
-			local se_part = gm.get_signed_part(object)
+			local se_part = gp.multipart_get_part(mp, 0)
 			M.show_part(se_part, buf, opts, state)
-			-- return something
 			return
-		elseif conf.values.alt_mode == 1 and gm.is_multipart_alt(object) then
+		elseif conf.values.alt_mode == 1 and gu.is_multipart_alt(object) then
 			local multi = ffi.cast("GMimeMultipart *", object)
 			local saved
 			local rating = 0
