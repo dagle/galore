@@ -48,7 +48,9 @@ function M.internet_address_list_iter(opt, str)
 	-- local list = galore.internet_address_list_parse(opt, str)
 	local list = gc.internet_address_list_parse(opt, str)
 	if list == nil then
-		return nil
+		return function ()
+			return nil
+		end
 	end
 	local i = 0
 	return function()
