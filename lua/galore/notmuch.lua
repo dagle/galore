@@ -1083,9 +1083,11 @@ function M.message_get_filenames(message)
 end
 
 --- @param message notmuch.Message
---- @param indexopts notmuch.Indexopts
+--- @param indexopts? notmuch.Indexopts
 --- @return notmuch.Status
 function M.message_reindex(message, indexopts)
+	local db = nm.notmuch_message_get_database(message)
+	indexopts = indexopts or nm.notmuch_database_get_default_indexopts(db)
 	return nm.notmuch_message_reindex(message, indexopts)
 end
 
