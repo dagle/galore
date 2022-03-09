@@ -40,6 +40,7 @@ local function _get_index(messages, m1, i)
 end
 
 --- gets the index of message is in a thread
+--- XXX removal
 function M.get_index(thread, m1)
 	local messages = nm.thread_get_toplevel_messages(thread)
 	-- for m2 in messages do
@@ -157,6 +158,10 @@ function M.line_info(message)
 	}
 end
 
+local function sync_message()
+	
+end
+
 
 --- do a deep copy now, test to do in place copy later
 local function update_message(message, str)
@@ -164,6 +169,7 @@ local function update_message(message, str)
 	local keys = u.make_keys(nm.message_get_tags(message))
 	nm.message_freeze(message)
 	_change_tag(message, str, keys)
+	--- sync message
 	nm.message_thaw(message)
 	nm.message_tags_to_maildir_flags(message)
 	return M.line_info(message)
@@ -199,22 +205,10 @@ function M.tag_unread(line_info)
 	return M.change_tag(conf.values.db, line_info, "-unread")
 end
 
--- local function M_change_tag_job(db, messages, str)
--- 	if type(messages) == "table" then
--- 		P(nil)
--- 	else
---
--- 		Job:new({
---
--- 		)
--- 	end
--- end
-
 local function message_description(level, tree, thread_num, thread_total, date, from, subtitle, tags)
 	local t = table.concat(tags, " ")
 	local formated
-	-- from = gu.show_addr(from, u.addr_trim, 25)
-	from = u.string_setlength(from, 25)
+	from = gu.preview_addr(from, 25)
 	if thread_num > 1 then
 		formated = string.format("%s [%02d/%02d] %s│ %s▶ (%s)", date, thread_num, thread_total, from, tree, t)
 	else
