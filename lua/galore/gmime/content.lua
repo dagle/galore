@@ -1,5 +1,7 @@
+---@diagnostic disable: undefined-field
 local gmime = require("galore.gmime.gmime_ffi")
 local convert = require("galore.gmime.convert")
+local safe = require("galore.gmime.funcs")
 local ffi = require("ffi")
 
 local M = {}
@@ -410,7 +412,7 @@ end
 --- @param ia gmime.InternetAddress
 --- @return string
 function M.internet_address_get_name(ia)
-	return ffi.string(gmime.internet_address_get_name(ia))
+	return safe.safestring(gmime.internet_address_get_name(ia))
 end
 
 --
@@ -458,7 +460,7 @@ end
 --- @param mb gmime.InternetAddressMailbox
 --- @return string
 function M.internet_address_mailbox_get_addr(mb)
-	return ffi.string(gmime.internet_address_mailbox_get_addr(mb))
+	return safe.safestring(gmime.internet_address_mailbox_get_addr(mb))
 end
 
 -- const char *internet_address_mailbox_get_idn_addr (InternetAddressMailbox *mailbox);
@@ -610,7 +612,7 @@ end
 --- @param encode boolean
 --- @return string
 function M.internet_address_list_to_string(list, options, encode)
-	return ffi.string(gmime.internet_address_list_to_string(list, options, encode))
+	return safe.safestring(gmime.internet_address_list_to_string(list, options, encode))
 end
 
 -- void internet_address_list_encode (InternetAddressList *list, GMimeFormatOptions *options, GString *str);

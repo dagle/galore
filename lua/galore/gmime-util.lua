@@ -88,12 +88,25 @@ local function sanatize(name)
 	return string.gsub(name, " via.*", "")
 end
 
+local function sep(item, seperator)
+	seperator = seperator or " "
+	if item and item ~= "" then
+		return item .. seperator
+	end
+	return item
+end
+
 function M.preview_addr(addr, minlen)
 	local strbuf = {}
 	for name, mail in gu.internet_address_list_iter(nil, addr) do
-		name = sanatize(name)
-		local item = name .. " <" .. mail .. ">"
-		table.insert(strbuf, item)
+		-- if the addr doesn't follow the mbox standard, we we nop
+		if not (name and mail) then
+			table.insert(strbuf, addr)
+		else
+			name = sanatize(name)
+			local item = sep(name) .. "<" .. mail .. ">"
+			table.insert(strbuf, item)
+		end
 	end
 	local str = table.concat(strbuf, " ")
 	local len = vim.fn.strchars(str)
