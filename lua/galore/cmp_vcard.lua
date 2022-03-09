@@ -4,6 +4,13 @@ if not ok then
 	return
 end
 
+--- make this module more genirc in the future
+local okk, is_exe = pcall(vim.fn.executable, "mates")
+if okk and is_exe ~= 1 then
+	print("Error can't find the mates address book executable")
+	return
+end
+
 if not vim.fn.executable("khard") then
 	print("Error can't find the khard binary")
 end
