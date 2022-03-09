@@ -3,6 +3,8 @@ local Job = require("plenary.job")
 local u = require('galore.util')
 local gs = require("galore.gmime.stream")
 local gp = require("galore.gmime.parts")
+local go = require("galore.gmime.object")
+local ffi = require("ffi")
 local uv = vim.loop
 
 local M = {}
@@ -134,31 +136,49 @@ end
 -- end)
 
 local function raw_pipe(object, cmd, args)
-	local stdin = uv.new_pipe()
+	-- local stdin = uv.new_pipe()
 	local stdout = uv.new_pipe()
 	local stderr = uv.new_pipe()
-	local stream = gs.stream_pipe_new(stdin)
+	local fds = uv.pipe({nonblock=true}, {nonblock=true})
+	local stream = gs.stream_pipe_new(fds.write)
 
-	-- this should do some some conversion first?
-	-- or is that the senders responsibility?
-	gs.g_mime_object_write_to_stream(object, nil, stream)
-
-	local opts
+	local opts = {}
 	opts.args = args
-	opts.stdio = { stdin, stdout, stderr}
+	opts.stdio = { fds.read, stdout, stderr}
 
 	local handle, pid = uv.spawn(cmd, opts, function(code, signal)
+		P(code)
+		P(signal)
+	end)
+	go.object_write_to_stream(object, nil, stream)
+	gs.stream_flush(stream)
+
+	uv.read_start(stdout, function(err, data)
+		assert(not err, err)
+		if data then
+			print("stdout chunk", stdout, data)
+		else
+			print("stdout end", stdout)
+		end
+	end)
+
+	uv.read_start(stderr, function(err, data)
+		assert(not err, err)
+		if data then
+			print("stderr chunk", stderr, data)
+		else
+			print("stderr end", stderr)
+		end
 	end)
 end
 
 --- use fg to spawn a terminal to display output when we want that
 
---- XXX stub
 function M.send_mail_pipe(to, from, message)
 	-- create a pipe
 	local cmd, args = conf.values.send_cmd(to, from)
 	local object = ffi.cast("GMimeObject *", message)
-	raw_pipe(object, false, cmd, args)
+	raw_pipe(object, cmd, args)
 end
 
 --- @param cmd string
