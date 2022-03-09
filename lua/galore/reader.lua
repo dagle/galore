@@ -1,4 +1,8 @@
-local gm = require("galore.gmime")
+-- local gm = require("galore.gmime")
+local gp = require("galore.gmime.parts")
+local go = require("galore.gmime.object")
+local gc = require("galore.gmime.content")
+local gu = require("galore.gmime.util")
 local u = require("galore.util")
 local config = require("galore.config")
 local ffi = require("ffi")
@@ -84,65 +88,60 @@ end
 function M.create_message(buf, reply, attachments, mode)
 	-- move to ctx
 	local current
-	local message = gm.new_message(true)
+	local message = gp.new_message(true)
 	local headers = {"from", "to", "cc", "bcc"} -- etc
 
 	for _, v in ipairs(headers) do
 		if buf[v] then
-			for name, email in gm.internet_address_list(nil, buf[v]) do
-				gm.message_add_mailbox(message, v, name, email)
+			for name, email in gu.internet_address_list_iter(nil, buf[v]) do
+				gp.message_add_mailbox(message, v, name, email)
 			end
 		end
 	end
 
 	if buf.subject then
-		gm.message_set_subject(message, buf.subject, nil)
+		gp.message_set_subject(message, buf.subject, nil)
 	end
 
 	if reply then
-		gm.set_header(message, "References", reply.reference)
-		gm.set_header(message, "In-Reply-To", reply.in_reply_to)
+		go.object_set_header(message, "References", reply.reference)
+		go.object_set_header(message, "In-Reply-To", reply.in_reply_to)
 	end
 
-	-- XXX update
-	local body = gm.new_text_part("plain")
-	-- XXX update
-	gm.set_text(body, buf.body)
+	local body = gp.text_part_new_with_subtype("plain")
+	gp.text_part_set_text(body, table.concat(buf.body, "\n"))
 	current = body
 
-	if config.values.make_html then
-		-- we make another body and then filter it through html
-		local alt = gm.new_multipart("alternative")
+	-- if config.values.make_html then
+	-- 	local alt = gp.multipart_new_with_subtype("alternative")
+	--
+	-- 	local html_body = gp.text_part_new_with_subtype("html")
+	-- 	gp.text_part_set_text(html_body, buf.body)
+	-- 	local html = make_html(html_body)
+	-- 	gp.multipart_add(alt, body)
+	-- 	gp.multipart_add(alt, html)
+	-- 	current = alt
+	-- end
+	--
+	-- if attachments ~= nil and attachments ~= {} then
+	-- 	local multipart = gp.multipart_new_with_subtype("mixed")
+	-- 	gp.multipart_add(multipart, current)
+	-- 	current = multipart
+	-- 	for _, file in ipairs(attachments) do
+	-- 		local attachment = create_attachment(file)
+	-- 		gp.multipart_add(multipart, attachment)
+	-- 	end
+	-- end
+	--
+	-- if config.values.encrypt or config.values.sign then
+	-- 	local ctx = ge.new_gpg_contex()
+	-- 	local secure = M.secure(ctx, current, { buf.To })
+	-- 	if secure then
+	-- 		current = secure
+	-- 	end
+	-- end
 
-		-- XXX update
-		local html_body = gm.new_text_part("plain")
-		-- XXX update
-		gm.set_text(html_body, buf.body)
-		local html = make_html(html_body)
-		gm.multipart_add(alt, body)
-		gm.multipart_add(alt, html)
-		current = alt
-	end
-
-	if attachments ~= nil and attachments ~= {} then
-		local multipart = gm.new_multipart("mixed")
-		gm.multipart_add(multipart, current)
-		current = multipart
-		for _, file in ipairs(attachments) do
-			local attachment = create_attachment(file)
-			gm.multipart_add(multipart, attachment)
-		end
-	end
-
-	if config.values.encrypt or config.values.sign then
-		local ctx = gm.new_gpg_contex()
-		local secure = M.secure(ctx, current, { buf.To })
-		if secure then
-			current = secure
-		end
-	end
-
-	gm.message_set_mime(message, ffi.cast("GMimeObject *", current))
+	gp.message_set_mime_part(message, ffi.cast("GMimeObject *", current))
 
 	return message
 end
