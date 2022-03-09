@@ -7,6 +7,7 @@ local Buffer = require("galore.lib.buffer")
 local nu = require("galore.notmuch-util")
 
 local Tmb = Buffer:new()
+Tmb.num = 0
 
 local function get_message(message, level, prestring, i, tot)
 	local sub = nm.message_get_header(message, "Subject")
@@ -52,37 +53,59 @@ end
 
 function Tmb.to_virtualline(threads, linenr)
 	local i = linenr
-	for _, val in ipairs(threads) do
-		if val.start < i and not val.expand then
-			i = i + #val.messages - 1
-		else
+	for _, thread in ipairs(threads) do
+		if thread.start < i and not thread.expand then
+			i = i + #thread.messages - 1
+		elseif thread.start > i then
 			break
 		end
 	end
 	return i
 end
+
 function Tmb.to_realline(threads, linenr)
 	local i = linenr
-	for _, val in ipairs(threads) do
-		if val.start < i and not val.expand then
-			i = i - #val.messages + 1
-		else
-			break
+	for _, thread in ipairs(threads) do
+		if thread.start < linenr and not thread.expand then
+			i = i - #thread.messages + 1
 		end
 	end
 	return math.max(i, 1)
 end
 
+local function binsearch(threads, between, low, max)
+	local mid = low + math.floor(max / 2)
+	local t = threads[mid]
+	if t.start <= between and between <= t.stop then
+		return t
+	elseif between > t.stop then
+		return binsearch(threads, between, low, mid)
+	elseif t.start > between then
+		return binsearch(threads, between, mid, max)
+	end
+end
+
+function Tmb:get_thread(vline)
+	for _, thread in ipairs(self.Threads) do
+		if thread.start <= vline and vline <= thread.stop then
+			return thread
+		end
+	end
+end
+
+function Tmb:get_thread_message(vline)
+	local thread = self:get_thread(vline)
+	return thread.messages[vline-thread.start+1]
+end
+
 -- XXX shouldn't loop twice
 function Tmb:toggle(linenr)
 	local line = self.to_virtualline(self.Threads, linenr)
-	for _, val in ipairs(self.Threads) do
-		if val.start <= line and line <= val.stop then
-			val.expand = not val.expand
-			-- return val.expand, linenr + val.start - line
-			return val.expand, linenr + val.start - line, val.stop, val
-		end
-	end
+	local thread = self:get_thread(line)
+	thread.expand = not thread.expand
+	local start = linenr + thread.start - line
+	local stop = start + #thread.messages - 1
+	return thread.expand, start, stop, thread
 end
 
 local function ppMessage(messages)
@@ -115,61 +138,53 @@ function Tmb:get_messages(db, search)
 	return threads
 end
 
-function Tmb:get_thread_message(vline)
-	-- local vline = self.to_virtualline(self.Threads, line)
-
-	local messages
-	local start
-	for _, val in ipairs(self.Threads) do
-		if val.start <= vline and vline <= val.stop then
-			start = val.start
-			messages = val.messages
-			break
-		end
-	end
-	return messages[vline-start+1]
-end
 
 function Tmb:threads_to_buffer()
 	-- Tmb.threads_buffer:clear_sign_group("thread-expand")
-	for _, item in ipairs(self.Threads) do
-		if item.expand then
-			local lines = ppMessage(item.messages)
+	self:unlock()
+	self:clear()
+	for _, thread in ipairs(self.Threads) do
+		if thread.expand then
+			local lines = ppMessage(thread.messages)
 			self:set_lines(-1, -1, true, lines)
 			-- self:set_lines(-1, -1, true, item.messages)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
 			-- i = i + #item.messages
 		else
-			local lines = ppMessage(item.messages)
+			local lines = ppMessage(thread.messages)
 			self:set_lines(-1, -1, true, { lines[1]})
 			-- self:set_lines(-1, -1, true, { item.messages[1] })
-			if #item.messages ~= 1 then
+			if #thread.messages ~= 1 then
 				-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
 				-- i = i + 1
 			end
 		end
 	end
 	self:set_lines(0, 1, true, {})
+	self:lock()
 end
 
 function Tmb:refresh(search)
-	self:unlock()
-	self:clear()
 	self:get_messages(config.values.db, search)
 	self:threads_to_buffer()
-	self:lock()
 end
 
 local function tail(list)
     return {unpack(list, 2)}
 end
 
+--- XXX
 local function render_message(tmb, message, line)
 	local formated = config.values.show_message_description(unpack(message))
 	tmb:unlock()
 	tmb:set_lines(line-1, line, true, {formated})
 	tmb:lock()
 end
+
+--- adds an message and updates the thread? Or something?
+--- Maybe not?
+-- local function add_message()
+-- end
 --- Being able to to do a partial update
 --- Only works for a single line atm, easy fix
 -- XXX
@@ -191,7 +206,6 @@ function Tmb:redraw(expand, to, stop, thread)
 	else
 		if expand then
 			self:set_lines(to, to, true, tail(ppMessage(thread.messages)))
-			-- self:set_lines(to, to, true, tail(thread.messages))
 		else
 			self:set_lines(to, stop, true, {})
 		end
@@ -205,36 +219,13 @@ function Tmb:go_thread_next()
 	local col = pos[2]
 	local vline = self.to_virtualline(self.Threads, line)
 
-	local ret
-	for _, val in ipairs(self.Threads) do
-		if val.start <= vline and vline <= val.stop then
-			ret = val.stop + 1
-			break
-		end
-	end
-	if ret ~= nil and ret < #self.State then
-		self.Line = ret
-		vim.api.nvim_win_set_cursor(0, {ret, col})
-		return self.State[ret]
+	local tm = self:get_thread(vline)
+	if tm then
+		local lline = math.min(tm.stop + 1, #self.State)
+		local real = self.to_realline(self.Threads, lline)
+		vim.api.nvim_win_set_cursor(0, {real, col})
 	end
 end
--- hmmm.
--- function M:next_thread()
--- 	local line = vim.fn.getpos(".")[2]
--- 	local vline = self.to_virtualline(self.Threads, line[1])
---
--- 	local ret
--- 	for _, val in ipairs(self.Threads) do
--- 		if val.start <= vline and vline <= val.stop then
--- 			ret = val.stop + 1
--- 			break
--- 		end
--- 	end
--- 	if ret ~= nil and ret < #self.State then
--- 		self.Line = ret
--- 		return self.State[ret]
--- 	end
--- end
 
 function Tmb:go_thread_prev()
 	local pos = vim.api.nvim_win_get_cursor(0)
@@ -242,52 +233,60 @@ function Tmb:go_thread_prev()
 	local col = pos[2]
 	local vline = self.to_virtualline(self.Threads, line)
 
-	local ret
-	for _, val in ipairs(self.Threads) do
-		if val.start <= vline and vline <= val.stop then
-			ret = val.start - 1
-			break
+	local tm = self:get_thread(vline - 1)
+	if tm then
+		local lline
+		if tm.start == vline then
+			lline = math.max(tm.start - 1, 1)
+		else
+			lline = tm.start
 		end
-	end
-	if ret ~= nil and ret > 0 then
-		self.Line = ret
-		vim.api.nvim_win_set_cursor(0, {ret, col})
-		return self.State[ret]
+		local real = self.to_realline(self.Threads, lline)
+		vim.api.nvim_win_set_cursor(0, {real, col})
 	end
 end
 
 --
-function Tmb:next()
-	self.Line = math.min(self.Line + 1, #self.State)
-	local nm_message = self.State[self.Line]
-	return nm.message_get_filename(nm_message)
+function Tmb:next(line)
+	line = math.min(line + 1, #self.State)
+	local line_info = self.State[line]
+	return line_info[2], line
 end
 
 --
-function Tmb:prev()
-	self.Line = math.max(self.Line - 1, 1)
-	local nm_message = self.State[self.Line]
-	return nm.message_get_filename(nm_message)
+function Tmb:prev(line)
+	line = math.max(line - 1, 1)
+	local line_info = self.State[line]
+	return line_info[2], line
+end
+
+--- Maybe update the line when buffer is focused
+--- Using autocmd
+function Tmb:set_line(line)
+	--- should do to_realline and maybe we shouldn't have a self.Line
+	self.Line = line
 end
 
 function Tmb:select()
 	local line = v.nvim_win_get_cursor(0)
 	local virt_line = self.to_virtualline(self.Threads, line[1])
 	self.Line = virt_line
-	-- return self.State[virt_line], self.filenames[virt_line]
 	return virt_line, self.State[virt_line]
 end
 
-function Tmb.create(search, kind, parent)
-	Buffer.create({
-		name = "galore-threads",
+function Tmb:create(search, kind, parent)
+	self.num = self.num + 1
+	return Buffer.create({
+		name = u.gen_name("galore-threads", self.num),
 		ft = "galore-threads",
 		kind = kind,
 		cursor = "top",
 		parent = parent,
 		mappings = config.values.key_bindings.thread_browser,
 		init = function(buffer)
+			vim.api.nvim_win_set_option(0, "number", true)
 			buffer:refresh(search)
+			buffer.line = 1
 		end,
 	}, Tmb)
 end
