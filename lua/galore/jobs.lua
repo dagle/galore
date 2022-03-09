@@ -1,6 +1,9 @@
 local conf = require("galore.config")
 local Job = require("plenary.job")
 local u = require('galore.util')
+local gs = require("galore.gmime.stream")
+local gp = require("galore.gmime.parts")
+local uv = vim.loop
 
 local M = {}
 
@@ -53,6 +56,21 @@ function M.html(text)
 	return ret
 end
 
+function M.w3m(text)
+	local ret
+	Job
+		:new({
+			command = "w3m",
+			args = {"-dump", "-T", "text/html"},
+			writer = text,
+			on_exit = function(j, _)
+				ret = j:result()
+			end,
+		})
+		:sync()
+	return ret
+end
+
 function M.send_mail(to, from, message_str)
 	local cmd, args = conf.values.send_cmd(to, from)
 	Job
@@ -70,6 +88,90 @@ function M.send_mail(to, from, message_str)
 			end,
 		})
 		:start()
+end
+-- local stdin = uv.new_pipe()
+-- local stdout = uv.new_pipe()
+-- local stderr = uv.new_pipe()
+--
+-- print("stdin", stdin)
+-- print("stdout", stdout)
+-- print("stderr", stderr)
+--
+-- local handle, pid = uv.spawn("cat", {
+--   stdio = {stdin, stdout, stderr}
+-- }, function(code, signal) -- on exit
+--   print("exit code", code)
+--   print("exit signal", signal)
+-- end)
+--
+-- print("process opened", handle, pid)
+--
+-- uv.read_start(stdout, function(err, data)
+--   assert(not err, err)
+--   if data then
+--     print("stdout chunk", stdout, data)
+--   else
+--     print("stdout end", stdout)
+--   end
+-- end)
+--
+-- uv.read_start(stderr, function(err, data)
+--   assert(not err, err)
+--   if data then
+--     print("stderr chunk", stderr, data)
+--   else
+--     print("stderr end", stderr)
+--   end
+-- end)
+--
+-- uv.write(stdin, "Hello World")
+--
+-- uv.shutdown(stdin, function()
+--   print("stdin shutdown", stdin)
+--   uv.close(handle, function()
+--     print("process closed", handle, pid)
+--   end)
+-- end)
+
+local function raw_pipe(object, cmd, args)
+	local stdin = uv.new_pipe()
+	local stdout = uv.new_pipe()
+	local stderr = uv.new_pipe()
+	local stream = gs.stream_pipe_new(stdin)
+
+	-- this should do some some conversion first?
+	-- or is that the senders responsibility?
+	gs.g_mime_object_write_to_stream(object, nil, stream)
+
+	local opts
+	opts.args = args
+	opts.stdio = { stdin, stdout, stderr}
+
+	local handle, pid = uv.spawn(cmd, opts, function(code, signal)
+	end)
+end
+
+--- use fg to spawn a terminal to display output when we want that
+
+--- XXX stub
+function M.send_mail_pipe(to, from, message)
+	-- create a pipe
+	local cmd, args = conf.values.send_cmd(to, from)
+	local object = ffi.cast("GMimeObject *", message)
+	raw_pipe(object, false, cmd, args)
+end
+
+--- @param cmd string
+--- @param terminal boolean
+--- @param part gmime.Part | gmime.Message
+function M.pipe(cmd, terminal, part)
+	local obj
+	if not gp.is_part(part) then
+		local message = ffi.cast("GMimeMessage *", part)
+		obj = gp.message_get_body(message)
+	end
+	local args = {unpack(2, cmd)}
+	raw_pipe(obj, cmd[1], args)
 end
 
 return M
