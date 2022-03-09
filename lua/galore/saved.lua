@@ -4,17 +4,24 @@ local v = vim.api
 local nm = require("galore.notmuch")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
+local u = require("galore.util")
 
 local Saved = Buffer:new()
 Saved.num = 0
+
+local function saved_entry(db, search, name, box)
+	local q = nm.create_query(db, search)
+	local unread_q = nm.create_query(db, search .. " and tag:unread")
+	local i = nm.query_count_messages(q)
+	local unread_i = nm.query_count_messages(unread_q)
+	table.insert(box, { i, unread_i, name, search})
+end
 
 local function get_tags(db)
 	local box = {}
 	for tag in nm.db_get_all_tags(db) do
 		local search = "tag:" .. tag
-		local q = nm.create_query(db, search)
-		local i = nm.query_count_messages(q)
-		table.insert(box, { i, tag, search })
+		saved_entry(db, search, tag, box)
 	end
 	return box
 end
@@ -22,20 +29,18 @@ end
 local function get_search_info(searches, db)
 	local box = {}
 	for _, search in pairs(searches) do
-		local q = nm.create_query(db, search[2])
-		local i = nm.query_count_messages(q)
-		table.insert(box, { i, search[1], search[2] })
+		saved_entry(db, search[2], search[1], box)
 	end
 	return box
 end
 
 local function ppsearch(tag)
-	return string.format("%d %-20s (%s)", unpack(tag))
+	return string.format("%d(%d) %-30s (%s)", unpack(tag))
 end
 
 function Saved:select()
 	local line = vim.fn.line(".")
-	return self.state[line]
+	return self.State[line]
 end
 
 function Saved:get_searches()
@@ -44,22 +49,14 @@ function Saved:get_searches()
 		local tags = get_tags(config.values.db)
 		search = vim.tbl_extend("keep", search, tags)
 	end
-	self.state = search
+	self.State = search
 	return search
 end
-
-local function gen_name(num)
-	if num == 1 then
-		return "galore-saved"
-	end
-	return string.format("galore-saved-%d", num)
-end
-
 
 function Saved:create(kind)
 	self.num = self.num + 1
 	return Buffer.create({
-		name = gen_name(self.num),
+		name = u.gen_name("galore-saved", self.num),
 		ft = "galore-saved",
 		kind = kind,
 		cursor = "top",
