@@ -19,35 +19,88 @@ Done:
 - Fix gmime.lua, split up the string and sort stuff
 - Do we actually get bools
 - Begin exploring a modular UI
+- Telescope mimepart browser to test new api, maybe a bit to simple now and doesn't do anything
+- Fix string_setlength so that in doesn't break searching etc
+- What should we save in Line, maybe not a message, maybe have a ref in thread
+-- {id, tags, path} 
+
+Thoughts for view and render:
+- Anything that isn't shown, should be extmarks
+-- Attachments
+-- Signs and encryption, should it be on the parts and/or the whole email 
+--- Like a lock on from
+--- Color the text or a ext_mark around it
+- Use get_body to select the body part (optional)
+-- line_to_part() function to get the part from current line
+-- Maybe it should just be a way pipe an part/attachment? (like in aerc)
+-- Maybe other "guess" functions that returns a vim.ui.select if more than 1 value is found (sorted)
+
+
 
 Today:
+- Managed windows
+- Should we use channels?
+-- Reimplement the mutt api-ui with Managed windows
+-- Implent a singleton class 
+
+- Gpg interface.
+-- Document how to use gpg-tui in galore.
+-- How to find a gpg key in a message? 
+
+-- do sort
+
+- Message view
+- Fix the gmime-lib, names etc suck
+- Toy with casting!
+- Fix render, update the api
+-- How should the UI work? How do we display, I need to draw it? 
+- Don't there shouldn't be a global selected line in tmb, it should take a line
+
+- decrypt full messages
+
+- Null-ls support?
+- Do sorting
+- TextObjects
+- Pipe
+- unsubscribe
+
+- A way to do to_virtual and to_real etc in O(1) in the future. A million message goal
+- Don't convert a message to a string when we send it. Use a stream pipe instead.
+- FIGURE OUT THE CRASHES!
+-- Do no gmime but only notmuch, so we can be sure notmuch-code doesn't crash
+-- seems to be opening another db that creates the crashes
 - Figure out the feature!
 - Never assert in notmuch!
-- Toy with casting!
-- Fix the maildir 
-=======
-- Fix the maildir
-- Can we propegate to tags?
-- Add draft flagged passed replied tags
 - Add a way to handle children and having sticky buffers
-- Folds message
+
+- Add draft flagged passed replied tags
+- Folds message, or how to even display message overall
+
+- Maybe a thread should have have a Line inside it
+
+- Togglemimepart
+- Togglemimetree
 
 ---
 - Convert 64bit number to date
 - Boolean stuff
 =======
 
+
 Next:
   - Do exmarks to show different parts
 0.1
 ===
+* other email features
+  - [ ] Compose to sender
+  - [ ] Encrypt to self via fcc
 
 * Handling bad emails
  - [ ] Correctly handling emails enters in the topic (not just replace it with ^M)
 
 * Gmime lib
   - [x] Make full lua bindings
-  - [ ] Make enum functions take string, string[] or enum
+  - [-] Make enum functions take string, string[] or enum
   - [-] Make the bindings lua-ish
   - [-] Make helpers.
   - [-] Update function names in the client
@@ -65,12 +118,16 @@ Next:
   - [x] send email using sendmail interface
   - [x] Use an exmark line seperate the header from the message
   - [x] Support reply-all
+  - [ ] Fcc support (for saving emails)
+  - [ ] Non-standard headers: ‘Mail-Reply-To’, ‘Mail-Followup-To’, etc
 
 * Compose
   - [x] Solve the draft issue. A draft should have a message but it isn't a reply
   - [ ] A real template system to generate new and responses
   - [x] Remove attachment
   - [ ] Show filenames of attachments
+  - [ ] Inspect the email
+  - [ ] Fetch and override internal headers like refrence and in-reply-to
 
 * Reply  
   - [x] Get a way to autoset the from (you want to use the same addr as the recieved)
@@ -141,9 +198,23 @@ Next:
   -- [ ] Make a match-mode in thread view, were only matched messages are shown.
   -- [-] Make it possible to open a group
   -- [x] drop the other views? Pure thread mode is dropped
+  -- [ ] a way to select (or do an action) a whole thread
+  -- [ ] Allow functinos to work on multiple messages (at least in a thread)
   - [ ] thread_view
   - [ ] message_view
- ** Missing from all
+  - [ ] Saved
+  -- [ ] A way to add saved searches without editing the config and without reloading
+  -- [ ] More info on the saved screen, number of unread messages total(unread) 
+  - [ ] General
+  -- [ ] Implement exclude tags
+  -- [ ] Polling support?
+  -- [ ] Timeout to functions
+  -- [ ] Delayed functions (like deleting in 5 min etc)
+  -- [ ] Text objects
+  - [ ] compose
+  -- [ ] dry run
+  -- [ ] hooks
+  -- [ ] auto save draft if the email isn't sent or saved
 
 * respect the notmuch config
   - [x] Read config values for basic values (name, account, dir, etc)
@@ -176,7 +247,8 @@ Next:
 	- [-] preview
 	- [ ] tree-view
 	- [ ] Delete
-	- [ ] callbacks (user config stuff, like when notmuch new is ran, on delete, send, etc)
+	- [ ] hooks (user config stuff, like when notmuch new is ran, on delete, send, etc)
+	- [ ] Toggle tag?
 	- [ ] autocmds (it's a part of the UI overhaul)
 	- [x] Make a read message read
 	- [ ] Make a way to jump between views?
@@ -213,10 +285,11 @@ Next:
   - [x] cmp support
 
 * A gpg browser interface
-  - [ ] Do gpg password callbacks in vim
-  - [ ] Be able to use a password manager? Do I need one, I'm only asking for a password, not how to handle it? You would connect a gpg-easy client to a password manager
-  - [ ] Make a interface for gpg-tui
+  - [-] Do gpg password callbacks in vim
+  - [-] Be able to use a password manager? Do I need one, I'm only asking for a password, not how to handle it? You would connect a gpg-easy client to a password manager
+  - [x] Make a interface for gpg-tui, don't include it.
   - [-] Do input for password in nvim.
+  - [ ] make it possible to import keys from view
 
 * Lazy loading or atleast partial loading
   - [ ] Don't load everything on setup. (shouldn't load anything tbh)
