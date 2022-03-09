@@ -183,8 +183,8 @@ end
 --- @param name string
 --- @param addr string
 function M.message_add_mailbox(message, type, name, addr)
-	-- local addrtype = convert.address_type(type)
-	gmime.g_mime_message_add_mailbox(message, type, name, addr)
+	local addrtype = convert.to_address_type(type)
+	gmime.g_mime_message_add_mailbox(message, addrtype, name, addr)
 end
 
 --- @param message gmime.Message
