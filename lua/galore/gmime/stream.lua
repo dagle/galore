@@ -446,7 +446,7 @@ end
 --- @param fd number
 --- @return gmime.Stream
 function M.stream_pipe_new(fd)
-	return ffi.gce(gmime.g_mime_stream_pipe_new(fd), gmime.g_object_unref)
+	return ffi.gc(gmime.g_mime_stream_pipe_new(fd), gmime.g_object_unref)
 end
 
 -- gboolean g_mime_stream_pipe_get_owner (GMimeStreamPipe *stream);
