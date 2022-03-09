@@ -11,6 +11,7 @@ local nm = require("galore.notmuch")
 local nu = require("galore.notmuch-util")
 local gs = require("galore.gmime.stream")
 local gp = require("galore.gmime.parts")
+local gc = require("galore.gmime.content")
 
 local Compose = Buffer:new()
 
@@ -35,7 +36,7 @@ function Compose:parse_buffer()
 	local box = {}
 	local body = {}
 	local lines = v.nvim_buf_get_lines(0, 0, -1, true)
-	local body_line = vim.api.nvim_buf_get_extmark_by_id(self.compose.handle, self.ns, self.marks, {})[1]
+	local body_line = vim.api.nvim_buf_get_extmark_by_id(self.handle, self.ns, self.marks, {})[1]
 	for i = 1, body_line do
 		local start, stop = string.find(lines[i], "^%a+:")
 		-- ignore lines that isn't xzy: abc
@@ -59,15 +60,15 @@ function Compose:parse_buffer()
 end
 
 -- Tries to send what is in the current buffer
-function Compose:send_message()
+function Compose:send()
 	-- should check for nil
-	local buf = self.parse_buffer()
+	local buf = self:parse_buffer()
 	local message = reader.create_message(buf, self.reply, self.attachments)
-	local to = gp.show_addresses(gp.message_get_address(message, "to"))
-	local from = gp.show_addresses(gp.message_get_address(message, "from"))
+	local to = gc.internet_address_list_to_string(gp.message_get_address(message, "to"), nil, false)
+	local from = gc.internet_address_list_to_string(gp.message_get_address(message, "from"), nil, false)
 	--- XXX add pre-hooks
-	local message_str = gm.write_message_mem(message)
-	job.send_mail_pipe(to, from, message_str)
+	-- local message_str = gm.write_message_mem(message)
+	job.send_mail_pipe(to, from, message)
 	--- XXX add post-hooks
 end
 
@@ -82,7 +83,7 @@ function Compose:save_draft()
 			error("File exist")
 			return
 		end
-		local buf = self.parse_buffer()
+		local buf = self:parse_buffer()
 		local message = reader.create_message(buf, self.reply, self.attachments)
 		if ret ~= nil then
 			print("Failed to parse draft")
