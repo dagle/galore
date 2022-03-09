@@ -1,39 +1,24 @@
-local job = require("galore.jobs")
-local u = require("galore.util")
-local util = require("galore.util")
+-- local job = require("galore.jobs")
+-- local u = require("galore.util")
 -- local saved = require("galore.saved")
 -- local threads = require("galore.thread_browser")
 local thread_message = require("galore.thread_message_browser")
 local config = require("galore.config")
 local mb = require("galore.message_browser")
-local thread_view = require("galore.thread_view")
+-- local thread_view = require("galore.thread_view")
 local message_view = require("galore.message_view")
 local compose = require("galore.compose")
 local gu = require("galore.gmime-util")
 local nu = require("galore.notmuch-util")
-local tele = require("galore.telescope")
-local nm = require("galore.notmuch")
 
 local M = {}
 
--- local function message_cb(id, func)
--- 	local message, q = nu.id_get_message(config.vaules.db, id)
--- 	func(message)
--- 	nm.query_destroy(q)
--- end
---
--- local function message_cb_write(id, func)
--- 	local message, q = nu.id_get_message(config.vaules.db, id)
--- 	func(message)
--- 	nm.query_destroy(q)
--- end
-
 function M.select_search(saved, mode)
-	local search = saved:select()[3]
+	local search = saved:select()[4]
 	if config.values.thread_browser then
-		thread_message.create(search, mode, saved)
+		thread_message:create(search, mode, saved)
 	else
-	mb.create(search, mode)
+	mb:create(search, mode)
 	end
 end
 
@@ -43,11 +28,13 @@ local function update_line(tmb, line, update)
 	end
 end
 
-function M.select_message(tmb, mode)
-	local vline, line_info = tmb:select()
-	local update = config.values.tag_unread(line_info)
-	update_line(tmb, vline, update)
-	message_view.create(line_info[2], mode, tmb)
+function M.select_message(browser, mode)
+	local vline, line_info = browser:select()
+	--- this works but crashes, remove it for now
+	-- local update = config.values.tag_unread(line_info)
+	-- update_line(tmb, vline, update)
+	-- message_view.create(update[2], mode, tmb)
+	message_view:create(line_info[2], mode, browser, vline)
 end
 
 function M.message_reply(message_view)
@@ -79,6 +66,7 @@ function M.change_tag(tmb, tag)
 end
 
 -- XXX what should a forward do?
+--- https://datatracker.ietf.org/doc/html/rfc2076#section-3.14
 function M.forward()
 	local message = message_view:message_ref()
 	vim.ui.input({ prompt = "Forward to: " }, function(to)
@@ -92,18 +80,15 @@ function M.forward()
 end
 
 function M.toggle(tmb)
-	local line = vim.fn.getpos(".")[2]
-	local expand, uline, stop, thread = tmb:toggle(line)
+	local cursor = vim.api.nvim_win_get_cursor(0)
+	local expand, uline, stop, thread = tmb:toggle(cursor[1])
 	tmb:redraw(expand, uline, stop, thread)
+	-- tmb:threads_to_buffer()
 	if expand then
-		vim.api.nvim_win_set_cursor(0, { line, 0 })
+		vim.api.nvim_win_set_cursor(0, cursor)
 	else
-		vim.api.nvim_win_set_cursor(0, { uline, 0 })
+		vim.api.nvim_win_set_cursor(0, { uline, cursor[2] })
 	end
-end
-
-function M.call(fun)
-	M[fun]()
 end
 
 return M
