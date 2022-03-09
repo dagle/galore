@@ -35,7 +35,7 @@ config.values = {
 	end,
 	tag_unread = function(message)
 		local nu = require("galore.notmuch-util")
-		nu.tag_unread(message)
+		return nu.tag_unread(message)
 	end,
 	sign = false,
 	encrypt = false,
@@ -57,6 +57,7 @@ config.values = {
 		local acc = string.sub(from, start+1, stop)
 		return "msmtp", { "-a", acc, to }
 	end,
+	from_length = 25,
 	show_message_descripiton = function(_, _, _, _, _, _, _) end,
 	key_bindings = {
 		global = {
@@ -135,6 +136,14 @@ config.values = {
 					local cb = require("galore.callback")
 					cb.select_message(mb, "replace")
 				end,
+				["<C-v>"] = function (mb)
+					local cb = require("galore.callback")
+					cb.select_message(mb, "vsplit")
+				end,
+				["<C-x>"] = function (mb)
+					local cb = require("galore.callback")
+					cb.select_message(mb, "split")
+				end,
 				["q"] = function (mb)
 					mb:close(true)
 				end,
@@ -167,6 +176,10 @@ config.values = {
 				end,
 				["<C-p>"] = function (message_view)
 					message_view:prev()
+				end,
+				["O"] = function (message_view)
+					local tele = require("galore.telescope")
+					tele.parts_browser(message_view.message)
 				end,
 			},
 		},
