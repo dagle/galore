@@ -1,33 +1,38 @@
--- local gm = require("galore.gmime")
 local config = require("galore.config")
 local u = require("galore.util")
 local ffi = require("ffi")
-local gm = require("galore.gmime")
+local gu = require("galore.gmime.util")
+-- local gmime = require("galore.gmime")
+local go = require("galore.gmime.object")
+local gc = require("galore.gmime.content")
+local gp = require("galore.gmime.parts")
 
 local M = {}
 
 function M.insert_current_date(message)
-	local time = gm.time_now()
-	gm.message_set_date(message, time)
+	local time = gmime.time_now()
+	gmime.message_set_date(message, time)
 end
 
 function M.make_id(message, prefix)
-	local str = table.concat(u.collect(gm.header_iter(message)))
+	local str = table.concat(u.collect(gmime.header_iter(message)))
 	local sha = vim.fn.sha256(str)
 	return prefix .. sha
 end
 
 -- get the ref if we are loading a draft
+--- fix this, we convert to string and back
+--- Write a getter to object->header?
 function M.get_ref(message)
-	local ref_str = gm.object_get_header(ffi.cast("GMimeObject *", message), "References")
+	local ref_str = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
 	local ref
 	if ref_str then
-		ref = gm.reference_parse(nil, ref_str)
+		ref = gc.references_parse(nil, ref_str)
 	end
 	local reply
-	local reply_str = gm.g_mime_object_get_header(ffi.cast("GMimeObject *", message), "In-Reply-To")
+	local reply_str = go.object_get_header(ffi.cast("GMimeObject *", message), "In-Reply-To")
 	if reply_str then
-		reply = gm.reference_parse(nil, ref_str)
+		reply = gc.references_parse(nil, ref_str)
 	end
 	return {
 		reference = ref,
@@ -39,18 +44,18 @@ end
 --- @return boolean
 function M.has_attachment(message)
 	local find_attachment = function (_, part, state)
-		if gm.is_part(part) and gm.get_disposition(part) == "attachment" then
+		if gp.is_part(part) and gp.part_is_attachment(part) then
 			state.attachment = true
 		end
 	end
 	local state = {}
-	gm.message_foreach(message, find_attachment, state)
+	gp.message_foreach(message, find_attachment, state)
 	return state.attachment
 end
 
 --- Doesn't handle re:
 function M.missed_attachment(message)
-	local sub = gm.get_header(message, 'Subject')
+	local sub = gp.message_get_subject(message)
 	local start, _ = string.find(sub, "[a,A]ttachment")
 	if start and not M.has_attachment(message) then
 		return false
@@ -60,19 +65,18 @@ end
 
 -- make a new ref if we a making a reply
 function M.make_ref(message)
-	-- local ref_str = gm.object_get_header(ffi.cast("GMimeObject *", message), "References")
-	local ref_str = gm.get_header(ffi.cast("GMimeObject *", message), "References")
+	local ref_str = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
 	local ref
 	if ref_str then
-		ref = gm.reference_parse(nil, ref_str)
+		ref = gc.references_parse(nil, ref_str)
 	else
-		ref = gm.new_ref()
+		ref = gc.references_new()
 	end
 	local reply = nil
-	local reply_str = gm.get_header(ffi.cast("GMimeObject *", message), "Message-ID")
+	local reply_str = go.object_get_header(ffi.cast("GMimeObject *", message), "Message-ID")
 	if reply_str then
-		reply = gm.reference_parse(nil, reply_str)
-		gm.references_append(ref, reply_str)
+		reply = gc.references_parse(nil, reply_str)
+		gc.references_append(ref, reply_str)
 	end
 	return {
 		reference = ref,
@@ -80,29 +84,28 @@ function M.make_ref(message)
 	}
 end
 
--- Parse a string into a internet_address and then use that to print a string
--- this function should be higher order and that way, the user is in charge of making it look nice
-function M.show_addr(addr, f, maxlen)
-	maxlen = maxlen or 1024
-	local first = true
-	local i = maxlen
-	local names = {}
-	-- local urls = {}
-	for name, mail in gm.internet_address_list(nil, addr) do
-		local item = f(name, mail)
-		if not first and #item > i then
-			break
-		end
-		table.insert(names, item)
-		i = i - #item
-		first = false
-	end
-	return u.string_setlength(table.concat(names, " "), maxlen)
-	-- gm.internet_address_list_parse(nil, str)
+local function sanatize(name)
+	return string.gsub(name, " via.*", "")
 end
 
+function M.preview_addr(addr, minlen)
+	local strbuf = {}
+	for name, mail in gu.internet_address_list_iter(nil, addr) do
+		name = sanatize(name)
+		local item = name .. " <" .. mail .. ">"
+		table.insert(strbuf, item)
+	end
+	local str = table.concat(strbuf, " ")
+	local len = vim.fn.strchars(str)
+	str = str .. string.rep(" ", minlen - len)
+	return str
+end
+
+-- This should be be able to be customized
+-- Because what might not be viewable for some, might be for others
 function M.viewable(part, control_bits)
-	if gm.part_is_type(part, "text", "*") then
+	-- gmime.part.part_is_type
+	if gmime.part_is_type(part, "text", "*") then
 		return true
 	end
 	--
@@ -140,7 +143,7 @@ function M.get_from(message)
 		"Envelope-to",
 		"X-Original-To",
 	}
-	for k, v in gm.header_iter(message) do
+	for k, v in gu.header_iter(message) do
 		if u.contains(tbl, k) then
 			local addr = match_address(v, emails)
 			if addr then
@@ -151,7 +154,7 @@ function M.get_from(message)
 	if not config.values.guess_email then
 		return config.values.primary_email
 	end
-	for _, v in gm.header_iter(message) do
+	for _, v in gu.header_iter(message) do
 		local addr = match_address(v, emails)
 		if addr then
 			return addr
@@ -164,10 +167,10 @@ end
 -- shouldn't we just use a table instead?
 local function remove_dups(list)
 	local tbl = {}
-	for i, addr in gm.addresses_iter(list) do
-		for j, addr2 in gm.addresses_iter(list) do
-			local string_addr = gm.address_to_string(addr)
-			local string_addr2 = gm.address_to_string(addr2)
+	for i, addr in gmime.addresses_iter(list) do
+		for j, addr2 in gmime.addresses_iter(list) do
+			local string_addr = gmime.address_to_string(addr)
+			local string_addr2 = gmime.address_to_string(addr2)
 			if string_addr == string_addr2 and i ~= j then
 				table.insert(tbl, j)
 			end
@@ -176,12 +179,12 @@ local function remove_dups(list)
 	--- FIXME dups in this one this too
 	--- FIXME removing an index changes all other indexes
 	for i in ipairs(tbl) do
-		gm.address_list_remove_at(list, i)
+		gmime.address_list_remove_at(list, i)
 	end
 end
 
 local function get_list(message)
-	local list = gm.get_header(message, "List-Post")
+	local list = gmime.get_header(message, "List-Post")
 	return list
 end
 
@@ -192,9 +195,9 @@ end
 -- Get the first none-nil value in a list of fields
 local function get_backup(message, list)
 	for _, v in ipairs(list) do
-		local addr = gm.message_get_address(message, v)
+		local addr = gp.message_get_address(message, v)
 		if addr ~= nil then
-			if gm.address_list_length(addr) > 0 then
+			if gc.internet_address_list_length(addr) > 0 then
 				return addr
 			end
 		end
@@ -214,23 +217,23 @@ function M.respone_headers(message, type)
 	local our = M.get_from(message)
 	local from = get_backup(message, { "reply_to", "sender", "from" })
 	if not type then
-		from = gm.show_addresses(from)
+		from = gc.internet_address_list_to_string(from, nil, false)
 		return {
 			"To: " .. from,
 			"From: " .. config.values.from_string(our),
 		}
 	elseif type == "reply_all" then
-		local to = gm.message_get_address(message, "to")
-		gm.address_list_append(to, from)
-		gm.address_list_remove(to, our)
+		local to = gp.message_get_address(message, "to")
+		gc.address_list_append(to, from)
+		gc.address_list_remove(to, our)
 		-- remove_dups(to)
 
-		local cc = gm.message_get_address(message, "cc")
-		gm.address_list_remove(cc, our)
+		local cc = gp.message_get_address(message, "cc")
+		gc.address_list_remove(cc, our)
 		-- remove_dups(cc)
 
-		local bcc = gm.message_get_address(message, "bcc")
-		gm.address_list_remove(bcc, our)
+		local bcc = gp.message_get_address(message, "bcc")
+		gc.address_list_remove(bcc, our)
 		-- remove_dups(bcc)
 		return {
 			{ "To: ", to },
@@ -258,15 +261,15 @@ end
 
 function M.message_add_marker(message, str)
 	local function marker_fun(obj, part, state)
-		if not gm.part_is_attachment(part) then
-			local ct = gm.get_content_type(part)
-			local type = gm.get_mime_type(ct)
+		if not gmime.part_is_attachment(part) then
+			local ct = gmime.get_content_type(part)
+			local type = gmime.get_mime_type(ct)
 			if type == "text/plain" then
 				-- update the part?
 			end
 		end
 	end
-	gm.message_foreach(message, marker_fun, depth)
+	gmime.message_foreach(message, marker_fun, depth)
 	-- local part = gm.mime_part(message)
 	-- if gm.is_part(part) then
 	-- elseif gm.is_multipart(part) then
@@ -278,22 +281,22 @@ end
 function M.forward(message, addr)
 	local our = M.get_from(message)
 	local old = {
-		From = gm.message_get_address(message, "from"),
-		To = gm.message_get_address(message, "to"),
-		Cc = gm.message_get_address(message, "cc"),
-		Bcc = gm.message_get_address(message, "bcc"),
-		Date = gm.message_get_address(message, "date"),
-	    Subject = gm.message_get_subject(message)
+		From = gmime.message_get_address(message, "from"),
+		To = gmime.message_get_address(message, "to"),
+		Cc = gmime.message_get_address(message, "cc"),
+		Bcc = gmime.message_get_address(message, "bcc"),
+		Date = gmime.message_get_address(message, "date"),
+	    Subject = gmime.message_get_subject(message)
 	}
 	-- XXX clear all headers
 
-	local name, email = gm.internet_address_list(nil, our)
-	gm.message_add_mailbox(message, "from", name, email)
-	name, email = gm.internet_address_list(nil, addr)
-	gm.message_add_mailbox(message, "to", name, email)
+	local name, email = gmime.internet_address_list(nil, our)
+	gmime.message_add_mailbox(message, "from", name, email)
+	name, email = gmime.internet_address_list(nil, addr)
+	gmime.message_add_mailbox(message, "to", name, email)
 
 	local sub = u.add_prefix(old.Subject, "Fwd:")
-	gm.message_set_subject(message, sub)
+	gmime.message_set_subject(message, sub)
 
 	local string_builder = {}
 	local header = "---------- Forwarded message ---------"

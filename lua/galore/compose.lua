@@ -1,20 +1,22 @@
 local v = vim.api
 local u = require("galore.util")
--- local nm = require("galore.notmuch")
-local gm = require("galore.gmime")
 local gu = require("galore.gmime-util")
 local Buffer = require("galore.lib.buffer")
 local job = require("galore.jobs")
--- local path = require('plenary.path')
 local config = require("galore.config")
 local reader = require("galore.reader")
 local render = require("galore.render")
 local Path = require("plenary.path")
 local nm = require("galore.notmuch")
 local nu = require("galore.notmuch-util")
+local gs = require("galore.gmime.stream")
+local gp = require("galore.gmime.parts")
 
 local Compose = Buffer:new()
 
+-- This shouldn't control that the file exists
+-- Because it might exist later on during the process of sending email
+-- If you want a "safe", version wrap this one
 function Compose:add_attachment(file)
 	table.insert(self.attachments, file)
 end
@@ -61,11 +63,11 @@ function Compose:send_message()
 	-- should check for nil
 	local buf = self.parse_buffer()
 	local message = reader.create_message(buf, self.reply, self.attachments)
-	local to = gm.show_addresses(gm.message_get_address(message, "to"))
-	local from = gm.show_addresses(gm.message_get_address(message, "from"))
+	local to = gp.show_addresses(gp.message_get_address(message, "to"))
+	local from = gp.show_addresses(gp.message_get_address(message, "from"))
 	--- XXX add pre-hooks
 	local message_str = gm.write_message_mem(message)
-	job.send_mail(to, from, message_str)
+	job.send_mail_pipe(to, from, message_str)
 	--- XXX add post-hooks
 end
 
@@ -113,7 +115,7 @@ end
 
 local function make_template(message, reply_all)
 	local headers = gu.respone_headers(message, reply_all)
-	local sub = gm.message_get_subject(message)
+	local sub = gp.message_get_subject(message)
 	sub = "Subject: " .. u.add_prefix(sub, "Re:")
 	table.insert(headers, sub)
 	return headers
