@@ -61,7 +61,7 @@ function Message:raw_mode(kind)
 end
 
 function Message:_save_attachment(filename, save_path)
-	if Message.attachments[filename] then
+	if self.attachments[filename] then
 		-- better way to do this?
 		local path = Path:new(Path:new(save_path):expand())
 		if path:is_dir() then
