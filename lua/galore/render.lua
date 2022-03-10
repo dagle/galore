@@ -80,16 +80,14 @@ function M.show_header(message, buffer, opts, nm_message)
 	end
 end
 
--- applies filters and writes it to memory
--- @param part gmime.Part
--- @return string of the part
-local function part_to_string(part, opts)
+function M.part_to_stream(part, opts, outstream)
 	local datawrapper = gp.part_get_content(part)
 	local stream = gs.data_wrapper_get_stream(datawrapper)
 	gs.stream_reset(stream)
 	local filters = gs.stream_filter_new(stream)
 	local streamfilter = ffi.cast("GMimeStreamFilter *", filters)
 
+	--- XXX add a way to configure this
 	local enc = gs.data_wrapper_get_encoding(datawrapper)
 	if enc then
 		local basic = gf.filter_basic_new(enc, false)
@@ -111,8 +109,17 @@ local function part_to_string(part, opts)
 		gs.stream_filter_add(streamfilter, reply_filter)
 	end
 
+	gs.stream_write_to_stream(filters, outstream)
+end
+
+
+
+-- applies filters and writes it to memory
+-- @param part gmime.Part
+-- @return string of the part
+function M.part_to_string(part, opts)
 	local mem = gs.stream_mem_new()
-	gs.stream_write_to_stream(filters, mem)
+	M.part_to_stream(part, opts, mem)
 	return gu.mem_to_string(mem)
 end
 
@@ -132,7 +139,7 @@ local function show_message_helper(message, buf, opts, state)
 		M.show_part(object, buf, opts, state)
 	else
 		local part = ffi.cast("GMimePart *", object)
-		local str = part_to_string(part, opts)
+		local str = M.part_to_string(part, opts)
 		M.draw(buf, format(str))
 	end
 end
@@ -182,10 +189,10 @@ function M.show_part(object, buf, opts, state)
 		else
 			local type = gu.part_mime_type(object)
 			if type == "text/plain" then
-				local str = part_to_string(part, opts)
+				local str = M.part_to_string(part, opts)
 				M.draw(buf, format(str))
 			elseif type == "text/html" then
-				local str = part_to_string(part, opts)
+				local str = M.part_to_string(part, opts)
 				local html = conf.values.show_html(str)
 				M.draw(buf, html)
 			end
@@ -200,6 +207,8 @@ function M.show_part(object, buf, opts, state)
 			M.show_part(de_part, buf, opts, state)
 			return
 		elseif gp.is_multipart_signed(object) then
+			-- local multi = ffi.cast("GMimeMultipart *", object)
+			-- local signed = ffi.cast("GMimeMultipartSigned *", part)
 			if ge.verify_signed(object) then
 			end
 			local se_part = gp.multipart_get_part(mp, 0)
