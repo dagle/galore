@@ -127,6 +127,14 @@ function M.split_lines(str)
 	return lines
 end
 
+function M.gen_name(name, num)
+	if num == 1 then
+		return name
+	end
+	return string.format("%s-%d", name, num)
+end
+
+
 function M.format(part, qoute)
 	local box = {}
 	for line in string.gmatch(part, "[^\n]+") do
