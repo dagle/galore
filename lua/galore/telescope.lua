@@ -17,6 +17,7 @@ local compose = require("galore.compose")
 local r = require("galore.render")
 local gm = require("galore.gmime")
 local gu = require("galore.gmime-util")
+local guu = require("galore.gmime.util")
 local nm = require("galore.notmuch")
 local conf = require("galore.config")
 local message_view = require("galore.message_view")
@@ -25,48 +26,59 @@ local strings = require "plenary.strings"
 local gp = require("galore.gmime.parts")
 local ge = require("galore.gmime.extra")
 local gc = require("galore.gmime.content")
--- local ffi = require("ffi")
-
+-- local jobs = require("galore.jobs")
+local ffi = require("ffi")
 
 local Telescope = {}
 
 -- parses the tree and outputs the parts
 -- this should use select
 -- XXX todo, a bit over the top atm
-
-local function show_tree(part)
-	if gp.is_message_part(part) then
+local function show_tree(object)
+	if gp.is_message_part(object) then
 		return "message-part"
-	elseif gp.is_partial(part) then
+	elseif gp.is_partial(object) then
 		return "partial"
-	elseif gp.is_part(part) then
+	elseif gp.is_part(object) then
+		local part = ffi.cast("GMimePart *", object)
+		if gp.part_is_attachment(part) then
+			if guu.part_mime_type(object) == "application/pgp-signature" then
+				return "signature"
+			end
+			return "attachment"
+		end
 		return "part"
-	elseif gp.is_multipart_encrypted(part) then
+	elseif gp.is_multipart_encrypted(object) then
 		return "encrypted mulitpart"
-	elseif gp.is_multipart_signed(part) then
+	elseif gp.is_multipart_signed(object) then
 		return "signed mulitpart"
-	elseif gp.is_multipart(part) then
+	elseif gp.is_multipart(object) then
 		return "mulitpart"
 	end
 end
 
-local function fun(parent, part, level, state)
-	-- local gc = ge.object_get_content_type(part)
+local function browser_fun(parent, part, level, state)
 	local strbuf = {}
 	for _ = 1, level-1 do
 		table.insert(strbuf, "\t")
 	end
-	-- local str = show_tree(part)
 	table.insert(strbuf, show_tree(part))
 	local str = table.concat(strbuf)
-	table.insert(state, str)
+	table.insert(state.select, str)
+	table.insert(state.part, part)
 end
 
-function Telescope.parts_browser(message)
-	-- P(message)
+-- should take a filter function?
+function Telescope.parts_browser(message, selected)
 	local state = {}
-	gp.message_foreach_dfs(message, fun, state)
-	vim.ui.select(state, {}, function (item, idx)
+	state.select = {}
+	state.part = {}
+	gp.message_foreach_dfs(message, browser_fun, state)
+	vim.ui.select(state.select, {}, function (item, idx)
+		-- apply filters to this?
+		if selected then
+			selected(state.part[idx])
+		end
 	end)
 end
 
