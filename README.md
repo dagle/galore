@@ -122,3 +122,25 @@ syntax/galore-threads.vim that matches your syntax.
 
 ## TODO:
 See the todo-file, even the todo has stuff missing.
+
+Tips and trix
+-------------
+You want a small gpg-ui to complement the email client?
+That is easy, with a plugin like toggleterm and gpg-tui, we can make
+a small popup window to manage your keys from 
+``` lua
+local terms = require("toggleterm.terminal")
+local gpgtui = terms.Terminal:new({
+  cmd = "gpg-tui",
+  direction = "float",
+  float_opts = {
+    border = "single",
+  },
+})
+
+local function gpgtui_toggle()
+  gpgtui:toggle()
+end
+
+vim.keymap.set('n', '<leader>mg', gpgtui_toggle, {noremap = true, silent = true})
+```
