@@ -91,52 +91,8 @@ function M.send_mail(to, from, message_str)
 		})
 		:start()
 end
--- local stdin = uv.new_pipe()
--- local stdout = uv.new_pipe()
--- local stderr = uv.new_pipe()
---
--- print("stdin", stdin)
--- print("stdout", stdout)
--- print("stderr", stderr)
---
--- local handle, pid = uv.spawn("cat", {
---   stdio = {stdin, stdout, stderr}
--- }, function(code, signal) -- on exit
---   print("exit code", code)
---   print("exit signal", signal)
--- end)
---
--- print("process opened", handle, pid)
---
--- uv.read_start(stdout, function(err, data)
---   assert(not err, err)
---   if data then
---     print("stdout chunk", stdout, data)
---   else
---     print("stdout end", stdout)
---   end
--- end)
---
--- uv.read_start(stderr, function(err, data)
---   assert(not err, err)
---   if data then
---     print("stderr chunk", stderr, data)
---   else
---     print("stderr end", stderr)
---   end
--- end)
---
--- uv.write(stdin, "Hello World")
---
--- uv.shutdown(stdin, function()
---   print("stdin shutdown", stdin)
---   uv.close(handle, function()
---     print("process closed", handle, pid)
---   end)
--- end)
 
 local function raw_pipe(object, cmd, args)
-	-- local stdin = uv.new_pipe()
 	local stdout = uv.new_pipe()
 	local stderr = uv.new_pipe()
 	local fds = uv.pipe({nonblock=true}, {nonblock=true})
@@ -147,27 +103,36 @@ local function raw_pipe(object, cmd, args)
 	opts.stdio = { fds.read, stdout, stderr}
 
 	local handle, pid = uv.spawn(cmd, opts, function(code, signal)
-		P(code)
-		P(signal)
 	end)
-	go.object_write_to_stream(object, nil, stream)
+
+	--- Maybe something like this
+	--- If you wanna pipe the buffer, don't use this
+	if gp.is_part(object) then
+		local part = ffi.cast("GMimePart *", object)
+		if gp.part_is_attachment(part) then
+			local dw = gp.part_get_content(part)
+			gs.data_wrapper_write_to_stream(dw, stream)
+		else
+			local r = require("galore.render")
+			r.part_to_stream(part, {}, stream)
+		end
+	else
+		go.object_write_to_stream(object, nil, stream)
+	end
+
 	gs.stream_flush(stream)
 
 	uv.read_start(stdout, function(err, data)
 		assert(not err, err)
 		if data then
-			print("stdout chunk", stdout, data)
-		else
-			print("stdout end", stdout)
+			print(data)
 		end
 	end)
 
 	uv.read_start(stderr, function(err, data)
 		assert(not err, err)
 		if data then
-			print("stderr chunk", stderr, data)
-		else
-			print("stderr end", stderr)
+			print("stderr: ", data)
 		end
 	end)
 end
@@ -183,14 +148,14 @@ end
 
 --- @param cmd string
 --- @param terminal boolean
---- @param part gmime.Part | gmime.Message
-function M.pipe(cmd, terminal, part)
-	local obj
-	if not gp.is_part(part) then
-		local message = ffi.cast("GMimeMessage *", part)
-		obj = gp.message_get_body(message)
-	end
-	local args = {unpack(2, cmd)}
+--- @param obj gmime.MimeObject
+function M.pipe(cmd, obj)
+	-- local obj
+	-- if not gp.is_part(part) then
+	-- 	local message = ffi.cast("GMimeMessage *", part)
+	-- 	obj = gp.message_get_body(message)
+	-- end
+	local args = {unpack(cmd, 2)}
 	raw_pipe(obj, cmd[1], args)
 end
 

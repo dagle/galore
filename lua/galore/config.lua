@@ -179,7 +179,11 @@ config.values = {
 				end,
 				["O"] = function (message_view)
 					local tele = require("galore.telescope")
-					tele.parts_browser(message_view.message)
+					local jobs = require("galore.jobs")
+					local function cb(object)
+						jobs.pipe({"cat"}, object)
+					end
+					tele.parts_browser(message_view.message, cb)
 				end,
 			},
 		},
