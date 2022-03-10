@@ -68,15 +68,6 @@ function M.secure(ctx, part, recipients)
 	end
 end
 
-function M.save_buf(headers, body, reply, attachment)
-	local message = gm.new_message(true)
-	for k, v in pairs(headers) do
-		for name, email in gm.internet_address_list(nil, v) do
-			gm.message_add_mailbox(message, k, name, email)
-		end
-	end
-end
-
 -- create a message from strings
 -- @param buf parsed data from the screen, only visual data
 -- @param reply, message or nil we use to set reference to
@@ -109,6 +100,7 @@ function M.create_message(buf, reply, attachments, mode)
 	end
 
 	local body = gp.text_part_new_with_subtype("plain")
+	--- XXX bad, we wan't to roll our own
 	gp.text_part_set_text(body, table.concat(buf.body, "\n"))
 	current = body
 
