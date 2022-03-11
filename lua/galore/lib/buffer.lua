@@ -47,6 +47,11 @@ function Buffer:close(delete)
 	end
 	if self.kind == "replace" and self.part then
 		vim.api.nvim_win_set_buf(0, self.parent.handle)
+	elseif self.kind == "floating" then
+		vim.api.nvim_win_close(0, true)
+		if self.parent then
+			self.parent:focus()
+		end
 	else
 		if self.parent then
 			self.parent:focus()
@@ -242,38 +247,6 @@ function Buffer.create(config, class)
 		local col = vim_width * 0.1 - 2
 		local row = vim_height * 0.15 - 1
 
-		local border_buffer = vim.api.nvim_create_buf(false, true)
-		local border_window = vim.api.nvim_open_win(border_buffer, true, {
-			relative = "editor",
-			width = width,
-			height = height,
-			col = col,
-			row = row,
-			style = "minimal",
-			focusable = false,
-		})
-
-		vim.api.nvim_win_set_cursor(border_window, { 1, 0 })
-
-		vim.wo.winhl = "Normal:Normal"
-
-		vim.api.nvim_buf_set_lines(border_buffer, 0, 1, false, { "┌" .. string.rep("─", width - 2) .. "┐" })
-		for i = 2, height - 1 do
-			vim.api.nvim_buf_set_lines(border_buffer, i - 1, i, false, { "│" .. string.rep(" ", width - 2) .. "│" })
-		end
-		vim.api.nvim_buf_set_lines(
-			border_buffer,
-			height - 1,
-			-1,
-			false,
-			{ "└" .. string.rep("─", width - 2) .. "┘" }
-		)
-		-- Creates the content window
-		width = width - 2
-		height = height - 2
-		col = col + 1
-		row = row + 1
-
 		local content_buffer = vim.api.nvim_create_buf(true, true)
 		local content_window = vim.api.nvim_open_win(content_buffer, true, {
 			relative = "editor",
@@ -283,11 +256,12 @@ function Buffer.create(config, class)
 			row = row,
 			style = "minimal",
 			focusable = false,
+			border = "single"
 		})
 
+		vim.wo.winhl = "Normal:Normal"
 		vim.api.nvim_win_set_cursor(content_window, { 1, 0 })
 		buffer = Buffer:new({handle = content_buffer})
-		buffer.border_buffer = border_buffer
 	else
 		assert("Wrong buffer mode!")
 	end
@@ -313,14 +287,24 @@ function Buffer.create(config, class)
 		buffer:set_filetype(config.ft)
 	end
 
-	--- What arguments should a callback have?
+	local mapopts = { noremap = true, silent = true, buffer = buffer.handle}
 	if config.mappings then
 		for mode, val in pairs(config.mappings) do
 			for key, cb in pairs(val) do
 				local cbfunc = function()
 					cb(buffer)
 				end
-				vim.keymap.set(mode, key, cbfunc, { noremap = true, silent = true, buffer = buffer.handle})
+				vim.keymap.set(mode, key, cbfunc, mapopts)
+			end
+		end
+	else
+		local conf = require("galore.config")
+		for mode, val in pairs(conf.values.key_bindings.default) do
+			for key, cb in pairs(val) do
+				local cbfunc = function()
+					cb(buffer)
+				end
+				vim.keymap.set(mode, key, cbfunc, mapopts)
 			end
 		end
 	end
