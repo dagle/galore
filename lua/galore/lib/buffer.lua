@@ -2,14 +2,6 @@ local Buffer = {}
 
 function Buffer:new(this)
 	this = this or {}
-	-- local this = {
-	-- 	handle = handle,
-	-- 	border = nil,
-	-- 	kind = nil,
-	-- 	parent = nil,
-	-- 	cache = nil,
-	-- }
-
 	self.__index = self
 	setmetatable(this, self)
 
@@ -63,35 +55,7 @@ function Buffer:close(delete)
 	if delete then
 		vim.api.nvim_buf_delete(self.handle, {})
 	end
-	-- if self.border_buffer then
-	-- 	vim.api.nvim_buf_delete(self.border_buffer, {})
-	-- end
 end
-
--- function Buffer:close(delete)
--- 	if self.kind == "replace" then
--- 		vim.api.nvim_win_set_buf(0, self.parent.handle)
--- 	else
--- 		if self.parent then
--- 			self.parent:focus()
--- 		end
--- 	end
--- 	if delete then
--- 		vim.api.nvim_buf_delete(self.handle, {})
--- 	end
--- end
--- function Buffer:close(force)
---   if force == nil then
---     force = false
---   end
---   vim.api.nvim_buf_delete(self.handle, { force = force })
---   if self.border_buffer then
---     vim.api.nvim_buf_delete(self.border_buffer, {})
---   end
--- end
-
--- function Buffer:define_autocmd(events, script)
--- end
 
 function Buffer:get_lines(first, last, strict)
 	return vim.api.nvim_buf_get_lines(self.handle, first, last, strict)
@@ -142,6 +106,13 @@ end
 
 function Buffer:set_option(name, value)
 	vim.api.nvim_buf_set_option(self.handle, name, value)
+end
+
+local function gen_name(num)
+	if num == 1 then
+		return "galore-saved"
+	end
+	return string.format("galore-saved-%d", num)
 end
 
 function Buffer:set_name(name)
@@ -212,7 +183,6 @@ end
 
 function Buffer:set_filetype(ft)
 	self:set_option("filetype", ft)
-	-- vim.cmd("setlocal filetype=" .. ft)
 end
 
 function Buffer:call(f)
