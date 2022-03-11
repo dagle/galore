@@ -27,7 +27,6 @@ local function _view_attachment(filename, kind)
 					v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 				end,
 			})
-			-- attach_view.create(M.attachment[filename], kind)
 		else
 			error("File not viewable")
 			return
@@ -45,17 +44,7 @@ function Message:raw_mode(kind)
 		-- ref = ref,
 		cursor = "top",
 		init = function(buffer)
-			-- need a way to open files in a float
-			-- local with = context_manager.with
-			-- local open = context_manager.open
-			--
-			-- local result = with(open(M.state), function(reader)
-			-- 	return reader:read()
-			-- end)
-			-- P(result)
-			-- vim.api.nvim_buf_set_lines(buffer.handle, 0, 0, true, u.split_lines(result))
 			vim.cmd(":e " .. self.file)
-			-- vim.api.nvim_set_keymap('n', 'q', "", nil)
 		end,
 	})
 end
@@ -110,12 +99,25 @@ function Message:update(file)
 	self:clear()
 	local gmessage = gu.parse_message(file)
 	if gmessage then
-		-- Message.ns = vim.api.nvim_create_namespace("galore-message-view")
+		self.ns = vim.api.nvim_create_namespace("galore-message-view")
 		self.message = gmessage
 		-- r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
 		r.show_header(gmessage, self.handle, nil, file)
 		self.attachments = r.show_message(gmessage, self.handle, {})
-	-- self:set_lines(1,1, true, {file})
+		if next(self.attachments) then
+			local marks = {}
+			for k, _ in pairs(self.attachments) do
+				local str = string.format("-[%s]", k)
+				table.insert(marks, {str, "Comment"})
+			end
+			local line = vim.fn.line("$") - 1
+			local opts = {
+				virt_lines = {
+					marks
+				},
+			}
+			self:set_extmark(self.ns, line, 0, opts)
+		end
 	end
 	self:lock()
 end

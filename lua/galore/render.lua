@@ -183,9 +183,6 @@ function M.show_part(object, buf, opts, state)
 			local filename = gp.part_get_filename(part)
 			local viewable = gu.part_is_type(object, "text", "*")
 			state.attachments[filename] = { part, viewable }
-			local str = "- [ " .. filename .. " ]"
-			-- this should be an extmark
-			M.draw(buf, { str })
 		else
 			local type = gu.part_mime_type(object)
 			if type == "text/plain" then
