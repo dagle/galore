@@ -1,5 +1,5 @@
 local nm = require("galore.notmuch")
-local gu = require("galore.gmime-util")
+local gu = require("galore.gmime.util")
 local u = require("galore.util")
 local conf = require("galore.config")
 
