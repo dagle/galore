@@ -17,12 +17,13 @@ config.values = {
 	autocrypt = true,
 	reverse_thread = true,
 	empty_topyic = "no topic",
+	guess_email = false, -- if we can't determain your email use primary
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
-	from_string = function(email)
-		return config.values.name .. " <" .. email .. ">"
-	end,
+	-- from_string = function(email)
+	-- 	return config.values.name .. " <" .. email .. ">"
+	-- end,
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
 	make_html = false,
 	html_color = 0x878787,
