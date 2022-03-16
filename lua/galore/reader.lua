@@ -1,6 +1,7 @@
 -- local gm = require("galore.gmime")
 local gp = require("galore.gmime.parts")
 local go = require("galore.gmime.object")
+local ge = require("galore.gmime.crypt")
 local gc = require("galore.gmime.content")
 local gu = require("galore.gmime.util")
 local u = require("galore.util")
@@ -74,7 +75,6 @@ end
 -- @param attachments a list of MimePart objects
 -- @return a gmime message
 -- XXX We want to set the reply_to (and other mailinglist things)
--- XXX We make it multipart for a simple signed email, which we shouldn't?
 -- XXX We need error handling, this should could return nil
 function M.create_message(buf, reply, attachments, mode)
 	-- move to ctx
@@ -95,44 +95,49 @@ function M.create_message(buf, reply, attachments, mode)
 	end
 
 	if reply then
-		go.object_set_header(message, "References", reply.reference)
-		go.object_set_header(message, "In-Reply-To", reply.in_reply_to)
+		go.object_set_header(message, "References", gc.references_format(reply.reference))
+		go.object_set_header(message, "In-Reply-To", gc.references_format(reply.in_reply_to))
 	end
+
 
 	local body = gp.text_part_new_with_subtype("plain")
 	--- XXX bad, we wan't to roll our own
 	gp.text_part_set_text(body, table.concat(buf.body, "\n"))
 	current = body
 
-	-- if config.values.make_html then
-	-- 	local alt = gp.multipart_new_with_subtype("alternative")
-	--
-	-- 	local html_body = gp.text_part_new_with_subtype("html")
-	-- 	gp.text_part_set_text(html_body, buf.body)
-	-- 	local html = make_html(html_body)
-	-- 	gp.multipart_add(alt, body)
-	-- 	gp.multipart_add(alt, html)
-	-- 	current = alt
-	-- end
-	--
-	-- if attachments ~= nil and attachments ~= {} then
-	-- 	local multipart = gp.multipart_new_with_subtype("mixed")
-	-- 	gp.multipart_add(multipart, current)
-	-- 	current = multipart
-	-- 	for _, file in ipairs(attachments) do
-	-- 		local attachment = create_attachment(file)
-	-- 		gp.multipart_add(multipart, attachment)
-	-- 	end
-	-- end
-	--
-	-- if config.values.encrypt or config.values.sign then
-	-- 	local ctx = ge.new_gpg_contex()
-	-- 	local secure = M.secure(ctx, current, { buf.To })
-	-- 	if secure then
-	-- 		current = secure
-	-- 	end
-	-- end
+	if config.values.make_html then
+		local alt = gp.multipart_new_with_subtype("alternative")
 
+		local html_body = gp.text_part_new_with_subtype("html")
+		gp.text_part_set_text(html_body, buf.body)
+		local html = make_html(html_body)
+		gp.multipart_add(alt, body)
+		gp.multipart_add(alt, html)
+		current = alt
+	end
+
+	if attachments ~= nil and not vim.tbl_isempty(attachments) then
+		local multipart = gp.multipart_new_with_subtype("mixed")
+		gp.multipart_add(multipart, current)
+		current = multipart
+		for _, file in ipairs(attachments) do
+			local attachment = create_attachment(file)
+			gp.multipart_add(multipart, attachment)
+		end
+	end
+
+	if config.values.encrypt or config.values.sign then
+		local ctx = ge.new_gpg_contex()
+		local secure = M.secure(ctx, current, { buf.To })
+		if secure then
+			current = secure
+		end
+	end
+
+	-- local disp = go.object_get_content_disposition(message)
+	-- gc.content_disposition_set_disposition(disp, "inline")
+	-- local cont = go.object_get_content_type(message)
+	-- gc.content_type_set_media_subtype(cont)
 	gp.message_set_mime_part(message, ffi.cast("GMimeObject *", current))
 
 	return message
