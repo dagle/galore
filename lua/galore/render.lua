@@ -25,7 +25,7 @@ local function format(part, qoute)
 end
 
 function M.draw(buffer, input)
-	-- check if input is a string or a table
+	-- Add hooks?
 	vim.api.nvim_buf_set_lines(buffer, -1, -1, true, input)
 end
 
@@ -49,22 +49,19 @@ local function mark(buffer, ns, content, i)
 end
 
 local marks = {
-	From = function(buffer, ns, i, nm_message)
-		local tags = table.concat(u.collect(nm.message_get_tags(nm_message)), " ")
+	From = function(buffer, ns, i, line)
+		local tags = table.concat(line.tags, " ")
 		mark(buffer, ns, "(" .. tags .. ")", i)
 	end,
-	-- this creashes luajit, also it might be a bad idea
-	-- Subject = function (buffer, ns, i, nm_message)
-	-- local count = nu.message_with_thread(nm_message, function (thread)
-	-- 	local tot = nm.thread_get_total_messages(thread)
-	-- 	local current = nu.get_index(thread, nm_message)
-	-- 	return string.format("[%02d/%02d]", current, tot)
-	-- end)
-	-- mark(buffer, ns, count, i)
-	-- end
+	Subject = function(buffer, ns, i, line)
+		if line.index and line.total then
+			local str = string.format("[%d/%d]", line.index, line.total)
+			mark(buffer, ns, str, i)
+		end
+	end
 }
 
-function M.show_header(message, buffer, opts, nm_message)
+function M.show_header(message, buffer, opts, line)
 	opts = opts or {}
 	local headers = collect(gu.header_iter(message))
 	local i = 0
@@ -73,7 +70,7 @@ function M.show_header(message, buffer, opts, nm_message)
 			local str = string.gsub(k .. ": " .. headers[k], "\n", "")
 			vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, { str })
 			if marks[k] and opts.ns then
-				marks[k](buffer, opts.ns, i, nm_message)
+				marks[k](buffer, opts.ns, i, line)
 			end
 			i = i + 1
 		end
@@ -166,6 +163,47 @@ local function rate(object)
 	return 1
 end
 
+local function exmark(buf, ns, style, text)
+	-- local line = vim.fn.line("$") - 1
+	-- local opts = {
+	-- 	virt_lines = {
+	-- 		{{text, style}}
+	-- 	},
+	-- }
+	-- vim.api.nvim_buf_set_extmark(buf, ns, line, 0, opts)
+end
+
+--- move this
+vim.cmd("highlight nmVerifyGreen	ctermfg=224 guifg=Green")
+vim.cmd("highlight nmVerifyRed		ctermfg=224 guifg=Red")
+
+local function verify_list(siglist)
+	if siglist == nil and ge.signature_list_length(siglist) < 1 then
+		return false
+	end
+
+	for sig in ge.sig_iterator(siglist) do
+		if conf.values.validate_key(ge.signature_get_status(sig)) then
+			return true
+		end
+	end
+	return false
+end
+
+local function verify_signed(obj)
+	local mps = ffi.cast("GMimeMultipartSigned *", obj)
+	local convert = require("galore.gmime.convert")
+	local lookup = convert.to_verify_flags(conf.values.verify_keys)
+
+	local signatures, error = gp.multipart_signed_verify(mps, lookup)
+	-- if not signatures or error then
+	if not signatures and error then
+		return false
+	else
+		return verify_list(signatures)
+	end
+end
+
 function M.show_part(object, buf, opts, state)
 	if gp.is_message_part(object) then
 		local mp = ffi.cast("GMimeMessagePart *", object)
@@ -181,6 +219,7 @@ function M.show_part(object, buf, opts, state)
 		local part = ffi.cast("GMimePart *", object)
 		if gp.part_is_attachment(part) then
 			local filename = gp.part_get_filename(part)
+			--- XXX this should be in config
 			local viewable = gu.part_is_type(object, "text", "*")
 			state.attachments[filename] = { part, viewable }
 		else
@@ -198,19 +237,29 @@ function M.show_part(object, buf, opts, state)
 		local mp = ffi.cast("GMimeMultipart *", object)
 		-- Can we get a way to show this
 		if gp.is_multipart_encrypted(object) then
+			if opts.preview then
+				opts.preview(buf, "Encrypted")
+			end
 			local de_part, sign = ge.decrypt_and_verify(object)
 			if sign then
 			end
 			M.show_part(de_part, buf, opts, state)
-			return
 		elseif gp.is_multipart_signed(object) then
-			-- local multi = ffi.cast("GMimeMultipart *", object)
-			-- local signed = ffi.cast("GMimeMultipartSigned *", part)
-			if ge.verify_signed(object) then
+			--- is this correct? Can't we have a sign in a sign etc
+			-- local verified = ge.verify_signed(object)
+			local verified = verify_signed(object)
+			if verified then
+				exmark(buf, opts.ns, "nmVerifyGreen", "--------- Signature Passed ---------")
+			else
+				exmark(buf, opts.ns, "nmVerifyRed", "--------- Signature Failed ---------")
 			end
-			local se_part = gp.multipart_get_part(mp, 0)
+			local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
 			M.show_part(se_part, buf, opts, state)
-			return
+			if verified then
+				exmark(buf, opts.ns, "nmVerifyGreen", "--------- Signature End ---------")
+			else
+				exmark(buf, opts.ns, "nmVerifyRed","--------- Signature End ---------")
+			end
 		elseif conf.values.alt_mode == 1 and gu.is_multipart_alt(object) then
 			local multi = ffi.cast("GMimeMultipart *", object)
 			local saved
