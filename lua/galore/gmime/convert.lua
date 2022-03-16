@@ -220,7 +220,7 @@ function M.to_decrytion_flag(flags)
 			return gmime.GMIME_DECRYPT_NONE
 		elseif flags == "session" then
 			return gmime.GMIME_DECRYPT_EXPORT_SESSION_KEY
-		elseif flags == "verify" then
+		elseif flags == "noverify" then
 			return gmime.GMIME_DECRYPT_NO_VERIFY
 		elseif flags == "keyserver" then
 			return gmime.GMIME_DECRYPT_ENABLE_KEYSERVER_LOOKUPS
@@ -241,7 +241,7 @@ function M.to_verify_flags(flags)
 			return gmime.GMIME_VERIFY_NONE
 		elseif flags == "keyserver" then
 			return gmime.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS
-		elseif flags == "certificate" then
+		elseif flags == "online" then
 			return gmime.GMIME_VERIFY_ENABLE_ONLINE_CERTIFICATE_CHECKS
 		end
 	elseif type(flags) == "table" then
@@ -367,6 +367,45 @@ function M.parser_warning_level(warning)
 		return vim.log.levels.ERROR
 	end
 end
+
+local function to_validate(choice)
+	choice = choice:lower()
+	if choice == "valid" then
+		return gmime.GMIME_SIGNATURE_STATUS_VALID
+	elseif choice == "green" then
+		return gmime.GMIME_SIGNATURE_STATUS_GREEN
+	elseif choice == "red" then
+		return gmime.GMIME_SIGNATURE_STATUS_RED
+	elseif choice == "revoked" then
+		return gmime.GMIME_SIGNATURE_STATUS_KEY_REVOKED
+	elseif choice == "key-expired" then
+		return gmime.GMIME_SIGNATURE_STATUS_KEY_EXPIRED
+	elseif choice == "sig-expired" then
+		return gmime.GMIME_SIGNATURE_STATUS_SIG_EXPIRED
+	elseif choice == "missing" then
+		return gmime.GMIME_SIGNATURE_STATUS_KEY_MISSING
+	elseif choice == "crl-missing" then
+		return gmime.GMIME_SIGNATURE_STATUS_CRL_MISSING
+	elseif choice == "crl-old" then
+		return gmime.GMIME_SIGNATURE_STATUS_CRL_TOO_OLD
+	elseif choice == "bad-policy" then
+		return gmime.GMIME_SIGNATURE_STATUS_BAD_POLICY
+	elseif choice == "error" then
+		return gmime.GMIME_SIGNATURE_STATUS_SYS_ERROR
+	elseif choice == "conflict" then
+		return gmime.GMIME_SIGNATURE_STATUS_TOFU_CONFLICT
+	end
+end
+
+function M.validate(sig, choices)
+	if type(choices) == "string" then
+		return bit.band(sig, to_validate(choices)) ~= 0
+	else
+		return bit.band(sig, choices) ~= 0
+	end
+end
+
+
 -- } GMimeParserWarning;
 --
 -- typedef enum {
