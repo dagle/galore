@@ -1397,6 +1397,9 @@ int gmime_is_multipart(GMimeObject *obj);
 int gmime_is_part(GMimeObject *obj);
 int gmime_is_multipart_signed(GMimeObject *obj);
 int gmime_is_multipart_encrypted(GMimeObject *obj);
+int internet_address_is_mailbox(InternetAddress *ia);
+int internet_address_is_group(InternetAddress *ia);
+
 GDateTime *         g_date_time_new_from_unix_local     (gint64 t);
 GDateTime *         g_date_time_new_from_unix_utc       (gint64 t);
 gint64              g_date_time_to_unix                 (GDateTime *datetime);
