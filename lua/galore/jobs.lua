@@ -146,14 +146,20 @@ function M.send_mail_pipe(to, from, message)
 	raw_pipe(object, cmd, args)
 end
 
+function M.pipe_input(object)
+	vim.ui.input({
+		prompt = "command: "
+	}, function (ret)
+		if ret ~= nil then
+			local cmd = vim.split(ret, " ")
+			raw_pipe(cmd, object)
+		end
+	end)
+end
+
 --- @param cmd string
 --- @param obj gmime.MimeObject
 function M.pipe(cmd, obj)
-	-- local obj
-	-- if not gp.is_part(part) then
-	-- 	local message = ffi.cast("GMimeMessage *", part)
-	-- 	obj = gp.message_get_body(message)
-	-- end
 	local args = {unpack(cmd, 2)}
 	raw_pipe(obj, cmd[1], args)
 end
