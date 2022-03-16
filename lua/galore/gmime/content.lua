@@ -14,7 +14,7 @@ local M = {}
 --- @return string
 function M.header_format_content_disposition(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_content_disposition(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_header_format_content_type (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);
@@ -25,7 +25,7 @@ end
 --- @return string
 function M.header_format_content_type(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_content_type(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_header_format_message_id (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);
@@ -36,7 +36,7 @@ end
 --- @return string
 function M.header_format_message_id(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_message_id(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_header_format_references (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);
@@ -47,7 +47,7 @@ end
 --- @return string
 function M.header_format_references(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_references(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_header_format_addrlist (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);
@@ -58,7 +58,7 @@ end
 --- @return string
 function M.header_format_addrlist(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_addrlist(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_header_format_received (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);
@@ -69,7 +69,7 @@ end
 --- @return string
 function M.header_format_received(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_received(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_header_format_default (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);
@@ -80,7 +80,7 @@ end
 --- @return string
 function M.header_format_default(header, options, value, charset)
 	local mem = gmime.g_mime_header_format_default(header, options, value, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -252,7 +252,7 @@ end
 --- @return string
 function M.header_list_to_string(headers, options)
 	local mem = gmime.g_mime_header_list_to_string(headers, options)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -273,7 +273,7 @@ end
 --- @return string
 function M.utils_generate_message_id(fqdn)
 	local mem = gmime.g_mime_utils_generate_message_id(fqdn)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -282,7 +282,7 @@ end
 --- @return string
 function M.utils_decode_message_id(message_id)
 	local mem = gmime.g_mime_utils_decode_message_id(message_id)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -293,7 +293,7 @@ end
 --- @return string
 function M.utils_structured_header_fold(options, format, header)
 	local mem = gmime.g_mime_utils_structured_header_fold(options, format, header)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char  *g_mime_utils_unstructured_header_fold (GMimeParserOptions *options, GMimeFormatOptions *format, const char *header);
@@ -303,13 +303,13 @@ end
 --- @return string
 function M.utils_unstructured_header_fold(options, format, header)
 	local mem = gmime.g_mime_utils_unstructured_header_fold(options, format, header)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char  *g_mime_utils_header_printf (GMimeParserOptions *options, GMimeFormatOptions *format, const char *text, ...);
 function M.utils_header_printf(option, format, text, ...)
 	local mem = gmime.g_mime_utils_header_printf(option, format, text, ...)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char  *g_mime_utils_header_unfold (const char *value);
@@ -317,7 +317,7 @@ end
 --- @return string
 function M.utils_header_unfold(value)
 	local mem = gmime.g_mime_utils_header_unfold(value)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -326,7 +326,7 @@ end
 --- @return string
 function M.utils_quote_string(str)
 	local mem = gmime.g_mime_utils_quote_string(str)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- void   g_mime_utils_unquote_string (char *str);
@@ -357,7 +357,7 @@ end
 --- XXX
 function M.utils_decode_8bit(options, text)
 	local mem = gmime.g_mime_utils_decode_8bit(options, text, #text)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -367,7 +367,7 @@ end
 --- @return string
 function M.utils_header_decode_text(options, text)
 	local mem = gmime.g_mime_utils_header_decode_text(options, text)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_utils_header_encode_text (GMimeFormatOptions *options, const char *text, const char *charset);
@@ -377,7 +377,7 @@ end
 --- @return string
 function M.utils_header_encode_text(options, text, charset)
 	local mem = gmime.g_mime_utils_header_encode_text(options, text, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -387,7 +387,7 @@ end
 --- @return string
 function M.utils_header_decode_phrase(options, phrase)
 	local mem = gmime.g_mime_utils_header_decode_phrase(options, phrase)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_utils_header_encode_phrase (GMimeFormatOptions *options, const char *phrase, const char *charset);
@@ -397,7 +397,7 @@ end
 --- @return string
 function M.utils_header_encode_phrase(options, phrase, charset)
 	local mem = gmime.g_mime_utils_header_encode_phrase(options, phrase, charset)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -436,7 +436,7 @@ end
 --- @return string
 function M.internet_address_to_string(ia, option, encode)
 	local mem = gmime.internet_address_to_string(ia, option, encode)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --
@@ -525,9 +525,8 @@ function M.internet_address_list_clear(list)
 end
 
 --
--- int internet_address_list_add (InternetAddressList *list, InternetAddress *ia);
 --- @param list gmime.InternetAddressList
---- @param ia list gmime.InternetAddress
+--- @param ia gmime.InternetAddress
 --- @return number
 function M.internet_address_list_add(list, ia)
 	return gmime.internet_address_list_add(list, ia)
@@ -626,10 +625,24 @@ end
 -- InternetAddressList *internet_address_list_parse (GMimeParserOptions *options, const char *str);
 --- @param options gmime.Option
 --- @param str string
+--- @return gmime.InternetAddressList
 function M.internet_address_list_parse(options, str)
 	return gmime.internet_address_list_parse(options, str)
 end
 
+-- int internet_address_is_mailbox(InternetAddress *ia);
+---@param ia gmime.InternetAddress
+---@return boolean
+function M.internet_address_is_mailbox(ia)
+	return gmime.internet_address_is_mailbox(ia) ~= 0
+end
+
+-- int internet_address_is_group(InternetAddress *ia);
+---@param ia gmime.InternetAddress
+---@return boolean
+function M.internet_address_is_group(ia)
+	return gmime.internet_address_is_group(ia) ~= 0
+end
 --
 -- GMimeContentDisposition *g_mime_content_disposition_new (void);
 --- @retun gmime.ContentDisposition
@@ -863,6 +876,35 @@ end
 --- @param msgid string
 function M.references_set_message_id(refs, index, msgid)
 	gmime.g_mime_references_set_message_id(refs, index, msgid)
+end
+
+function M.references_format(refs)
+	local box = {}
+	for ref in M.reference_iter(refs) do
+		table.insert(box, "<" .. ref .. ">")
+	end
+	return table.concat(box, "\n\t")
+end
+
+function M.reference_iter_str(str)
+	local refs = M.references_parse(nil, str)
+	if refs == nil then
+		return function ()
+			return nil
+		end
+	end
+	return M.reference_iter(refs)
+end
+
+function M.reference_iter(refs)
+	local i = 0
+	return function()
+		if i < M.references_length(refs) then
+			local ref = M.references_get_message_id(refs, i)
+			i = i + 1
+			return ref
+		end
+	end
 end
 
 return M
