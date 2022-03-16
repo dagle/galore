@@ -6,8 +6,7 @@ config.values = {
 	other_email = {},
 	db = nil,
 	name = "",
-	drafttag = "draft",
-	draftdir = "Drafts", -- relative path of the bd!
+	draftdir = "/home/dagle/gmail/drafts", -- relative path of the bd!
 	exclude_tags = "",
 	saved_search = {},
 	show_tags = true,
@@ -69,7 +68,7 @@ config.values = {
 	key_bindings = {
 		global = {
 			["<leader>mc"] = function ()
-				require("galore.compose").create("tab")
+				require("galore.compose"):create("tab")
 			end,
 			["<leader>mf"] = function ()
 				require("galore.telescope").load_draft()
@@ -228,6 +227,9 @@ config.values = {
 				["<leader>md"] = function (compose)
 					compose:remove_attachment()
 				end,
+				["<leader>mq"] = function (compose)
+					compose:save_draft()
+				end
 			},
 		},
 		default = {

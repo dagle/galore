@@ -88,7 +88,7 @@ end
 --- @param header gmime.Header
 --- @return string
 function M.header_get_name(header)
-	return ffi.string(gmime.g_mime_header_get_name(header))
+	return safe.safestring(gmime.g_mime_header_get_name(header))
 end
 
 -- const char *g_mime_header_get_raw_name (GMimeHeader *header);
@@ -102,7 +102,7 @@ end
 --- @param header gmime.Header
 --- @return string
 function M.header_get_value(header)
-	return ffi.string(gmime.g_mime_header_get_value(header))
+	return safe.safestring(gmime.g_mime_header_get_value(header))
 end
 
 -- void g_mime_header_set_value (GMimeHeader *header, GMimeFormatOptions *options, const char *value, const char *charset);

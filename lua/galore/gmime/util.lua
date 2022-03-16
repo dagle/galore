@@ -14,10 +14,13 @@ function M.insert_current_date(message)
 	gp.message_set_date(message, time)
 end
 
-function M.make_id(message, prefix)
-	local str = table.concat(u.collect(M.header_iter(message)))
-	local sha = vim.fn.sha256(str)
-	return prefix .. sha
+function M.make_id(message)
+	local from = gp.message_get_from(message)
+	local str = gc.internet_address_list_to_string(from, nil, false)
+	--- FIXME UGLY
+	str = str:gsub(".*@", "@")
+	local fqdn = str:gsub(">", "")
+	return "<" .. gc.utils_generate_message_id(fqdn) .. ">"
 end
 
 --- XXX move iters
@@ -58,19 +61,30 @@ function M.internet_address_list_iter(opt, str)
 	end
 end
 
+--- XXX what to do when value is nil?
 function M.header_iter(message)
 	local ls = go.object_get_header_list(ffi.cast("GMimeObject *", message))
-	if ls then
-		local j = gc.header_list_get_count(ls)
-		local i = 0
-		return function()
-			if i < j then
-				local header = gc.header_list_get_header_at(ls, i)
-				local key = gc.header_get_name(header)
-				local value = gc.header_get_value(header)
-				i = i + 1
-				return key, value
+	if ls == nil then
+		return function ()
+			return nil
+		end
+	end
+	local j = gc.header_list_get_count(ls)
+	local i = 0
+	return function()
+		if i < j then
+			local header = gc.header_list_get_header_at(ls, i)
+			if header == nil then
+				return nil, nil
 			end
+			local key = gc.header_get_name(header)
+			local value = gc.header_get_value(header)
+			-- do not do this, skip over
+			if value == nil then
+				value = ""
+			end
+			i = i + 1
+			return key, value
 		end
 	end
 end
@@ -93,11 +107,21 @@ function M.parse_message(path)
 		-- assert(false, "Empty path")
 		return
 	end
-	local stream = gs.stream_file_open(path, "r")
+	local stream, err = gs.stream_file_open(path, "r")
 	local parser = gs.parser_new_with_stream(stream)
 	local message = gs.parser_construct_message(parser, nil)
 	return message
 end
+
+function M.write_message(path, object)
+	local stream, err = gs.stream_file_open(path, "w+")
+	if err == nil and stream ~= nil then
+		go.object_write_to_stream(object, nil, stream)
+		gs.stream_flush(stream)
+	end
+	return err
+end
+
 
 --- XXX this should use
 function M.save_part(part, filename)

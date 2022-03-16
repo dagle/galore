@@ -9,9 +9,11 @@ local render = require("galore.render")
 local Path = require("plenary.path")
 local nm = require("galore.notmuch")
 local nu = require("galore.notmuch-util")
+local go = require("galore.gmime.object")
 local gs = require("galore.gmime.stream")
 local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
+local ffi = require("ffi")
 
 local Compose = Buffer:new()
 Compose.num = 0
@@ -33,6 +35,7 @@ end
 
 -- this should be move to some util function
 -- maybe us virtual lines to split between header and message
+-- XXX returns an empty line in body
 function Compose:parse_buffer()
 	local box = {}
 	local body = {}
@@ -49,7 +52,7 @@ function Compose:parse_buffer()
 			box[word] = content
 		end
 	end
-	if box.subject ~= nil then
+	if box.subject == nil then
 		box.subject = config.values.empty_topyic
 	end
 
@@ -76,13 +79,15 @@ end
 --- Add ability to encrypt the message
 --- we then need to delete these when we load the message
 --- XXX get it working
---- Are we even create a file?
---- Look up how to do filenames
+--- Should we even ask for filename or just generate one?
 function Compose:save_draft()
 	vim.ui.input({
 		prompt = "Save as: ",
 	}, function(filename)
-		local path = Path:new(config.value.draftdir, filename)
+		if filename == nil then
+			return
+		end
+		local path = Path:new(config.values.draftdir, filename)
 		if path:exists() then
 			error("File exist")
 			return
@@ -93,28 +98,28 @@ function Compose:save_draft()
 			print("Failed to parse draft")
 			return ret
 		end
-		--- should we support multiple versions?
-		local id = gu.make_id(message, "draft")
-		gm.set_header(message, "Message-ID", id)
+		local id = gu.make_id(message)
+		local obj = ffi.cast("GMimeObject *", message)
+		go.object_set_header(obj, "Message-ID", id)
 		gu.insert_current_date(message)
-		local ret = gm.write_message(path:expand(), message)
+		local ret = gu.write_message(path:expand(), obj)
 		if ret ~= nil then
 			print("Failed to parse draft")
 			return ret
 		end
-		nu.with_db_writer(config.values.db, function (dbwriter)
-			local nm_message = nm.db_index_file(dbwriter, path:expand(), nil)
-			if nm_message == nil then
-				print("Failed to add draft to database")
-				return ret
-			end
-			ret = nm.message_add_tag(nm_message, config.values.drafttag)
-			if ret == nil then
-				print("Failed to add tag")
-				return ret
-			end
-		end)
-		print("draft saved")
+		-- nu.with_db_writer(config.values.db, function (dbwriter)
+		-- 	local nm_message = nm.db_index_file(dbwriter, path:expand(), nil)
+		-- 	if nm_message == nil then
+		-- 		print("Failed to add draft to database")
+		-- 		return ret
+		-- 	end
+		-- 	ret = nm.message_add_tag(nm_message, config.values.drafttag)
+		-- 	if ret == nil then
+		-- 		print("Failed to add tag")
+		-- 		return ret
+		-- 	end
+		-- end)
+		-- print("draft saved")
 	end)
 end
 
