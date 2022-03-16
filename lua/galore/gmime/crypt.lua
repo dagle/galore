@@ -790,15 +790,8 @@ function M.certificate_list_set_certificate(list, index, cert)
 	return gmime.g_mime_certificate_list_set_certificate(list, index, cert)
 end
 
----- XXX FIX THIS
 
-
-function M.get_signed_part(part)
-	-- local mps = ffi.cast("GMimeMultipartSigned *", part)
-	return galore.g_mime_multipart_get_part(ffi.cast("GMimeMultipart *", part), galore.GMIME_MULTIPART_SIGNED_CONTENT)
-end
-
-local function sig_iterator(siglist)
+function M.sig_iterator(siglist)
 	local i = gmime.g_mime_signature_list_length(siglist)
 	local j = 0
 	return function()
@@ -819,21 +812,15 @@ local function verify_list(siglist)
 	if siglist == nil or gmime.g_mime_signature_list_length(siglist) < 1 then
 		return false
 	end
-	-- local ret = true
 
-	for sig in sig_iterator(siglist) do
+	for sig in M.sig_iterator(siglist) do
 		if verify(sig) then
-			return false
+			return true
 		end
 	end
-	return true
+	return false
 end
 
--- function M.new_gpg_contex()
--- 	return galore.g_mime_gpg_context_new()
--- end
-
---- XXX DONE
 -- @param recipients An array of recipient key ids and/or email addresses
 function M.encrypt(ctx, part, id, recipients)
 	-- convert a table to a C array
@@ -884,11 +871,6 @@ function M.verify_signed(part)
 	return ret
 end
 
-function M.filter_reply(add)
-	return galore.g_mime_filter_reply_new(add)
-end
-
---- XXX DONE
 function M.decrypt_and_verify(part)
 	local encrypted = ffi.cast("GMimeMultipartEncrypted *", part)
 	local error = ffi.new("GError*[1]")
