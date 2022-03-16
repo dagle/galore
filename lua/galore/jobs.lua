@@ -1,6 +1,7 @@
 local conf = require("galore.config")
 local Job = require("plenary.job")
 local u = require('galore.util')
+local gu = require('galore.gmime.util')
 local gs = require("galore.gmime.stream")
 local gp = require("galore.gmime.parts")
 local go = require("galore.gmime.object")
@@ -137,8 +138,7 @@ local function raw_pipe(object, cmd, args)
 	end)
 end
 
---- use fg to spawn a terminal to display output when we want that
-
+--- being able to spawn in a terminal
 function M.send_mail_pipe(to, from, message)
 	-- create a pipe
 	local cmd, args = conf.values.send_cmd(to, from)
@@ -147,7 +147,6 @@ function M.send_mail_pipe(to, from, message)
 end
 
 --- @param cmd string
---- @param terminal boolean
 --- @param obj gmime.MimeObject
 function M.pipe(cmd, obj)
 	-- local obj
