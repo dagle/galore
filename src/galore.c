@@ -35,6 +35,14 @@ int gmime_is_multipart_encrypted(GMimeObject *obj){
 	return GMIME_IS_MULTIPART_ENCRYPTED(obj);
 }
 
+int internet_address_is_mailbox(InternetAddress *ia) {
+	return INTERNET_ADDRESS_IS_MAILBOX(ia);
+}
+
+int internet_address_is_group(InternetAddress *ia) {
+	return INTERNET_ADDRESS_IS_GROUP(ia);
+}
+
 GMimeObject *message_part(GMimeMessage *message){
 	return message->mime_part;
 }
