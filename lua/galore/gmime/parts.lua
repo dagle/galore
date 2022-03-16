@@ -3,11 +3,14 @@ local convert = require("galore.gmime.convert")
 local ffi = require("ffi")
 local M = {}
 
+M.multipart_signed_content = 0 --gmime.GMIME_MULTIPART_SIGNED_CONTENT
+M.multipart_signed_signature = 1 -- gmime.GMIME_MULTIPART_SIGNED_SIGNATURE
+
 -- I might want to have the neighbours also in the the same group
 -- a bfs for multiparts
 
 --- @param multipart gmime.Multipart
---- @param fun fun(parent, part, state: table)
+--- @param fun fun(parent, part, level, state: table)
 --- @param state table
 function M.multipart_foreach(multipart, fun, level, state)
 	local queue = {}
@@ -33,7 +36,7 @@ function M.multipart_foreach(multipart, fun, level, state)
 end
 
 --- @param multipart gmime.Multipart
---- @param fun fun(parent, part, state: table)
+--- @param fun fun(parent, part, level, state: table)
 --- @param state table
 function M.multipart_foreach_dfs(multipart, parent, fun, level, state)
 	if parent ~= multipart then
@@ -53,7 +56,7 @@ function M.multipart_foreach_dfs(multipart, parent, fun, level, state)
 end
 
 --- @param message gmime.Message
---- @param fun fun(parent, part, state: table)
+--- @param fun fun(parent, part, level, state: table)
 --- @param state table
 --- A message walker that applies fun and does depth first search
 function M.message_foreach_dfs(message, fun, state)
@@ -71,7 +74,7 @@ function M.message_foreach_dfs(message, fun, state)
 end
 
 --- @param message gmime.Message
---- @param fun fun(parent, part, state: table)
+--- @param fun fun(parent, part, level, state: table)
 --- @param state table
 --- A message walker that applies fun and does breath first search
 function M.message_foreach(message, fun, state)
@@ -692,24 +695,15 @@ function M.multipart_signed_sign(ctx, entity, userid)
 	return ffi.gc(ret, gmime.g_object_unref), err[0]
 end
 
-local function string_toverify(flag)
-	if flag == "none" then
-		return gmime.GMIME_VERIFY_NONE
-	elseif flag == "keyserver" then
-		return gmime.GMIME_VERIFY_ENABLE_KEYSERVER_LOOKUPS
-	elseif flag == "online" then
-		return gmime.GMIME_VERIFY_ENABLE_ONLINE_CERTIFICATE_CHECKS
-	end
-end
-
 --- @param mps gmime.MultipartSigned
 --- @param flags string
 --- @return gmime.SignatureList, gmime.Error
 function M.multipart_signed_verify(mps, flags)
 	local err = ffi.new("GError*[1]")
-	local eflags = string_toverify(flags)
+	local eflags = convert.to_verify_flags(flags)
 	local ret = gmime.g_mime_multipart_signed_verify(mps, eflags, err)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ret, err[0]
+	-- return ffi.gc(ret, gmime.g_object_unref), err[0]
 end
 
 --- @return gmime.MultipartEncrypted
@@ -785,40 +779,40 @@ function M.text_part_get_text(mime_part)
 end
 
 -- macros
---- @param part gmime.MimeObject
+--- @param object gmime.MimeObject
 --- @return boolean
-function M.is_message_part(part)
-	return gmime.gmime_is_message_part(part) ~= 0
+function M.is_message_part(object)
+	return gmime.gmime_is_message_part(object) ~= 0
 end
 
---- @param part gmime.MimeObject
+--- @param object gmime.MimeObject
 --- @return boolean
-function M.is_partial(part)
-	return gmime.gmime_is_message_partial(part) ~= 0
+function M.is_partial(object)
+	return gmime.gmime_is_message_partial(object) ~= 0
 end
 
---- @param part gmime.MimeObject
+--- @param object gmime.MimeObject
 --- @return boolean
-function M.is_multipart(part)
-	return gmime.gmime_is_multipart(part) ~= 0
+function M.is_multipart(object)
+	return gmime.gmime_is_multipart(object) ~= 0
 end
 
---- @param part gmime.MimeObject
+--- @param object gmime.MimeObject
 --- @return boolean
-function M.is_part(part)
-	return gmime.gmime_is_part(part) ~= 0
+function M.is_part(object)
+	return gmime.gmime_is_part(object) ~= 0
 end
 
---- @param part gmime.MimeObject
+--- @param object gmime.MimeObject
 --- @return boolean
-function M.is_multipart_encrypted(part)
-	return gmime.gmime_is_multipart_encrypted(part) ~= 0
+function M.is_multipart_encrypted(object)
+	return gmime.gmime_is_multipart_encrypted(object) ~= 0
 end
 
---- @param part gmime.MimeObject
+--- @param object gmime.MimeObject
 --- @return boolean
-function M.is_multipart_signed(part)
-	return gmime.gmime_is_multipart_signed(part) ~= 0
+function M.is_multipart_signed(object)
+	return gmime.gmime_is_multipart_signed(object) ~= 0
 end
 
 -- function M.set_text(part, texts)
