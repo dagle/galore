@@ -46,8 +46,11 @@ function M.internet_address_list_iter(opt, str)
 	return function()
 		if i < gc.internet_address_list_length(list) then
 			local addr = gc.internet_address_list_get_address(list, i)
-			local mb = ffi.cast("InternetAddressMailbox *", addr)
-			local email = gc.internet_address_mailbox_get_addr(mb)
+			local email = ""
+			if gc.internet_address_is_mailbox(addr) then
+				local mb = ffi.cast("InternetAddressMailbox *", addr)
+				email = gc.internet_address_mailbox_get_addr(mb)
+			end
 			local name = gc.internet_address_get_name(addr)
 			i = i + 1
 			return name, email
@@ -103,6 +106,14 @@ function M.save_part(part, filename)
 	gs.data_wrapper_write_to_stream(content, stream)
 	gs.stream_flush(stream)
 end
+
+function M.part_to_buf(part)
+	local dw = gp.part_get_content(part)
+	local stream = gs.stream_mem_new()
+	gs.data_wrapper_write_to_stream(dw, stream)
+	return M.mem_to_string(stream)
+end
+
 
 function M.mem_to_string(mem)
 	local array = gs.stream_mem_get_byte_array(ffi.cast("GMimeStreamMem *", mem))
