@@ -1,4 +1,3 @@
--- When we view an email, this is the view
 local v = vim.api
 local r = require("galore.render")
 local u = require("galore.util")
@@ -6,15 +5,14 @@ local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
-local Message = Buffer:new()
 
--- Message.state = {}
+local Message = Buffer:new()
 Message.num = 0
 
-local function _view_attachment(filename, kind)
+local function _view_attachment(self, filename, kind)
 	kind = kind or "floating"
-	if Message.attachments[filename] then
-		if Message.attachments[filename][2] then
+	if self.attachments[filename] then
+		if self.attachments[filename][2] then
 			Buffer.create({
 				name = filename,
 				ft = require("plenary.filetype").detect(filename),
@@ -22,29 +20,28 @@ local function _view_attachment(filename, kind)
 				-- ref = ref,
 				cursor = "top",
 				init = function(buffer)
-					local content = u.format(gm.part_to_buf(Message.attachments[filename][1]))
+					local content = u.format(gu.part_to_buf(self.attachments[filename][1]))
 					v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
 					v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
 				end,
 			})
 		else
-			error("File not viewable")
+			-- pipe this some good way etc
+			-- config.values.external_view
 			return
 		end
 	end
-	print("No attachment with that name")
+	-- print("No attachment with that name")
 end
 
 function Message:raw_mode(kind)
 	Buffer.create({
-		name = self.file,
-		-- name = "raw_mode",
+		name = self.line.filename,
 		ft = "mail",
 		kind = kind or "floating",
-		-- ref = ref,
 		cursor = "top",
 		init = function(buffer)
-			vim.cmd(":e " .. self.file)
+			vim.cmd(":e " .. self.line.filename)
 		end,
 	})
 end
@@ -62,13 +59,13 @@ function Message:_save_attachment(filename, save_path)
 	error("No attachment with that name")
 end
 
-function Message:view_attachment()
+function Message:view_attach()
 	local files = u.collect_keys(self.attachments)
 	vim.ui.select(files, {
 		prompt = "View attachment:",
 	}, function(item, _)
 		if item then
-			_view_attachment(item)
+			_view_attachment(self, item, "floating")
 		else
 			error("No file selected")
 		end
@@ -94,17 +91,19 @@ function Message:save_attach()
 	end)
 end
 
-function Message:update(file)
+function Message:update(filename)
 	self:unlock()
 	self:clear()
-	local gmessage = gu.parse_message(file)
+	local gmessage = gu.parse_message(filename)
 	if gmessage then
+		if self.ns then
+			vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
+		end
 		self.ns = vim.api.nvim_create_namespace("galore-message-view")
 		self.message = gmessage
-		-- r.show_header(gmessage, buffer.handle, { ns = M.ns }, message)
-		r.show_header(gmessage, self.handle, nil, file)
-		self.attachments = r.show_message(gmessage, self.handle, {})
-		if next(self.attachments) then
+		r.show_header(gmessage, self.handle, { ns = self.ns }, self.line)
+		self.attachments = r.show_message(gmessage, self.handle, {ns = self.ns})
+		if not vim.tbl_isempty(self.attachments) then
 			local marks = {}
 			for k, _ in pairs(self.attachments) do
 				local str = string.format("-[%s]", k)
@@ -122,37 +121,34 @@ function Message:update(file)
 	self:lock()
 end
 
-function Message:redraw(file)
+function Message:redraw(filename)
 	self:focus()
-	self:update(file)
+	self:update(filename)
 end
 
 function Message:next()
-	local file, vline = self.parent:next(self.vline)
-	self.vline = vline
-	self:redraw(file)
+	local line, vline = self.parent:next(self.vline)
+	Message:create(line, "replace", self.parent, vline)
 end
 --
 function Message:prev()
-	local file, vline = self.parent:prev(self.vline)
-	self.vline = vline
-	self:redraw(file)
+	local line, vline = self.parent:prev(self.vline)
+	Message:create(line, "replace", self.parent, vline)
 end
 
-function Message:create(file, kind, parent, vline)
-	self.num = self.num + 1
+function Message:create(line, kind, parent, vline)
 	Buffer.create({
-		name = u.gen_name("galore-message", self.num),
+		name = "galore-view: " .. line.filename,
 		ft = "mail",
 		kind = kind,
 		parent = parent,
 		cursor = "top",
 		mappings = config.values.key_bindings.message_view,
 		init = function(buffer)
-			buffer.file = file
+			buffer.line = line
 			buffer.parent = parent
 			buffer.vline = vline
-			buffer:update(file)
+			buffer:update(line.filename)
 		end,
 	}, Message)
 end

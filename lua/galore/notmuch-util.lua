@@ -22,6 +22,27 @@ function M.message_with_thread(message, f)
 	nm.query_destroy(query)
 end
 
+function M.get_message(message)
+	local id = nm.message_get_id(message)
+	local file = nm.message_get_filename(message)
+	local sub = nm.message_get_header(message, "Subject")
+	local tags = u.collect(nm.message_get_tags(message))
+	local from = nm.message_get_header(message, "From")
+	local date = tonumber(nm.message_get_header(message, "Subject"))
+	return {
+		id = id,
+		file = file,
+		level = 1,
+		pre = "",
+		index = 1,
+		total = 1,
+		date = date,
+		from = from,
+		sub = sub,
+		tags = tags
+	}
+end
+
 
 --- XXX removal
 local function _get_index(messages, m1, i)
@@ -150,11 +171,13 @@ local function _optimize_search(db, messages, str)
 	-- update the query to only include the ones that needs to be updated
 end
 
-function M.line_info(message)
+function M.line_info(message, i, tot)
 	return {
 		nm.message_get_id(message),
 		nm.message_get_filename(message),
 		u.collect(nm.message_get_tags(message)),
+		i,
+		tot,
 	}
 end
 
@@ -205,14 +228,15 @@ function M.tag_unread(line_info)
 	return M.change_tag(conf.values.db, line_info, "-unread")
 end
 
-local function message_description(level, tree, thread_num, thread_total, date, from, subtitle, tags)
-	local t = table.concat(tags, " ")
+local function message_description(l)
+	local t = table.concat(l.tags, " ")
 	local formated
-	from = gu.preview_addr(from, 25)
-	if thread_num > 1 then
-		formated = string.format("%s [%02d/%02d] %s│ %s▶ (%s)", date, thread_num, thread_total, from, tree, t)
+	local date = os.date("%Y-%m-%d", l.date)
+	local from = gu.preview_addr(l.from, 25)
+	if l.index > 1 then
+		formated = string.format("%s [%02d/%02d] %s│ %s▶ (%s)", date, l.index, l.total, from, l.pre, t)
 	else
-		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, thread_num, thread_total, from, subtitle, t)
+		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, l.index, l.total, from, l.sub, t)
 	end
 	formated = string.gsub(formated, "\n", "")
 	return formated

@@ -3,7 +3,6 @@
 local v = vim.api
 local u = require("galore.util")
 local nm = require("galore.notmuch")
-local gm = require("galore.gmime")
 local Buffer = require("galore.lib.buffer")
 local M = {}
 

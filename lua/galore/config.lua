@@ -14,16 +14,21 @@ config.values = {
 	threads_ratio = 0.6, -- just an idea to make it a bit
 	bind_prefix = "", -- maybe
 	thread_browser = true,
-	autocrypt = true,
+	verify_keys = "keyserver",
+	validate_key = function (status)
+		local convert = require("galore.gmime.convert")
+		if convert.validate(status, "green") or convert.validate(status, "valid") then
+			return true
+		end
+		return false
+	end,
+	-- autocrypt = true,
 	reverse_thread = true,
 	empty_topyic = "no topic",
 	guess_email = false, -- if we can't determain your email use primary
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
-	-- from_string = function(email)
-	-- 	return config.values.name .. " <" .. email .. ">"
-	-- end,
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
 	make_html = false,
 	html_color = 0x878787,
@@ -59,7 +64,8 @@ config.values = {
 		return "msmtp", { "-a", acc, to }
 	end,
 	from_length = 25,
-	show_message_descripiton = function(_, _, _, _, _, _, _) end,
+	show_message_descripiton = function(line)
+	end,
 	key_bindings = {
 		global = {
 			["<leader>mc"] = function ()
@@ -183,8 +189,30 @@ config.values = {
 					local jobs = require("galore.jobs")
 					local function cb(object)
 						jobs.pipe({"cat"}, object)
+						-- jobs.pipe({"gpg", "--import"}, object)
 					end
 					tele.parts_browser(message_view.message, cb)
+				end,
+				--- lsp inspired bindings
+				["gd"] = function (message_view)
+					local telescope = require("galore.telescope")
+					telescope.goto_in_reply_to(message_view)
+				end,
+				["gD"] = function (message_view)
+					local telescope = require("galore.telescope")
+					telescope.goto_in_reply_tos(message_view.message)
+				end,
+				["gr"] = function (message_view)
+					local telescope = require("galore.telescope")
+					telescope.goto_reference(message_view.message)
+				end,
+				["gR"] = function (message_view)
+					local telescope = require("galore.telescope")
+					telescope.goto_references(message_view.message)
+				end,
+				["gM"] = function (message_view)
+					local telescope = require("galore.telescope")
+					telescope.goto_tree(message_view.message)
 				end,
 			},
 		},
@@ -202,6 +230,13 @@ config.values = {
 				end,
 			},
 		},
+		default = {
+			n = {
+				["q"] = function (buf)
+					buf:close(true)
+				end,
+			}
+		}
 	},
 }
 

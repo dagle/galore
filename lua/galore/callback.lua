@@ -1,14 +1,9 @@
--- local job = require("galore.jobs")
--- local u = require("galore.util")
--- local saved = require("galore.saved")
--- local threads = require("galore.thread_browser")
 local thread_message = require("galore.thread_message_browser")
 local config = require("galore.config")
 local mb = require("galore.message_browser")
--- local thread_view = require("galore.thread_view")
 local message_view = require("galore.message_view")
 local compose = require("galore.compose")
-local gu = require("galore.gmime-util")
+local gu = require("galore.gmime.util")
 local nu = require("galore.notmuch-util")
 
 local M = {}
@@ -18,7 +13,7 @@ function M.select_search(saved, mode)
 	if config.values.thread_browser then
 		thread_message:create(search, mode, saved)
 	else
-	mb:create(search, mode)
+	mb:create(search, mode, saved)
 	end
 end
 
@@ -31,10 +26,12 @@ end
 function M.select_message(browser, mode)
 	local vline, line_info = browser:select()
 	--- this works but crashes, remove it for now
-	-- local update = config.values.tag_unread(line_info)
-	-- update_line(tmb, vline, update)
+	-- local id, file, tags = config.values.tag_unread(line_info)
+	-- line_info.id = id
+	-- line_info.file = file
+	-- line_info.tags = tags
 	-- message_view.create(update[2], mode, tmb)
-	message_view:create(line_info[2], mode, browser, vline)
+	message_view:create(line_info, mode, browser, vline)
 end
 
 function M.message_reply(message_view)

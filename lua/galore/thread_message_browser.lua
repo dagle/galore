@@ -7,22 +7,33 @@ local Buffer = require("galore.lib.buffer")
 local nu = require("galore.notmuch-util")
 
 local Tmb = Buffer:new()
-Tmb.num = 0
 
-local function get_message(message, level, prestring, i, tot)
+local function get_message(message, level, prestring, i, total)
+	local id = nm.message_get_id(message)
+	local filename = nm.message_get_filename(message)
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = nm.message_get_date(message)
-	local ppdate = os.date("%Y-%m-%d ", date)
-	return { level, prestring, i, tot, ppdate, from, sub, tags }
+	return {
+		id = id,
+		filename = filename,
+		level = level,
+		pre = prestring,
+		index = i,
+		total = total,
+		date = date,
+		from = from,
+		sub = sub,
+		tags = tags
+	}
 end
 
 local function sort(messages)
 	return messages
 end
 
-local function show_messages(messages, level, prestring, num, tot, box, state)
+local function show_messages(messages, level, prestring, num, total, box, state)
 	local collected = u.collect(messages)
 	local j = 1
 	for _, message in ipairs(collected) do
@@ -34,9 +45,9 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 		else
 			newstring = prestring .. "├─"
 		end
-		table.insert(box, get_message(message, level, newstring, num + 1, tot))
-		-- table.insert(state, message)
-		table.insert(state, nu.line_info(message))
+		local tm = get_message(message, level, newstring, num + 1, total)
+		table.insert(box, tm)
+		table.insert(state, tm)
 		if num == 0 then
 			newstring = prestring
 		elseif #collected > j then
@@ -45,7 +56,7 @@ local function show_messages(messages, level, prestring, num, tot, box, state)
 			newstring = prestring .. "  "
 		end
 		local sorted = sort(nm.message_get_replies(message))
-		num = show_messages(sorted, level + 1, newstring, num + 1, tot, box, state)
+		num = show_messages(sorted, level + 1, newstring, num + 1, total, box, state)
 		j = j + 1
 	end
 	return num
@@ -111,7 +122,7 @@ end
 local function ppMessage(messages)
 	local box = {}
 	for _, message in ipairs(messages) do
-		local formated = config.values.show_message_description(unpack(message))
+		local formated = config.values.show_message_description(message)
 		table.insert(box, formated)
 	end
 	return box
@@ -124,12 +135,11 @@ function Tmb:get_messages(db, search)
 	local query = nm.create_query(db, search)
 	for thread in nm.query_get_threads(query) do
 		local box = {}
-		local tot = nm.thread_get_total_messages(thread)
+		local total = nm.thread_get_total_messages(thread)
 		local messages = nm.thread_get_toplevel_messages(thread)
-		show_messages(messages, 0, "", 0, tot, box, state)
-		stop = stop + tot
+		show_messages(messages, 0, "", 0, total, box, state)
+		stop = stop + total
 		local threadinfo = { thread, stop = stop, start = start, messages = box, expand = true }
-		-- local threadinfo = { thread, stop = stop, start = start, messages = ppMessage(box), expand = true }
 		table.insert(threads, threadinfo)
 		start = stop + 1
 	end
@@ -173,26 +183,15 @@ local function tail(list)
     return {unpack(list, 2)}
 end
 
---- XXX
 local function render_message(tmb, message, line)
-	local formated = config.values.show_message_description(unpack(message))
+	local formated = config.values.show_message_description(message)
 	tmb:unlock()
 	tmb:set_lines(line-1, line, true, {formated})
 	tmb:lock()
 end
 
---- adds an message and updates the thread? Or something?
---- Maybe not?
--- local function add_message()
--- end
---- Being able to to do a partial update
---- Only works for a single line atm, easy fix
--- XXX
-function Tmb:update(start, values)
-	local value = values[1]
-	self.State[start] = value
+function Tmb:update(start)
 	local tm = self:get_thread_message(start)
-	tm[8] = value[3]
 	render_message(self, tm, start)
 end
 
@@ -250,20 +249,19 @@ end
 function Tmb:next(line)
 	line = math.min(line + 1, #self.State)
 	local line_info = self.State[line]
-	return line_info[2], line
+	return line_info, line
 end
 
 --
 function Tmb:prev(line)
 	line = math.max(line - 1, 1)
 	local line_info = self.State[line]
-	return line_info[2], line
+	return line_info, line
 end
 
 --- Maybe update the line when buffer is focused
 --- Using autocmd
 function Tmb:set_line(line)
-	--- should do to_realline and maybe we shouldn't have a self.Line
 	self.Line = line
 end
 
@@ -275,9 +273,8 @@ function Tmb:select()
 end
 
 function Tmb:create(search, kind, parent)
-	self.num = self.num + 1
 	return Buffer.create({
-		name = u.gen_name("galore-threads", self.num),
+		name = "galore-threads: " .. search,
 		ft = "galore-threads",
 		kind = kind,
 		cursor = "top",

@@ -1,6 +1,6 @@
 local v = vim.api
 local u = require("galore.util")
-local gu = require("galore.gmime-util")
+local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
 local job = require("galore.jobs")
 local config = require("galore.config")
@@ -14,6 +14,7 @@ local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
 
 local Compose = Buffer:new()
+Compose.num = 0
 
 -- This shouldn't control that the file exists
 -- Because it might exist later on during the process of sending email
@@ -74,6 +75,9 @@ end
 
 --- Add ability to encrypt the message
 --- we then need to delete these when we load the message
+--- XXX get it working
+--- Are we even create a file?
+--- Look up how to do filenames
 function Compose:save_draft()
 	vim.ui.input({
 		prompt = "Save as: ",
@@ -124,7 +128,8 @@ end
 
 local mark_name = "email-compose"
 
-function Compose.create(kind, message, reply)
+function Compose:create(kind, message, reply)
+	self.num = self.num + 1
 	local template
 	-- local ref = util.get_ref()
 	if message then
@@ -133,6 +138,7 @@ function Compose.create(kind, message, reply)
 		template = u.default_template()
 	end
 	Buffer.create({
+		--- XXX maybe we shouldn't name it
 		name = "galore-compose",
 		ft = "mail",
 		kind = kind,
