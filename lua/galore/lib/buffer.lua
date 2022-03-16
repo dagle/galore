@@ -219,6 +219,15 @@ end
 
 function Buffer.create(config, class)
 	config = config or {}
+
+	-- Something like this
+	if vim.fn.bufexists(config.name) ~= 0 then
+		local buf = vim.fn.bufnr(config.name)
+		vim.api.nvim_win_set_buf(0, buf)
+		return
+	end
+
+
 	local kind = config.kind or "split"
 	local buffer = nil
 	class = class or Buffer
@@ -280,6 +289,9 @@ function Buffer.create(config, class)
 	buffer:set_option("bufhidden", config.bufhidden or "hide")
 	buffer:set_option("buftype", config.buftype or "nofile")
 	buffer:set_option("swapfile", false)
+	buffer:set_option("fileencoding", "utf-8")
+	buffer:set_option("fileformat", "unix")
+
 	-- don't want to do it like this
 	vim.api.nvim_win_set_option(0, "wrap", false)
 
