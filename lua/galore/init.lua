@@ -1,12 +1,12 @@
 local config = require("galore.config")
 local saved = require("galore.saved")
-require("galore.cmp_nm")
-require("galore.cmp_vcard")
 local nu = require("galore.notmuch-util")
 require("galore.gmime").init()
 
 local galore = {}
 function galore.open(opts)
+	require("galore.cmp_nm")
+	require("galore.cmp_vcard")
 	vim.fn.sign_define("uncollapsed", { text = "v" })
 	vim.fn.sign_define("collapsed", { text = ">>" })
 	galore.connect()
