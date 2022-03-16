@@ -26,6 +26,9 @@
   - [-] Drafts
   - [ ] Render attachments in compose
   - [ ] Keyserver lookup
+  - [ ] Set headers? Or is that up to sendmail? 
+  -- Return-Path
+  -- Reply-To
   - [-] Fcc suppport / Sent support
   - [ ] Non-standard headers: ‘Mail-Reply-To’, ‘Mail-Followup-To’
   - [ ] Documentation
@@ -53,3 +56,6 @@
   -- [ ] How easy is it to build on an old search, can we help?
   - [ ] AutoEncrypt headers support
 
+* 0.3 
+  - [ ] Decouple notmuch.lua and gmime.lua to their own projects
+  - [ ] Make different tiers, so it's easier to lazy load more of the code etc
