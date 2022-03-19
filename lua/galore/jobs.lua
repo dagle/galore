@@ -1,4 +1,4 @@
-local conf = require("galore.config")
+local config = require("galore.config")
 local Job = require("plenary.job")
 local u = require('galore.util')
 local gu = require('galore.gmime.util')
@@ -75,7 +75,7 @@ function M.w3m(text)
 end
 
 function M.send_mail(to, from, message_str)
-	local cmd, args = conf.values.send_cmd(to, from)
+	local cmd, args = config.values.send_cmd(to, from)
 	Job
 		:new({
 			command = cmd,
@@ -118,6 +118,7 @@ local function raw_pipe(object, cmd, args)
 			r.part_to_stream(part, {}, stream)
 		end
 	else
+		--- FIXME opts
 		go.object_write_to_stream(object, nil, stream)
 	end
 
@@ -138,10 +139,14 @@ local function raw_pipe(object, cmd, args)
 	end)
 end
 
+function M.insert_mail(mail, folder, tags)
+	raw_pipe(mail, "notmuch", {"insert", "--create-folder", folder, tags})
+end
+
 --- being able to spawn in a terminal
 function M.send_mail_pipe(to, from, message)
 	-- create a pipe
-	local cmd, args = conf.values.send_cmd(to, from)
+	local cmd, args = config.values.send_cmd(to, from)
 	local object = ffi.cast("GMimeObject *", message)
 	raw_pipe(object, cmd, args)
 end
