@@ -207,7 +207,7 @@ end
 --- XXX
 function M.iconv_strdup()
 	local mem = gmime.g_mime_iconv_strdup()
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 --- XXX do we need this?
@@ -221,7 +221,7 @@ end
 --- @return string
 function M.iconv_locale_to_utf8(str)
 	local mem = gmime.g_mime_iconv_locale_to_utf8(str)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_iconv_locale_to_utf8_length (const char *str, size_t n);
@@ -230,7 +230,7 @@ end
 --- @return string
 function M.iconv_locale_to_utf8_length(str, length)
 	local mem = gmime.g_mime_iconv_locale_to_utf8_length(str, length)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_iconv_utf8_to_locale (const char *str);
@@ -238,7 +238,7 @@ end
 --- @return string
 function M.iconv_utf8_to_locale(str)
 	local mem = gmime.g_mime_iconv_utf8_to_locale(str)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
 
 -- char *g_mime_iconv_utf8_to_locale_length (const char *str, size_t n);
@@ -247,10 +247,14 @@ end
 --- @return string
 function M.iconv_utf8_to_locale_length(str, length)
 	local mem = gmime.g_mime_iconv_utf8_to_locale_length(str, length)
-	return convert.strdup(mem)
+	return safe.strdup(mem)
 end
---
--- typedef void (* GMimeObjectForeachFunc) (GMimeObject *parent, GMimeObject *part, gpointer user_data);
+
+--- @return string
+function M.make_maildir_id()
+	local mem = gmime.make_maildir_id();
+	return safe.strdup(mem)
+end
 --
 -- // void g_mime_object_register_type (const char *type, const char *subtype, GType object_type);
 
