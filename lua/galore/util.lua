@@ -146,6 +146,22 @@ function M.format(part, qoute)
 	return box
 end
 
+local completion_headers = {
+	"To:",
+	"Cc:",
+	"Bcc:",
+}
+
+function M.completion_header(line)
+	for _, v in ipairs(completion_headers) do
+		local start, _ = string.find(line, v)
+		if start then
+			return true
+		end
+	end
+	return false
+end
+
 M.default_template = function()
 	return {
 		"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",
