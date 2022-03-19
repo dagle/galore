@@ -12,9 +12,12 @@
   -- Keep track of when the db was last updated, then ask for new threads etc for partial updates
   -- For full update, just rerun the buffer
   -- Update last update timer after a sync
-  - [ ] Sorting
-  -- Internal, query
+  - [x] Sorting <- 
+  -- [x] Internal does this make sense?
+  -- [x] Add sort nm-liversearch
+  -- [x] Query
   - [ ] Exclude tags
+  -- Tags to exclude by default
   - [ ] Autocmd and UI
   -- Parts
   -- Closing a window with q or wq should be the same?
@@ -23,16 +26,24 @@
   - [ ] Don't loose a compose, set better name etc
   - [ ] Pipes, pipe keys, git am etc.
   - [ ] No more crashes
-  - [-] Drafts
+  - [x] Drafts
   - [ ] Render attachments in compose
   - [ ] Keyserver lookup
   - [ ] Set headers? Or is that up to sendmail? 
   -- Return-Path
   -- Reply-To
-  - [-] Fcc suppport / Sent support
+  - [x] Fcc suppport / Sent support
+  -- [x] Fcc insert
   - [ ] Non-standard headers: ‘Mail-Reply-To’, ‘Mail-Followup-To’
   - [ ] Documentation
-  - [ ] Register Gmime callback methods, for password and parse errors.
+  - [-] Register Gmime callback methods, for password and parse errors. <- 
+  -- [-] Password
+  -- [-] Parser
+  -- [-] Format
+  -- Should we have a ctx with all the runtime settings for things that can't be configured 
+  --- Like db, session-key, charset, parser, format
+  -- Configure a global option from settings 
+  -- Go over all functions that takes an option, search for nil
   - [ ] A way to add searches not notmuch
   - [ ] Cleanup code
   -- Ugly code
@@ -46,7 +57,7 @@
   - [ ] Create a view from a search
   -- Ctrl-t to create a tmb
   -- Ctrl-q to create a mb 
-
+  - [ ] Use g_mime_utils_header_decode_text to decode header values
 
 * 0.2
   - [ ] Notmuch saved queries 
@@ -59,3 +70,6 @@
 * 0.3 
   - [ ] Decouple notmuch.lua and gmime.lua to their own projects
   - [ ] Make different tiers, so it's easier to lazy load more of the code etc
+  - [ ] A mml mode?
+  - [ ] Fcc outside of notmuch, not in 0.1
+  -- [ ] Make fcc automatically detect if it should insert or not, abs path vs relative
