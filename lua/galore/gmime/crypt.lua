@@ -871,16 +871,17 @@ function M.verify_signed(part)
 	return ret
 end
 
-function M.decrypt_and_verify(part)
+function M.decrypt_and_verify(part, passfun)
 	local encrypted = ffi.cast("GMimeMultipartEncrypted *", part)
 	local error = ffi.new("GError*[1]")
 	local res = ffi.new("GMimeDecryptResult*[1]")
-	-- do we need to configure a session key?
+	-- XXX do we need to configure a session key?
 	local session = nil
-	local decrypted = gmime.g_mime_multipart_encrypted_decrypt(
+	local decrypted = gmime.g_mime_multipart_encrypted_decrypt_pass(
 		encrypted,
 		gmime.GMIME_DECRYPT_ENABLE_KEYSERVER_LOOKUPS,
 		session,
+		passfun,
 		res,
 		error
 	)

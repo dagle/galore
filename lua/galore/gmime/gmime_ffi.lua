@@ -619,6 +619,13 @@ GMimeObject *g_mime_multipart_encrypted_decrypt (GMimeMultipartEncrypted *encryp
 						 GMimeDecryptResult **result,
 						 GError **err);
 
+GMimeObject *g_mime_multipart_encrypted_decrypt_pass (GMimeMultipartEncrypted *encrypted,
+						 GMimeDecryptFlags flags,
+						 const char *session_key,
+						 GMimePasswordRequestFunc request_passwd,
+						 GMimeDecryptResult **result,
+						 GError **err);
+
 GMimeTextPart *g_mime_text_part_new (void);
 GMimeTextPart *g_mime_text_part_new_with_subtype (const char *subtype);
 
@@ -1399,6 +1406,7 @@ int gmime_is_multipart_signed(GMimeObject *obj);
 int gmime_is_multipart_encrypted(GMimeObject *obj);
 int internet_address_is_mailbox(InternetAddress *ia);
 int internet_address_is_group(InternetAddress *ia);
+char *make_maildir_id(void);
 
 GDateTime *         g_date_time_new_from_unix_local     (gint64 t);
 GDateTime *         g_date_time_new_from_unix_utc       (gint64 t);
