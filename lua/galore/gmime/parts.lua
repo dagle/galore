@@ -738,8 +738,8 @@ end
 function M.multipart_encrypted_decrypt(part, flags, session_key)
 	local err = ffi.new("GError*[1]")
 	local res = ffi.new("GMimeDecryptResult*[1]")
-	-- local eflags = convert.decrytion_flag(flags)
-	local obj = gmime.g_mime_multipart_encrypted_decrypt(part, flags, session_key, res, error)
+	local eflags = convert.to_decrytion_flag(flags)
+	local obj = gmime.g_mime_multipart_encrypted_decrypt(part, eflags, session_key, res, error)
 	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
 end
 
