@@ -6,8 +6,9 @@ local go = require("galore.gmime.object")
 local ge = require("galore.gmime.crypt")
 local gs = require("galore.gmime.stream")
 local gf = require("galore.gmime.filter")
+local runtime = require("galore.runtime")
 local u = require("galore.util")
-local nm = require("galore.notmuch")
+-- local nm = require("galore.notmuch")
 local ffi = require("ffi")
 local conf = require("galore.config")
 
@@ -240,7 +241,8 @@ function M.show_part(object, buf, opts, state)
 			if opts.preview then
 				opts.preview(buf, "Encrypted")
 			end
-			local de_part, sign = ge.decrypt_and_verify(object)
+			--- doesn't seem to run the callback
+			local de_part, sign = ge.decrypt_and_verify(object, runtime.get_password)
 			if sign then
 			end
 			M.show_part(de_part, buf, opts, state)
