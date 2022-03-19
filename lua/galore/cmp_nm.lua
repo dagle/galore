@@ -5,6 +5,7 @@ if not ok then
 end
 
 local Job = require("plenary.job")
+local u = require("galore.util")
 
 local source = {}
 
@@ -47,8 +48,7 @@ end
 function source:complete(params, callback)
 	local bufnr = vim.api.nvim_get_current_buf()
 
-	local start, stop = string.find(params.context.cursor_before_line, "%a+:")
-	if not start then
+	if u.completion_header(params.context.cursor_before_line) then
 		callback(nil)
 		return
 	end
