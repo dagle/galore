@@ -433,6 +433,8 @@ end
 --
 -- char *internet_address_to_string (InternetAddress *ia, GMimeFormatOptions *options, gboolean encode);
 --- @param ia gmime.InternetAddress
+--- @param option gmime.FormatOptions
+--- @param encode boolean
 --- @return string
 function M.internet_address_to_string(ia, option, encode)
 	local mem = gmime.internet_address_to_string(ia, option, encode)
@@ -607,7 +609,7 @@ end
 --
 -- char *internet_address_list_to_string (InternetAddressList *list, GMimeFormatOptions *options, gboolean encode);
 --- @param list gmime.InternetAddressList
---- @param options gmime.Option
+--- @param options gmime.FormatOptions
 --- @param encode boolean
 --- @return string
 function M.internet_address_list_to_string(list, options, encode)
@@ -616,14 +618,14 @@ end
 
 -- void internet_address_list_encode (InternetAddressList *list, GMimeFormatOptions *options, GString *str);
 --- @param list gmime.InternetAddressList
---- @param options gmime.Option
+--- @param options gmime.FormatOptions
 function M.internet_address_list_encode(list, options, str)
 	gmime.internet_address_list_encode(list, options, str)
 end
 
 --
 -- InternetAddressList *internet_address_list_parse (GMimeParserOptions *options, const char *str);
---- @param options gmime.Option
+--- @param options gmime.ParserOptions
 --- @param str string
 --- @return gmime.InternetAddressList
 function M.internet_address_list_parse(options, str)
@@ -887,6 +889,7 @@ function M.references_format(refs)
 end
 
 function M.reference_iter_str(str)
+	--- FIXME opts
 	local refs = M.references_parse(nil, str)
 	if refs == nil then
 		return function ()
