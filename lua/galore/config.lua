@@ -2,24 +2,22 @@ local config = {}
 
 -- should read more stuff from notmuch config
 config.values = {
-	primary_email = "",
-	other_email = {},
+	primary_email = nil,
+	other_email = nil,
 	db = nil,
-	name = "",
+	name = nil,
 	draftdir = "/home/dagle/gmail/drafts", -- relative path of the bd!
-	exclude_tags = "",
-	saved_search = {},
+	exclude_tags = nil,
+	show_excluded = true,  -- show all excluded tags as their own tags
+	saved_search = {{"jelle", "from:jelle"}},
 	show_tags = true,
 	threads_ratio = 0.6, -- just an idea to make it a bit
 	bind_prefix = "", -- maybe
 	thread_browser = true,
-	verify_keys = "keyserver",
+	verify_flags = "keyserver",
 	validate_key = function (status)
 		local convert = require("galore.gmime.convert")
-		if convert.validate(status, "green") or convert.validate(status, "valid") then
-			return true
-		end
-		return false
+		return convert.validate(status, "green") or convert.validate(status, "valid") or status == 0
 	end,
 	-- autocrypt = true,
 	reverse_thread = true,
@@ -61,6 +59,21 @@ config.values = {
 		end
 		local acc = string.sub(from, start+1, stop)
 		return "msmtp", { "-a", acc, to }
+	end,
+	--- What more do we need? Start line, stop line?
+	annotate_signature = function (buf, ns, status, cb)
+		local ui = require("galore.ui")
+		if status then
+			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature Passed ---------")
+		else
+			ui.exmark(buf, ns, "nmVerifyRed", "--------- Signature Failed ---------")
+		end
+		cb()
+		if status then
+			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature End ---------")
+		else
+			ui.exmark(buf, ns, "nmVerifyRed","--------- Signature End ---------")
+		end
 	end,
 	from_length = 25,
 	show_message_descripiton = function(line)
@@ -184,6 +197,8 @@ config.values = {
 					message_view:prev()
 				end,
 				["O"] = function (message_view)
+					--- don't do this
+					--- use g_mime_crypto_context_import_keys instead?
 					local tele = require("galore.telescope")
 					local jobs = require("galore.jobs")
 					local function cb(object)
