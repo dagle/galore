@@ -1,4 +1,5 @@
 local config = require("galore.config")
+local runtime = require("galore.runtime")
 local Job = require("plenary.job")
 local u = require('galore.util')
 local gu = require('galore.gmime.util')
@@ -118,8 +119,7 @@ local function raw_pipe(object, cmd, args)
 			r.part_to_stream(part, {}, stream)
 		end
 	else
-		--- FIXME opts
-		go.object_write_to_stream(object, nil, stream)
+		go.object_write_to_stream(object, runtime.format_opts, stream)
 	end
 
 	gs.stream_flush(stream)

@@ -1,5 +1,6 @@
 --- should we really include config?
 local config = require("galore.config")
+local runtime = require("galore.runtime")
 local gs = require("galore.gmime.stream")
 local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
@@ -38,7 +39,6 @@ function M.reference_iterator(ref)
 end
 
 function M.internet_address_list_iter(opt, str)
-	-- local list = galore.internet_address_list_parse(opt, str)
 	local list = gc.internet_address_list_parse(opt, str)
 	if list == nil then
 		return function ()
@@ -104,19 +104,18 @@ end
 --- @return gmime.Message
 function M.parse_message(path)
 	if not path or path == "" then
-		-- assert(false, "Empty path")
-		return
+		return nil
 	end
 	local stream, err = gs.stream_file_open(path, "r")
 	local parser = gs.parser_new_with_stream(stream)
-	local message = gs.parser_construct_message(parser, nil)
-	return message
+	local message = gs.parser_construct_message(parser, runtime.parser_opts)
+	return message, err
 end
 
 function M.write_message(path, object)
 	local stream, err = gs.stream_file_open(path, "w+")
 	if err == nil and stream ~= nil then
-		go.object_write_to_stream(object, nil, stream)
+		go.object_write_to_stream(object, runtime.format_opts, stream)
 		gs.stream_flush(stream)
 	end
 	return err
@@ -156,12 +155,12 @@ function M.get_ref(message)
 	local ref_str = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
 	local ref
 	if ref_str then
-		ref = gc.references_parse(nil, ref_str)
+		ref = gc.references_parse(runtime.parser_opts, ref_str)
 	end
 	local reply
 	local reply_str = go.object_get_header(ffi.cast("GMimeObject *", message), "In-Reply-To")
 	if reply_str then
-		reply = gc.references_parse(nil, ref_str)
+		reply = gc.references_parse(runtime.parser_opts, ref_str)
 	end
 	return {
 		reference = ref,
@@ -174,14 +173,14 @@ function M.make_ref(message)
 	local ref_str = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
 	local ref
 	if ref_str then
-		ref = gc.references_parse(nil, ref_str)
+		ref = gc.references_parse(runtime.parser_opts, ref_str)
 	else
 		ref = gc.references_new()
 	end
 	local reply = nil
 	local reply_str = go.object_get_header(ffi.cast("GMimeObject *", message), "Message-ID")
 	if reply_str then
-		reply = gc.references_parse(nil, reply_str)
+		reply = gc.references_parse(runtime.parser_opts, reply_str)
 		gc.references_append(ref, reply_str)
 	end
 	return {
@@ -204,7 +203,7 @@ end
 
 function M.preview_addr(addr, minlen)
 	local strbuf = {}
-	for name, mail in M.internet_address_list_iter(nil, addr) do
+	for name, mail in M.internet_address_list_iter(runtime.parser_opts, addr) do
 		-- if the addr doesn't follow the mbox standard, we we nop
 		if not (name and mail) then
 			table.insert(strbuf, addr)
@@ -286,9 +285,9 @@ local function get_backup(message, list)
 end
 
 local function append_no_dups(dst, src)
-	for _, semail in M.internet_address_list_iter(src) do
+	for _, semail in M.internet_address_list_iter(runtime.parser_opts, src) do
 		local matched = false
-		for _, demail in M.internet_address_list_iter(dst) do
+		for _, demail in M.internet_address_list_iter(runtime.parser_opts, dst) do
 			if semail == demail then
 				matched = true
 				break;
@@ -316,10 +315,10 @@ function M.respone_headers(message, type)
 	local our = gc.internet_address_mailbox_new(config.values.name, addr)
 	local from = get_backup(message, { "reply_to", "sender", "from" })
 	if not type then
-		from = gc.internet_address_list_to_string(from, nil, false)
+		from = gc.internet_address_list_to_string(from, runtime.format_opts, false)
 		return {
 			"To: " .. from,
-			"From: " .. gc.internet_address_to_string(our, nil, false)
+			"From: " .. gc.internet_address_to_string(our, runtime.format_opts, false)
 		}
 	elseif type == "reply_all" then
 		local to = gp.message_get_address(message, "to")
@@ -332,10 +331,10 @@ function M.respone_headers(message, type)
 		local bcc = gp.message_get_address(message, "bcc")
 		gc.address_list_remove(bcc, our)
 		return {
-			{ "From: ", gc.internet_address_to_string(our, nil, false)},
-			{ "To: ", gc.internet_address_list_to_string(to, nil, false)},
-			{ "Cc: ", gc.internet_address_list_to_string(cc, nil, false)},
-			{ "Bcc: ", gc.internet_address_list_to_string(bcc, nil, false)},
+			{ "From: ", gc.internet_address_to_string(our, runtime.format_opts, false)},
+			{ "To: ", gc.internet_address_list_to_string(to, runtime.format_opts, false)},
+			{ "Cc: ", gc.internet_address_list_to_string(cc, runtime.format_opts, false)},
+			{ "Bcc: ", gc.internet_address_list_to_string(bcc, runtime.format_opts, false)},
 		}
 	elseif type == "mailinglist" then
 		local list = get_list()
