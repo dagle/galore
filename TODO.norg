@@ -1,8 +1,4 @@
 * 0.1
-  - [ ] Template system
-  -- Easy to use
-  -- Easy to write rules
-  -- Reply, reply-all, compose to sender, compose, forward, unsubsribe
   - [ ] Responds to mailing list
   - [ ] Hooks, where and why? (init, send, sent ...)
   - [ ] Notmuch, ffi memory handling and assert?
@@ -12,12 +8,14 @@
   -- Keep track of when the db was last updated, then ask for new threads etc for partial updates
   -- For full update, just rerun the buffer
   -- Update last update timer after a sync
-  - [x] Sorting <- 
+  - [x] Sorting
   -- [x] Internal does this make sense?
   -- [x] Add sort nm-liversearch
   -- [x] Query
-  - [ ] Exclude tags
-  -- Tags to exclude by default
+  - [x] Exclude tags
+  -- [x] Search
+  -- [x] Browsers
+  -- [x] Telescope, not now, wait until the new notmuch-rs
   - [ ] Autocmd and UI
   -- Parts
   -- Closing a window with q or wq should be the same?
@@ -25,10 +23,14 @@
   -- What about compose? How do we not lose data? (:wq to send?)
   - [ ] Don't loose a compose, set better name etc
   - [ ] Pipes, pipe keys, git am etc.
-  - [ ] No more crashes
+  - [x] No more crashes, for now
   - [x] Drafts
-  - [ ] Render attachments in compose
-  - [ ] Keyserver lookup
+  - [-] Render attachments in compose
+  -- [ ] Unify the attachments api
+  -- [x] Report the virtual-lines bugs
+  -- [ ] Get a better way to update exmarks etc
+  - [-] Keyserver lookup, does gpgme_op_verify actually do keyserver lookups
+  - [x] Verify local keys correctly
   - [ ] Set headers? Or is that up to sendmail? 
   -- Return-Path
   -- Reply-To
@@ -36,38 +38,52 @@
   -- [x] Fcc insert
   - [ ] Non-standard headers: ‘Mail-Reply-To’, ‘Mail-Followup-To’
   - [ ] Documentation
-  - [-] Register Gmime callback methods, for password and parse errors. <- 
-  -- [-] Password
-  -- [-] Parser
-  -- [-] Format
+  - [-] Register Gmime callback methods, for password and parse errors. <- almost done
+  -- [-] Password (doesn't work but it should?)
+  -- [x] Parser
+  -- [x] Format  
   -- Should we have a ctx with all the runtime settings for things that can't be configured 
   --- Like db, session-key, charset, parser, format
   -- Configure a global option from settings 
   -- Go over all functions that takes an option, search for nil
-  - [ ] A way to add searches not notmuch
+  - [ ] A way to add/delete searches to notmuch/galore? <-
   - [ ] Cleanup code
   -- Ugly code
   -- Cycles in requires
   - [ ] Clunky stuff, init, setup etc
-  - [ ] Email groups
   - [ ] Fix reader
   -- Content-Type and Content-Disposition
   -- References and  in-reply-to
   -- Remove html for now, if we should generate html, it should be good at least
-  - [ ] Create a view from a search
-  -- Ctrl-t to create a tmb
-  -- Ctrl-q to create a mb 
-  - [ ] Use g_mime_utils_header_decode_text to decode header values
+  - [-] Create a view from a search
+  -- [x] Ctrl-b to create a tmb
+  -- [x] Ctrl-q to create a mb 
+  -- [-] move stuff to config
+  - [ ] look into g_mime_utils_header_decode_text, maybe in get_list, the rest should be fine
+  - [x] Check Health 
+  - [x] Blog
+  - [ ] Rename reader to builder
 
 * 0.2
+  - [ ] Template system
+  -- Easy to use
+  -- Easy to write rules
+  -- Reply, reply-all, compose to sender, compose, forward, unsubsribe
   - [ ] Notmuch saved queries 
   -- [ ] Read queries from the notmuch config
   -- [ ] Being able to save queries and write them to notmuch config
   -- [ ] Easy way to create new queries or should we rely on telescope?
   -- [ ] How easy is it to build on an old search, can we help?
   - [ ] AutoEncrypt headers support
+  - [ ] Email groups, maybe this is vcard?
+  -- [ ] Being able to add vcards, groups etc
+  - [ ] https://efail.de/ secure, only render html in non-encrypted emails
+  - [ ] Benchmark, dunno if galore is that slow but we need to benchmark
+  - [ ] Add tests to the 
 
 * 0.3 
+  - [ ] Managed windows
+  - [ ] Rewrite notmuch-rs, the state of the lib is quite horrible
   - [ ] Decouple notmuch.lua and gmime.lua to their own projects
   - [ ] Make different tiers, so it's easier to lazy load more of the code etc
   - [ ] A mml mode?
