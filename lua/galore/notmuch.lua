@@ -792,11 +792,22 @@ local function property_iterator(properties)
 	return function()
 		if nm.notmuch_message_properties_valid(properties) == 1 then
 			local key = ffi.string(nm.notmuch_message_properties_key(properties))
-			local value = ffi.string(nm.notmuch_message_properties_key(properties))
+			local value = ffi.string(nm.notmuch_message_properties_value(properties))
 			nm.notmuch_tags_move_to_next(properties)
 			return key, value
 		-- else
 		-- 	nm.notmuch_tags_destroy(properties)
+		end
+	end
+end
+
+local function config_list_iterator(properties)
+	return function()
+		if nm.notmuch_config_list_valid(properties) ~= 0 then
+			local key = ffi.string(nm.notmuch_config_list_key(properties))
+			local value = ffi.string(nm.notmuch_config_list_value(properties))
+			nm.notmuch_config_list_move_to_next(properties)
+			return key, value
 		end
 	end
 end
@@ -1277,7 +1288,7 @@ function M.directory_destroy(directory)
 	nm.notmuch_directory_destroy(directory)
 end
 
---- @param filenames notmuch.Filenames 
+--- @param filenames notmuch.Filenames
 --- @return notmuch.Status
 function M.filenames_destroy(filenames)
 	return nm.notmuch_filenames_destroy(filenames)
@@ -1301,8 +1312,10 @@ end
 --- @param db notmuch.Db
 --- @param prefix string
 function M.db_get_conf_list(db, prefix)
-	-- TODO
-	-- return iterator
+	local list = ffi.new("notmuch_config_list_t*[1]")
+	local res = nm.notmuch_database_get_config_list(db, prefix, list)
+	assert(res == 0, "Error creating database with err=" .. res)
+	return config_list_iterator(list[0])
 end
 
 --- @param config_list object
