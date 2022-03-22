@@ -1,3 +1,5 @@
+--- Runtime keeps track of the following:
+--- notmuchdb_handler, parser_opts, format_opts, and crypto-ctx 
 local config = require("galore.config")
 local u = require("galore.util")
 local nm = require("galore.notmuch")
@@ -58,8 +60,6 @@ local function make_gmime_format_options()
 
 	runtime.format_opts = format
 end
-
---- should contain the session-key
 
 function runtime.get_password(ctx, uid, prompt, reprompt, response_stream)
 	--- use ctx? uid?

@@ -5,6 +5,7 @@ local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
 local nu = require("galore.notmuch-util")
+local runtime = require("galore.runtime")
 
 local Tmb = Buffer:new()
 
@@ -133,6 +134,9 @@ function Tmb:get_messages(db, search)
 	local threads = {}
 	local start, stop = 1, 0
 	local query = nm.create_query(db, search)
+	for _, ex in ipairs(config.values.exclude_tags) do
+		nm.query_add_tag_exclude(query, ex)
+	end
 	for thread in nm.query_get_threads(query) do
 		local box = {}
 		local total = nm.thread_get_total_messages(thread)
@@ -175,7 +179,7 @@ function Tmb:threads_to_buffer()
 end
 
 function Tmb:refresh(search)
-	self:get_messages(config.values.db, search)
+	self:get_messages(runtime.db, search)
 	self:threads_to_buffer()
 end
 
@@ -281,6 +285,7 @@ function Tmb:create(search, kind, parent)
 		parent = parent,
 		mappings = config.values.key_bindings.thread_browser,
 		init = function(buffer)
+			buffer.search = search
 			vim.api.nvim_win_set_option(0, "number", true)
 			buffer:refresh(search)
 			buffer.line = 1

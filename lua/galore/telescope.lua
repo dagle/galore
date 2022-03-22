@@ -301,7 +301,7 @@ function Telescope.goto_parent(mv)
 	end
 	local realsearch = gc.utils_decode_message_id(ref)
 
-	local query = nm.create_query(config.values.db,  realsearch)
+	local query = nm.create_query(runtime.db,  realsearch)
 	local line
 	for nmmessage in nm.query_get_messages(query) do
 		line = nu.get_message(nmmessage)

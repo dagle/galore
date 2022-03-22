@@ -4,6 +4,7 @@ local nu = require("galore.notmuch-util")
 local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
+local runtime = require("galore.runtime")
 local Mb = Buffer:new()
 
 local function get_message(message)
@@ -30,6 +31,9 @@ end
 function Mb:get_messages(db, search)
 	local state = {}
 	local query = nm.create_query(db, search)
+	for _, ex in ipairs(config.values.exclude_tags) do
+		nm.query_add_tag_exclude(query, ex)
+	end
 	for message in nm.query_get_messages(query) do
 		table.insert(state, get_message(message))
 	end
@@ -86,7 +90,8 @@ function Mb:create(search, kind, parent)
 		parent = parent,
 		mappings = config.values.key_bindings.message_browser,
 		init = function(buffer)
-			buffer:get_messages(config.values.db, search)
+			buffer.search = search
+			buffer:get_messages(runtime.db, search)
 			buffer:ppMessage(buffer.State)
 		end,
 	}, Mb)

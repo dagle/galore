@@ -1,7 +1,7 @@
 local nm = require("galore.notmuch")
 local gu = require("galore.gmime.util")
 local u = require("galore.util")
-local conf = require("galore.config")
+local config = require("galore.config")
 
 local M = {}
 
@@ -22,6 +22,7 @@ function M.message_with_thread(message, f)
 	nm.query_destroy(query)
 end
 
+--- Get a single message and convert it into a line
 function M.get_message(message)
 	local id = nm.message_get_id(message)
 	local file = nm.message_get_filename(message)
@@ -42,7 +43,6 @@ function M.get_message(message)
 		tags = tags
 	}
 end
-
 
 --- XXX removal
 local function _get_index(messages, m1, i)
@@ -72,14 +72,6 @@ function M.get_index(thread, m1)
 	return nil
 end
 
-local function get(db, name)
-	return table.concat(u.collect(nm.config_get_values_string(db, name)))
-end
-
-local function gets(db, name)
-	return u.collect(nm.config_get_values_string(db, name))
-end
-
 local special_tags = {
     draft = true,
     flagged = true,
@@ -103,12 +95,10 @@ local function _change_tag(message, str, tags, state)
 	if string.sub(str, start, start) == "+" then
 		if not tags[tag] then
 			status = nm.message_add_tag(message, tag)
-			-- state[3][tag] = true
 		end
 	else
 		if tags[tag] then
 			status = nm.message_remove_tag(message, tag)
-			-- state[3][tag] = nil
 		end
 	end
 	if status ~= 0 then
@@ -181,9 +171,9 @@ function M.line_info(message, i, tot)
 	}
 end
 
-local function sync_message()
-	
-end
+-- local function sync_message()
+--
+-- end
 
 
 --- do a deep copy now, test to do in place copy later
@@ -225,10 +215,14 @@ function M.change_tag(db, line_infos, str)
 end
 
 function M.tag_unread(line_info)
-	return M.change_tag(conf.values.db, line_info, "-unread")
+	return M.change_tag(config.values.db, line_info, "-unread")
 end
 
-local function message_description(l)
+function M.add_search(search)
+	-- check if the search
+end
+
+function M.message_description(l)
 	local t = table.concat(l.tags, " ")
 	local formated
 	local date = os.date("%Y-%m-%d", l.date)
@@ -238,22 +232,16 @@ local function message_description(l)
 	else
 		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, l.index, l.total, from, l.sub, t)
 	end
+	--- Can we do without this?
 	formated = string.gsub(formated, "\n", "")
 	return formated
 end
 
-function M.gen_config(path, config, profile)
-	local mode = 0
-	local db = nm.db_open_with_config(path, mode, config, profile)
-	local name = get(db, "user.name")
-	local primary_email = get(db, "user.primary_email")
-	local other_email = gets(db, "user.other_email")
-	local exclude_tags = gets(db, "search.exclude_tags")
-	conf.values.db = db
-	conf.values.name = name
-	conf.values.primary_email = primary_email
-	conf.values.other_email = other_email
-	conf.values.exclude_tags = exclude_tags
-	conf.values.show_message_description = message_description
+--- Can we fix this?
+--- Maybe have this copied to runtime?
+function M.gen_config()
+	local message_description = M.message_description
+	config.values.show_message_description = message_description
 end
+
 return M
