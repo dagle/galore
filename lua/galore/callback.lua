@@ -5,6 +5,7 @@ local message_view = require("galore.message_view")
 local compose = require("galore.compose")
 local gu = require("galore.gmime.util")
 local nu = require("galore.notmuch-util")
+local runtime = require("galore.runtime")
 
 local M = {}
 
@@ -34,26 +35,30 @@ function M.select_message(browser, mode)
 	message_view:create(line_info, mode, browser, vline)
 end
 
-function M.message_reply(message_view)
-	local ref = gu.make_ref(message_view.message)
-	compose.create("replace", message_view.message, ref)
+function M.message_reply(mv)
+	local ref = gu.make_ref(mv.message)
+	compose:create("replace", mv.message, ref)
 end
 
-function M.message_reply_all(message_view)
-	local ref = gu.make_ref(message_view.message)
-	compose.create("replace", message_view.message, ref)
+function M.message_reply_all(mv)
+	local ref = gu.make_ref(mv.message)
+	compose:create("replace", mv.message, ref)
+end
+
+function M.add_search(browser)
+	nu.add_search(browser.search)
 end
 
 
 function M.change_tag(tmb, tag)
 	local line, line_info = tmb:select()
 	if tag then
-		local update = nu.change_tag(config.values.db, line_info, tag)
+		local update = nu.change_tag(runtime.db, line_info, tag)
 		update_line(tmb, line, update)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				local update = nu.change_tag(config.values.db, line_info, itag)
+				local update = nu.change_tag(runtime.db, line_info, itag)
 				update_line(tmb, line, update)
 			else
 				error("No tag")
@@ -73,7 +78,7 @@ function M.forward()
 			return
 		end
 	end)
-	nu.tag_change(config.values.db, message, "+passed")
+	nu.tag_change(runtime.db, message, "+passed")
 end
 
 function M.toggle(tmb)
