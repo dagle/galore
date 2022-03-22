@@ -3,7 +3,6 @@ if not ok then
 	error("You need to install telescope to use this module")
 	return
 end
-
 local pickers = require("telescope.pickers")
 local previewers = require("telescope.previewers")
 local actions = require("telescope.actions")
@@ -22,8 +21,11 @@ local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
 local go = require("galore.gmime.object")
 local ffi = require("ffi")
-local config = require("galore.config")
+local runtime = require("galore.runtime")
 local nm = require("galore.notmuch")
+
+local mb = require("galore.message_browser")
+local tmb = require("galore.thread_message_browser")
 
 local Telescope = {}
 
@@ -102,12 +104,12 @@ end
 
 local function load_draft(kind, message)
 	local ref = gu.get_ref(message)
-	compose.create(kind, message, ref)
+	compose:create(kind, message, ref)
 end
 
 local function load_compose(kind, message)
 	local ref = gu.make_ref(message)
-	compose.create(kind, message, ref)
+	compose:create(kind, message, ref)
 end
 
 local function open_draft(bufnr, type)
@@ -130,6 +132,12 @@ local function open_search(bufnr, type)
 		tags=entry.value.tags,
 	}
 	message_view:create(line, mode, nil, nil)
+end
+
+local function open_browser(browser, bufnr)
+	local search = action_state.get_current_line()
+	actions.close(bufnr)
+	browser:create(search, "split", nil)
 end
 
 -- XXX honor opts
@@ -186,12 +194,14 @@ local function encrypted(buf, winid, message)
 end
 
 local function mime_preview(buf, winid, path)
-	local message = gu.parse_message(path)
-	r.show_header(message, buf, nil, nil)
-	r.show_message(message, buf, {preview = function (bufid, str)
-		encrypted(bufid, winid, str)
-	end})
-	putils.highlighter(buf, "mail")
+	if path and path ~= "" then
+		local message = gu.parse_message(path)
+		r.show_header(message, buf, nil, nil)
+		r.show_message(message, buf, {preview = function (bufid, str)
+			encrypted(bufid, winid, str)
+		end})
+		putils.highlighter(buf, "mail")
+	end
 end
 
 Telescope.notmuch_search = function(opts, cb)
@@ -224,8 +234,20 @@ Telescope.notmuch_search = function(opts, cb)
 				mime_preview(self.state.bufnr, self.state.winid, filename)
 			end,
 		}),
-		attach_mappings = function()
+		attach_mappings = function(buf, map)
 			action_set.select:replace(open_search)
+			-- move this to config etc
+			map("i", "<c-q>", function ()
+				open_browser(mb, buf)
+			end)
+			--- We need better keymaps
+			map("i", "<c-f>", function ()
+				open_browser(tmb, buf)
+			end)
+			--- add the kinds
+			map("i", "<c-e>", function ()
+				compose_search(buf)
+			end)
 			return true
 		end,
 	}):find()
