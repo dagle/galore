@@ -308,7 +308,7 @@ end
 --- @param cat string
 --- @param type string
 --- @return gmime.Part
-function M.new_part_with_type(cat, type)
+function M.part_new_with_type(cat, type)
 	return ffi.gc(gmime.g_mime_part_new_with_type(cat, type), gmime.g_object_unref)
 end
 
@@ -702,8 +702,7 @@ function M.multipart_signed_verify(mps, flags)
 	local err = ffi.new("GError*[1]")
 	local eflags = convert.to_verify_flags(flags)
 	local ret = gmime.g_mime_multipart_signed_verify(mps, eflags, err)
-	return ret, err[0]
-	-- return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ffi.gc(ret, gmime.g_object_unref), err[0]
 end
 
 --- @return gmime.MultipartEncrypted
@@ -720,12 +719,12 @@ end
 --- @return gmime.MultipartEncrypted, gmime.Error
 function M.multipart_encrypted_encrypt(ctx, entity, sign, userid, flags, recipients)
 	local err = ffi.new("GError*[1]")
-	-- local eflags = convert.encryption_flags(flags)
+	local eflags = convert.to_encryption_flags(flags)
 	local array = gmime.g_ptr_array_sized_new(0)
 	for _, rep in pairs(recipients) do
 		gmime.g_ptr_array_add(array, ffi.cast("gpointer", rep))
 	end
-	local multi = gmime.g_mime_multipart_encrypted_encrypt(ctx, entity, sign, userid, flags, array, err)
+	local multi = gmime.g_mime_multipart_encrypted_encrypt(ctx, entity, sign, userid, eflags, array, err)
 	gmime.g_ptr_array_unref(array, false)
 	return ffi.gc(multi, gmime.g_object_unref), err[0]
 end
@@ -740,6 +739,14 @@ function M.multipart_encrypted_decrypt(part, flags, session_key)
 	local res = ffi.new("GMimeDecryptResult*[1]")
 	local eflags = convert.to_decrytion_flag(flags)
 	local obj = gmime.g_mime_multipart_encrypted_decrypt(part, eflags, session_key, res, error)
+	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
+end
+
+function M.multipart_encrypted_decrypt_pass(part, flags, fun, session_key)
+	local err = ffi.new("GError*[1]")
+	local res = ffi.new("GMimeDecryptResult*[1]")
+	local eflags = convert.to_decrytion_flag(flags)
+	local obj = gmime.g_mime_multipart_encrypted_decrypt_pass(part, eflags, session_key, fun, res, error)
 	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
 end
 
