@@ -41,7 +41,7 @@ end
 --- @param object gmime.MimeObject
 --- @param name string
 function M.object_get_content_type_parameter(object, name)
-	return ffi.string(gmime.g_mime_object_get_content_type_parameter(object, name))
+	return safe.safestring(gmime.g_mime_object_get_content_type_parameter(object, name))
 end
 
 --- @param object gmime.MimeObject
