@@ -1,19 +1,17 @@
 local v = vim.api
 local u = require("galore.util")
 local gu = require("galore.gmime.util")
+local ui = require("galore.ui")
 local Buffer = require("galore.lib.buffer")
 local job = require("galore.jobs")
 local config = require("galore.config")
 local reader = require("galore.reader")
 local render = require("galore.render")
-local Path = require("plenary.path")
-local nm = require("galore.notmuch")
-local nu = require("galore.notmuch-util")
 local go = require("galore.gmime.object")
-local gs = require("galore.gmime.stream")
 local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
 local ffi = require("ffi")
+local runtime = require("galore.runtime")
 
 local Compose = Buffer:new()
 Compose.num = 0
@@ -23,6 +21,7 @@ Compose.num = 0
 -- If you want a "safe", version wrap this one
 function Compose:add_attachment(file)
 	table.insert(self.attachments, file)
+	self:update_attachments()
 end
 
 function Compose:remove_attachment()
@@ -31,11 +30,12 @@ function Compose:remove_attachment()
 			table.remove(self.attachments, idx)
 		end
 	end)
+	self:update_attachments()
 end
 
 -- this should be move to some util function
 -- maybe us virtual lines to split between header and message
--- XXX returns an empty line in body
+-- XXX Adds an empty line to body
 function Compose:parse_buffer()
 	local box = {}
 	local body = {}
@@ -68,9 +68,8 @@ function Compose:send()
 	-- should check for nil
 	local buf = self:parse_buffer()
 	local message = reader.create_message(buf, self.reply, self.attachments)
-	--- FIXME opts
-	local to = gc.internet_address_list_to_string(gp.message_get_address(message, "to"), nil, false)
-	local from = gc.internet_address_list_to_string(gp.message_get_address(message, "from"), nil, false)
+	local to = gc.internet_address_list_to_string(gp.message_get_address(message, "to"), runtime.format_opts, false)
+	local from = gc.internet_address_list_to_string(gp.message_get_address(message, "from"), runtime.format_opts, false)
 	--- XXX add pre-hooks
 	-- local message_str = gm.write_message_mem(message)
 	job.send_mail_pipe(to, from, message)
@@ -102,6 +101,12 @@ local function make_template(message, reply_all)
 end
 
 local mark_name = "email-compose"
+
+function Compose:update_attachments()
+	if not vim.tbl_isempty(self.attachments) then
+		ui.render_attachments2(self.attachments, self)
+	end
+end
 
 function Compose:create(kind, message, reply)
 	self.num = self.num + 1

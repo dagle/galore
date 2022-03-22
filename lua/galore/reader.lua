@@ -1,5 +1,8 @@
 -- local gm = require("galore.gmime")
 local gp = require("galore.gmime.parts")
+local gcu = require("galore.crypt-utils")
+local gf = require("galore.gmime.filter")
+local gs = require("galore.gmime.stream")
 local go = require("galore.gmime.object")
 local ge = require("galore.gmime.crypt")
 local gc = require("galore.gmime.content")
@@ -8,42 +11,49 @@ local u = require("galore.util")
 local config = require("galore.config")
 local ffi = require("ffi")
 local jobs = require("galore.jobs")
+local runtime = require("galore.runtime")
 
 local M = {}
+
+local function stream_open(file, mode, perm)
+	local fd = assert(vim.loop.fs_open(file, mode, perm))
+	return gs.stream_fs_new(fd)
+end
 
 -- @param filename path to file to include
 -- @return A MimePart object containing an attachment
 -- Support encryption?
 local function create_attachment(filename)
 	local cat, type = jobs.get_type(filename)
-	local attachment = gm.new_part(cat, type)
-	--- XXX part_set__filename
-	gm.set_part_filename(attachment, u.basename(filename))
-	local stream = gm.stream_open(filename, "r", 0644)
+	local attachment = gp.part_new_with_type(cat, type)
 
-	local content = gm.data_wrapper(stream, "default")
-	gm.set_part_content(attachment, content)
-	gm.set_encoding(attachment, "base64")
+	gp.part_set_filename(attachment, u.basename(filename))
+	local stream = stream_open(filename, "r", 0644)
+
+	local content = gs.data_wrapper_new_with_stream(stream, "default")
+	gp.part_set_content(attachment, content)
+	gp.part_set_content_encoding(attachment, "base64")
 	return attachment
 end
 
 local function make_html(part)
 	-- overly complicated?
-	local content = gm.get_content(part)
-	local stream = gm.get_stream(content)
-	local filters = gm.new_filter_stream(stream)
+	local content = gp.part_get_content(part)
+	local stream = gs.data_wrapper_get_stream(content)
+	local filters = gs.stream_filter_new(stream)
 	-- No flags atm, flags can convert tabs into spaces etc
 	local flags = 0
 	local color = config.values.html_color
 
-	local filter = gm.filter_html(flags, color)
-	gm.filter_add(filters, filter)
+	local filter = gf.filter_html_new(flags, color)
+	gs.stream_filter_add(filters, filter)
 	-- XXX update
-	local html_body = gm.new_text_part("html")
-	local new_content = gm.get_content(html_body)
-	gm.wrapper_set_stream(new_content, filter)
-	gm.part_set_content(html_body, new_content)
-	gm.stream_flush(filter)
+	local html_body = gp.text_part_new_with_subtype("html")
+	local new_content = gp.part_get_content(html_body)
+	gs.wrapper_set_stream(new_content, filter)
+	--- Do I need to do this?
+	gs.part_set_content(html_body, new_content)
+	gs.stream_flush(filter)
 end
 
 -- encrypt a part and return the multipart
@@ -51,16 +61,17 @@ end
 function M.secure(ctx, part, recipients)
 	if config.values.encrypt then
 		-- It should be more than just too To, should be all recipients
-		local encrypt, err = gm.encrypt(ctx, part, config.values.gpg_id, recipients)
+		local encrypt, err = gcu.encrypt(ctx, part, recipients)
 		if encrypt ~= nil then
 			return encrypt
 		else
+			-- err isn't a string
 			print("Error: " .. err)
 		end
 	end
 	if config.values.sign then
-		-- chec if we should do (RFC 4880 and 3156)
-		local signed, err = gm.sign(ctx, part, config.values.gpg_id)
+		-- check if we should do (RFC 4880 and 3156)
+		local signed, err = gcu.sign(ctx, part)
 		if signed ~= nil then
 			return signed
 		else
@@ -84,7 +95,7 @@ function M.create_message(buf, reply, attachments, mode)
 
 	for _, v in ipairs(headers) do
 		if buf[v] then
-			for name, email in gu.internet_address_list_iter(nil, buf[v]) do
+			for name, email in gu.internet_address_list_iter(runtime.parser_opts, buf[v]) do
 				gp.message_add_mailbox(message, v, name, email)
 			end
 		end
