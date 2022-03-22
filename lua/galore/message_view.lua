@@ -5,6 +5,7 @@ local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
+local ui = require("galore.ui")
 
 local Message = Buffer:new()
 Message.num = 0
@@ -91,6 +92,7 @@ function Message:save_attach()
 	end)
 end
 
+
 function Message:update(filename)
 	self:unlock()
 	self:clear()
@@ -104,18 +106,7 @@ function Message:update(filename)
 		r.show_header(gmessage, self.handle, { ns = self.ns }, self.line)
 		self.attachments = r.show_message(gmessage, self.handle, {ns = self.ns})
 		if not vim.tbl_isempty(self.attachments) then
-			local marks = {}
-			for k, _ in pairs(self.attachments) do
-				local str = string.format("-[%s]", k)
-				table.insert(marks, {str, "Comment"})
-			end
-			local line = vim.fn.line("$") - 1
-			local opts = {
-				virt_lines = {
-					marks
-				},
-			}
-			self:set_extmark(self.ns, line, 0, opts)
+			ui.render_attachments(self.attachments, self)
 		end
 	end
 	self:lock()
