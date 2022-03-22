@@ -9,6 +9,7 @@ local u = require("galore.util")
 
 local source = {}
 
+-- this should be configure able
 source.query = "not list and not tag:spam"
 
 source.new = function()
@@ -48,7 +49,7 @@ end
 function source:complete(params, callback)
 	local bufnr = vim.api.nvim_get_current_buf()
 
-	if u.completion_header(params.context.cursor_before_line) then
+	if not u.completion_header(params.context.cursor_before_line) then
 		callback(nil)
 		return
 	end

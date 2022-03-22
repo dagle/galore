@@ -147,12 +147,13 @@ function M.format(part, qoute)
 end
 
 local completion_headers = {
-	"To:",
-	"Cc:",
-	"Bcc:",
+	"to:",
+	"cc:",
+	"bcc:",
 }
 
 function M.completion_header(line)
+	line = line:lower()
 	for _, v in ipairs(completion_headers) do
 		local start, _ = string.find(line, v)
 		if start then

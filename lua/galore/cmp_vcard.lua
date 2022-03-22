@@ -52,7 +52,7 @@ end
 function source:complete(params, callback)
 	local bufnr = vim.api.nvim_get_current_buf()
 
-	if u.completion_header(params.context.cursor_before_line) then
+	if not u.completion_header(params.context.cursor_before_line) then
 		callback(nil)
 		return
 	end
