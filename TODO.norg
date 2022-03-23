@@ -4,7 +4,7 @@
   - [ ] Notmuch, ffi memory handling and assert?
   - [ ] Get sync of tags to filenames working
   - [ ] Add the following auto tags: (draft), passed and replied
-  - [-] Update UI, partial, buffer or full
+  - [ ] Update UI, partial, buffer or full
   -- Keep track of when the db was last updated, then ask for new threads etc for partial updates
   -- For full update, just rerun the buffer
   -- Update last update timer after a sync
@@ -79,7 +79,11 @@
   -- [ ] Being able to add vcards, groups etc
   - [ ] https://efail.de/ secure, only render html in non-encrypted emails
   - [ ] Benchmark, dunno if galore is that slow but we need to benchmark
+  - [ ] Generalized movement
+  - [ ] Make standard functions
+  - [ ] Guard against untagged messages: No tags => +archive?
   - [ ] Add tests to the 
+  - [ ] Subfilters
 
 * 0.3 
   - [ ] Managed windows
