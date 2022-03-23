@@ -7,27 +7,6 @@ local Buffer = require("galore.lib.buffer")
 local runtime = require("galore.runtime")
 local Mb = Buffer:new()
 
-local function get_message(message)
-	local id = nm.message_get_id(message)
-	local filename = nm.message_get_filename(message)
-	local sub = nm.message_get_header(message, "Subject")
-	local tags = u.collect(nm.message_get_tags(message))
-	local from = nm.message_get_header(message, "From")
-	local date = tonumber(nm.message_get_header(message, "Subject"))
-	return {
-		id = id,
-		filename = filename,
-		level = 1,
-		pre = "",
-		index = 1,
-		total = 1,
-		date = date,
-		from = from,
-		sub = sub,
-		tags = tags
-	}
-end
-
 function Mb:get_messages(db, search)
 	local state = {}
 	local query = nm.create_query(db, search)
@@ -35,7 +14,7 @@ function Mb:get_messages(db, search)
 		nm.query_add_tag_exclude(query, ex)
 	end
 	for message in nm.query_get_messages(query) do
-		table.insert(state, get_message(message))
+		table.insert(state, nu.get_message(message))
 	end
 	self.State = state
 end
