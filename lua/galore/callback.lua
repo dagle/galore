@@ -29,7 +29,7 @@ function M.select_message(browser, mode)
 	local vline, line_info = browser:select()
 	--- this works but crashes, remove it for now
 	-- local id, file, tags = config.values.tag_unread(line_info)
-	local id, file, tags = nu.tag_unread(message)
+	local id, file, tags = nu.tag_unread(line_info)
 	line_info.id = id
 	line_info.file = file
 	line_info.tags = tags
