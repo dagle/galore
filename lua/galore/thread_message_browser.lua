@@ -9,7 +9,7 @@ local runtime = require("galore.runtime")
 
 local Tmb = Buffer:new()
 
-local function get_message(message, level, prestring, i, total)
+local function get_message(message, tid, level, prestring, i, total)
 	local id = nm.message_get_id(message)
 	local filename = nm.message_get_filename(message)
 	local sub = nm.message_get_header(message, "Subject")
@@ -18,6 +18,7 @@ local function get_message(message, level, prestring, i, total)
 	local date = nm.message_get_date(message)
 	return {
 		id = id,
+		tid = tid,
 		filename = filename,
 		level = level,
 		pre = prestring,
@@ -35,7 +36,7 @@ local function sort(messages)
 	return messages
 end
 
-local function show_messages(messages, level, prestring, num, total, box, state)
+local function show_messages(messages, level, prestring, num, total, tid, box, state)
 	local j = 1
 	for _, message in ipairs(messages) do
 		local newstring
@@ -52,7 +53,7 @@ local function show_messages(messages, level, prestring, num, total, box, state)
 		else
 			newstring = newstring .. "─"
 		end
-		local tm = get_message(message, level, newstring, num + 1, total)
+		local tm = get_message(message, tid, level, newstring, num + 1, total)
 		table.insert(box, tm)
 		table.insert(state, tm)
 		if num == 0 then
@@ -62,7 +63,7 @@ local function show_messages(messages, level, prestring, num, total, box, state)
 		else
 			newstring = prestring .. "  "
 		end
-		num = show_messages(sorted, level + 1, newstring, num + 1, total, box, state)
+		num = show_messages(sorted, level + 1, newstring, num + 1, total, tid, box, state)
 		j = j + 1
 	end
 	return num
@@ -147,7 +148,8 @@ function Tmb:get_messages(db, search)
 		local total = nm.thread_get_total_messages(thread)
 		local messages = nm.thread_get_toplevel_messages(thread)
 		local cmessages = u.collect(messages)
-		show_messages(cmessages, 0, "", 0, total, box, state)
+		local tid = nm.thread_get_id(thread)
+		show_messages(cmessages, 0, "", 0, total, tid, box, state)
 		stop = stop + total
 		local threadinfo = { thread, stop = stop, start = start, messages = box, expand = true }
 		table.insert(threads, threadinfo)
