@@ -30,33 +30,38 @@ local function get_message(message, level, prestring, i, total)
 	}
 end
 
+-- NOP for now
 local function sort(messages)
 	return messages
 end
 
 local function show_messages(messages, level, prestring, num, total, box, state)
-	local collected = u.collect(messages)
 	local j = 1
-	for _, message in ipairs(collected) do
+	for _, message in ipairs(messages) do
 		local newstring
 		if num == 0 then
 			newstring = prestring
-		elseif j == #collected then
+		elseif j == #messages then
 			newstring = prestring .. "└─"
 		else
 			newstring = prestring .. "├─"
+		end
+		local sorted = u.collect(sort(nm.message_get_replies(message)))
+		if #sorted > 0 then
+			newstring = newstring .. "┬"
+		else
+			newstring = newstring .. "─"
 		end
 		local tm = get_message(message, level, newstring, num + 1, total)
 		table.insert(box, tm)
 		table.insert(state, tm)
 		if num == 0 then
 			newstring = prestring
-		elseif #collected > j then
+		elseif #messages > j then
 			newstring = prestring .. "│ "
 		else
 			newstring = prestring .. "  "
 		end
-		local sorted = sort(nm.message_get_replies(message))
 		num = show_messages(sorted, level + 1, newstring, num + 1, total, box, state)
 		j = j + 1
 	end
@@ -141,7 +146,8 @@ function Tmb:get_messages(db, search)
 		local box = {}
 		local total = nm.thread_get_total_messages(thread)
 		local messages = nm.thread_get_toplevel_messages(thread)
-		show_messages(messages, 0, "", 0, total, box, state)
+		local cmessages = u.collect(messages)
+		show_messages(cmessages, 0, "", 0, total, box, state)
 		stop = stop + total
 		local threadinfo = { thread, stop = stop, start = start, messages = box, expand = true }
 		table.insert(threads, threadinfo)
