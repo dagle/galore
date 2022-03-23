@@ -4,7 +4,6 @@ local config = {}
 config.values = {
 	primary_email = nil,
 	other_email = nil,
-	db = nil,
 	name = nil,
 	draftdir = "/home/dagle/gmail/drafts", -- relative path of the bd!
 	exclude_tags = nil,
@@ -218,11 +217,11 @@ config.values = {
 				--- lsp inspired bindings
 				["gd"] = function (message_view)
 					local telescope = require("galore.telescope")
-					telescope.goto_in_reply_to(message_view)
+					telescope.goto_parent(message_view)
 				end,
 				["gD"] = function (message_view)
 					local telescope = require("galore.telescope")
-					telescope.goto_in_reply_tos(message_view.message)
+					telescope.goto_tree(message_view.message)
 				end,
 				["gr"] = function (message_view)
 					local telescope = require("galore.telescope")
