@@ -139,6 +139,10 @@ config.values = {
 				["q"] = function (tmb)
 					tmb:close(true)
 				end,
+				["ymi"] = function (tmb)
+					local cb = require("galore.callback")
+					cb.yank_browser(tmb, "id")
+				end,
 				["<tab>"] = function (tmb)
 					local cb = require("galore.callback")
 					cb.toggle(tmb)
@@ -162,6 +166,10 @@ config.values = {
 				["<C-x>"] = function (mb)
 					local cb = require("galore.callback")
 					cb.select_message(mb, "split")
+				end,
+				["ymi"] = function (tmb)
+					local cb = require("galore.callback")
+					cb.yank_browser(tmb, "id")
 				end,
 				["q"] = function (mb)
 					mb:close(true)
