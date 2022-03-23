@@ -35,6 +35,15 @@ function M.select_message(browser, mode)
 	message_view:create(line_info, mode, browser, vline)
 end
 
+function M.yank_browser(browser, select)
+	local _, line_info = browser:select()
+	vim.fn.setreg('', line_info[select])
+end
+
+function M.yank_message(mv, select)
+	vim.fn.setreg('', mv.line[select])
+end
+
 function M.message_reply(mv)
 	local ref = gu.make_ref(mv.message)
 	compose:create("replace", mv.message, ref)
