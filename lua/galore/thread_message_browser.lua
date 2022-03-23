@@ -187,8 +187,10 @@ function Tmb:threads_to_buffer()
 end
 
 function Tmb:refresh(search)
-	self:get_messages(runtime.db, search)
-	self:threads_to_buffer()
+	runtime.with_db(function(db)
+		self:get_messages(db, search)
+		self:threads_to_buffer()
+	end)
 end
 
 local function tail(list)

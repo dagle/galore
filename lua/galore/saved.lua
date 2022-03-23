@@ -59,16 +59,19 @@ function Saved:select()
 end
 
 function Saved:get_searches()
-	local search = get_search_info(config.values.saved_search, runtime.db)
-	if config.values.show_tags then
-		local tags = get_tags(runtime.db)
-		search = vim.tbl_extend("keep", search, tags)
-	end
-	if config.values.show_excluded then
-		local exclude = show_excluded(config.values.exclude_tags, runtime.db)
-		search = vim.tbl_extend("keep", search, exclude)
-	end
-	self.State = search
+	local search
+	runtime.with_db(function (db)
+		search = get_search_info(config.values.saved_search, db)
+		if config.values.show_tags then
+			local tags = get_tags(db)
+			search = vim.tbl_extend("keep", search, tags)
+		end
+		if config.values.show_excluded then
+			local exclude = show_excluded(config.values.exclude_tags, db)
+			search = vim.tbl_extend("keep", search, exclude)
+		end
+		self.State = search
+	end)
 	return search
 end
 

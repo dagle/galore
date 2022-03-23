@@ -70,7 +70,9 @@ function Mb:create(search, kind, parent)
 		mappings = config.values.key_bindings.message_browser,
 		init = function(buffer)
 			buffer.search = search
-			buffer:get_messages(runtime.db, search)
+			runtime.with_db(function (db)
+				buffer:get_messages(db, search)
+			end)
 			buffer:ppMessage(buffer.State)
 		end,
 	}, Mb)

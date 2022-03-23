@@ -190,32 +190,27 @@ end
 
 function M.change_tag(db, line_infos, str)
 	if type(line_infos[1]) == "table" then
-		M.with_db_writer(db, function(new_db)
-			-- maybe do _optimized_query, so we fetch all the messages and only
-			-- messages that needs to be updated, that we we only need to do one query
-			-- local new_messages = _optimize_search(new_db, messages, str)
-			local rets = {}
-			for _, line_info in ipairs(line_infos) do
-				local new_message, q = id_get_message(new_db, line_info[1])
-				local ret = update_message(new_message, str)
-				table.insert(rets, ret)
-				nm.query_destroy(q)
-			end
-			return rets
-		end)
-	else
-		local ret
-		M.with_db_writer(db, function(new_db)
-			local new_message, q = id_get_message(new_db, line_infos[1])
-			ret = update_message(new_message, str)
+		-- maybe do _optimized_query, so we fetch all the messages and only
+		-- messages that needs to be updated, that we we only need to do one query
+		-- local new_messages = _optimize_search(new_db, messages, str)
+		local rets = {}
+		for _, line_info in ipairs(line_infos) do
+			local new_message, q = id_get_message(db, line_info.id)
+			local ret = update_message(new_message, str)
+			table.insert(rets, ret)
 			nm.query_destroy(q)
-		end)
+		end
+		return rets
+	else
+		local new_message, q = id_get_message(db, line_infos.id)
+		local ret = update_message(new_message, str)
+		nm.query_destroy(q)
 		return ret
 	end
 end
 
-function M.tag_unread(line_info)
-	return M.change_tag(config.values.db, line_info, "-unread")
+function M.tag_unread(db, line_info)
+	return M.change_tag(db, line_info, "-unread")
 end
 
 function M.add_search(search)

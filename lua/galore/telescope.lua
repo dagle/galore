@@ -323,12 +323,14 @@ function Telescope.goto_parent(mv)
 	end
 	local realsearch = gc.utils_decode_message_id(ref)
 
-	local query = nm.create_query(runtime.db,  realsearch)
 	local line
-	for nmmessage in nm.query_get_messages(query) do
-		line = nu.get_message(nmmessage)
-		break;
-	end
+	runtime.with_db(function (db)
+		local query = nm.create_query(db,  realsearch)
+		for nmmessage in nm.query_get_messages(query) do
+			line = nu.get_message(nmmessage)
+			break;
+		end
+	end)
 
 	local items = make_tag(mv.message)
 	vim.fn.settagstack(vim.fn.win_getid(), {items=items}, 't')

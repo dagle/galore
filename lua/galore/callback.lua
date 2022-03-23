@@ -29,20 +29,22 @@ function M.select_message(browser, mode)
 	local vline, line_info = browser:select()
 	--- this works but crashes, remove it for now
 	-- local id, file, tags = config.values.tag_unread(line_info)
-	-- line_info.id = id
-	-- line_info.file = file
-	-- line_info.tags = tags
-	-- message_view.create(update[2], mode, tmb)
+	local id, file, tags = nu.tag_unread(message)
+	line_info.id = id
+	line_info.file = file
+	line_info.tags = tags
 	message_view:create(line_info, mode, browser, vline)
 end
 
 function M.get_message(unique, mode)
-	local query = nm.create_query(runtime.db, unique)
 	local line_info
-	for message in nm.query_get_messages(query) do
-		line_info = nu.get_message(message)
-		break
-	end
+	runtime.with_db(function (db)
+		local query = nm.create_query(db, unique)
+		for message in nm.query_get_messages(query) do
+			line_info = nu.get_message(message)
+			break
+		end
+	end)
 	message_view:create(line_info, mode, nil, nil)
 end
 
@@ -79,12 +81,18 @@ end
 function M.change_tag(tmb, tag)
 	local line, line_info = tmb:select()
 	if tag then
-		local update = nu.change_tag(runtime.db, line_info, tag)
+		local update
+		runtime.with_db(function (db)
+			update = nu.change_tag(db, line_info, tag)
+		end)
 		update_line(tmb, line, update)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				local update = nu.change_tag(runtime.db, line_info, itag)
+				local update
+				runtime.with_db(function (db)
+					update = nu.change_tag(db, line_info, itag)
+				end)
 				update_line(tmb, line, update)
 			else
 				error("No tag")
@@ -104,7 +112,9 @@ function M.forward()
 			return
 		end
 	end)
-	nu.tag_change(runtime.db, message, "+passed")
+	runtime.with_db(function (db)
+		nu.tag_change(db, message, "+passed")
+	end)
 end
 
 function M.toggle(tmb)

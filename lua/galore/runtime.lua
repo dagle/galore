@@ -28,11 +28,26 @@ local function notmuch_init(path, conf, profile)
 	local primary_email = get(db, "user.primary_email")
 	local other_email = gets(db, "user.other_email")
 	local exclude_tags = gets(db, "search.exclude_tags")
-	runtime.db = db
+	-- runtime.db = db
 	config.values.name = config.values.name or name
 	config.values.primary_email = config.values.primary_email or primary_email
 	config.values.other_email = config.values.other_email or other_email
 	config.values.exclude_tags = config.values.exclude_tags or exclude_tags
+	nm.db_close(db)
+end
+
+function runtime.with_db(func)
+	local db = nm.db_open_with_config(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
+	func(db)
+	nm.db_close(db)
+end
+
+function runtime.with_db_writer(func)
+	local db = nm.db_open_with_config(config.values.db_path, 1, config.values.nm_config, config.values.nm_profile)
+	-- nm.db_atomic_begin(db)
+	func(db)
+	-- nm.db_atomic_end(db)
+	nm.db_close(db)
 end
 
 --- @param offset number
