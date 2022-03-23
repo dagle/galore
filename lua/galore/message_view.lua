@@ -118,13 +118,21 @@ function Message:redraw(filename)
 end
 
 function Message:next()
-	local line, vline = self.parent:next(self.vline)
-	Message:create(line, "replace", self.parent, vline)
+	if self.vline then
+		local line, vline = self.parent:next(self.vline)
+		Message:create(line, "replace", self.parent, vline)
+	end
 end
 --
 function Message:prev()
-	local line, vline = self.parent:prev(self.vline)
-	Message:create(line, "replace", self.parent, vline)
+	if self.vline then
+		local line, vline = self.parent:prev(self.vline)
+		Message:create(line, "replace", self.parent, vline)
+	end
+end
+
+--- Makes a movement in parent etc
+function Message:move()
 end
 
 function Message:create(line, kind, parent, vline)
