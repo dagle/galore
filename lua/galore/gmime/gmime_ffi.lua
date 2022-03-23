@@ -226,7 +226,7 @@ typedef struct {
 
 typedef int guint;
 typedef int guint;
-typedef int gchar;
+typedef char gchar;
 typedef unsigned int guint32;
 typedef signed long gint64;
 typedef void* *iconv_t;
