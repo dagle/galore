@@ -25,14 +25,14 @@ end
 --- Get a single message and convert it into a line
 function M.get_message(message)
 	local id = nm.message_get_id(message)
-	local file = nm.message_get_filename(message)
+	local filename = nm.message_get_filename(message)
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_header(message, "Subject"))
 	return {
 		id = id,
-		file = file,
+		filename = filename,
 		level = 1,
 		pre = "",
 		index = 1,
