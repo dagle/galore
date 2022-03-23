@@ -178,35 +178,33 @@ end
 
 --- do a deep copy now, test to do in place copy later
 local function update_message(message, str)
-	-- local state = vim.deepcopy(line_info)
 	local keys = u.make_keys(nm.message_get_tags(message))
 	nm.message_freeze(message)
 	_change_tag(message, str, keys)
-	--- sync message
 	nm.message_thaw(message)
 	nm.message_tags_to_maildir_flags(message)
 	return M.line_info(message)
 end
 
 function M.change_tag(db, line_infos, str)
-	if type(line_infos[1]) == "table" then
-		-- maybe do _optimized_query, so we fetch all the messages and only
-		-- messages that needs to be updated, that we we only need to do one query
-		-- local new_messages = _optimize_search(new_db, messages, str)
-		local rets = {}
-		for _, line_info in ipairs(line_infos) do
-			local new_message, q = id_get_message(db, line_info.id)
-			local ret = update_message(new_message, str)
-			table.insert(rets, ret)
-			nm.query_destroy(q)
-		end
-		return rets
-	else
+	-- if type(line_infos[1]) == "table" then
+	-- 	-- maybe do _optimized_query, so we fetch all the messages and only
+	-- 	-- messages that needs to be updated, that we we only need to do one query
+	-- 	-- local new_messages = _optimize_search(new_db, messages, str)
+	-- 	local rets = {}
+	-- 	for _, line_info in ipairs(line_infos) do
+	-- 		local new_message, q = id_get_message(db, line_info.id)
+	-- 		local ret = update_message(new_message, str)
+	-- 		table.insert(rets, ret)
+	-- 		nm.query_destroy(q)
+	-- 	end
+	-- 	return rets
+	-- else
 		local new_message, q = id_get_message(db, line_infos.id)
 		local ret = update_message(new_message, str)
 		nm.query_destroy(q)
 		return ret
-	end
+	-- end
 end
 
 function M.tag_unread(db, line_info)

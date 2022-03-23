@@ -27,12 +27,14 @@ end
 
 function M.select_message(browser, mode)
 	local vline, line_info = browser:select()
-	--- this works but crashes, remove it for now
-	-- local id, file, tags = config.values.tag_unread(line_info)
-	local id, file, tags = nu.tag_unread(line_info)
+	local id, file, tags
+	runtime.with_db_writer(function (db)
+		id, file, tags = unpack(nu.tag_unread(db, line_info))
+	end)
 	line_info.id = id
-	line_info.file = file
+	line_info.filename = file
 	line_info.tags = tags
+	browser:update(vline)
 	message_view:create(line_info, mode, browser, vline)
 end
 
