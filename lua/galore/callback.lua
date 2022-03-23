@@ -6,6 +6,7 @@ local compose = require("galore.compose")
 local gu = require("galore.gmime.util")
 local nu = require("galore.notmuch-util")
 local runtime = require("galore.runtime")
+local nm = require("galore.notmuch")
 
 local M = {}
 
@@ -35,6 +36,16 @@ function M.select_message(browser, mode)
 	message_view:create(line_info, mode, browser, vline)
 end
 
+function M.get_message(unique, mode)
+	local query = nm.create_query(runtime.db, unique)
+	local line_info
+	for message in nm.query_get_messages(query) do
+		line_info = nu.get_message(message)
+		break
+	end
+	message_view:create(line_info, mode, nil, nil)
+end
+
 function M.yank_browser(browser, select)
 	local _, line_info = browser:select()
 	vim.fn.setreg('', line_info[select])
@@ -45,10 +56,16 @@ function M.yank_message(mv, select)
 end
 
 function M.message_reply(mv)
-	local ref = gu.make_ref(mv.message)
+	local ref
+	if vim.tbl_contains(mv.line.tags, "draft") then
+		ref = gu.get_ref(mv.message)
+	else
+		ref = gu.make_ref(mv.message)
+	end
 	compose:create("replace", mv.message, ref)
 end
 
+--- XXX todo!
 function M.message_reply_all(mv)
 	local ref = gu.make_ref(mv.message)
 	compose:create("replace", mv.message, ref)
