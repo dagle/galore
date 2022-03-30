@@ -80,6 +80,10 @@ function M.secure(ctx, part, recipients)
 	end
 end
 
+local function required_headers(buf)
+	return buf.from and buf.to and buf.subject
+end
+
 -- create a message from strings
 -- @param buf parsed data from the screen, only visual data
 -- @param reply, message or nil we use to set reference to
@@ -87,11 +91,18 @@ end
 -- @return a gmime message
 -- XXX We want to set the reply_to (and other mailinglist things)
 -- XXX We need error handling, this should could return nil
-function M.create_message(buf, reply, attachments, mode)
-	-- move to ctx
+function M.create_message(buf, reply, attachments, opts)
+	opts = opts or {}
 	local current
 	local message = gp.new_message(true)
+	local mobj = ffi.cast("GMimeObject *", message)
 	local headers = {"from", "to", "cc", "bcc"} -- etc
+	--- From and too should be required
+
+	if not required_headers(buf) then
+		vim.notify("Missing non-optional headers", vim.log.levels.ERROR)
+		return
+	end
 
 	for _, v in ipairs(headers) do
 		if buf[v] then
@@ -100,19 +111,34 @@ function M.create_message(buf, reply, attachments, mode)
 			end
 		end
 	end
+	local list = go.object_get_header_list(ffi.cast("GMimeObject *", message))
 
+	for _, email in gu.internet_address_list_iter(runtime.parser_opts, buf.from) do
+		local id = gu.make_id(email)
+		go.object_set_header(mobj, "Message-ID", id)
+	end
+
+	gu.insert_current_date(message)
+
+	--- this shouldn't be optional, set it to no-topic
 	if buf.subject then
 		gp.message_set_subject(message, buf.subject, nil)
 	end
 
+	--- XXX USE header_list instead and insert these? That way we don't need to do it by hand
+	--- and we don't need to format etc
 	if reply then
-		go.object_set_header(message, "References", gc.references_format(reply.reference))
-		go.object_set_header(message, "In-Reply-To", gc.references_format(reply.in_reply_to))
+		go.object_set_header(mobj, "References", gc.references_format(reply.reference))
+		go.object_set_header(mobj, "In-Reply-To", gc.references_format(reply.in_reply_to))
+	end
+
+	for k, v in pairs(opts) do
+		go.object_set_header(mobj, k, v)
 	end
 
 
 	local body = gp.text_part_new_with_subtype("plain")
-	--- XXX bad, we wan't to roll our own
+	--- XXX bad, we wan't to roll our own or maybe we can set format_opts
 	gp.text_part_set_text(body, table.concat(buf.body, "\n"))
 	current = body
 
@@ -131,7 +157,7 @@ function M.create_message(buf, reply, attachments, mode)
 		local multipart = gp.multipart_new_with_subtype("mixed")
 		gp.multipart_add(multipart, current)
 		current = multipart
-		for _, file in ipairs(attachments) do
+		for file, _ in pairs(attachments) do
 			local attachment = create_attachment(file)
 			gp.multipart_add(multipart, attachment)
 		end
