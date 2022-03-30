@@ -10,7 +10,7 @@ local runtime = require("galore.runtime")
 local Saved = Buffer:new()
 Saved.num = 0
 
-local function saved_entry(db, search, name, box, exclude)
+local function make_entry(db, box, search, name, exclude)
 	local q = nm.create_query(db, search)
 	if exclude then
 		for _, ex in ipairs(config.values.exclude_tags) do
@@ -23,58 +23,71 @@ local function saved_entry(db, search, name, box, exclude)
 	table.insert(box, { i, unread_i, name, search})
 end
 
-local function get_tags(db)
-	local box = {}
+local function gen_tags(db, searches)
 	for tag in nm.db_get_all_tags(db) do
 		local search = "tag:" .. tag
-		saved_entry(db, search, tag, box, true)
+		if not searches[search] then
+			searches[search] = {search, tag, true}
+		end
 	end
-	return box
 end
 
-local function get_search_info(searches, db)
-	local box = {}
-	for _, search in ipairs(searches) do
-		saved_entry(db, search[2], search[1], box, true)
+local function gen_internal(searches)
+	for search in runtime.iterate_saved() do
+		if not searches[search] then
+			searches[search] = {search, search, true}
+		end
 	end
-	return box
 end
 
-local function show_excluded(tags, db)
-	local box = {}
+local function gen_excluded(tags, searches)
 	for _, tag in ipairs(tags) do
 		local search = "tag:" .. tag
-		saved_entry(db, search, tag, box, false)
+		if not searches[search] then
+			searches[search] = {search, tag, false}
+		end
 	end
-	return box
+end
+
+function Saved.get_searches(db)
+	local searches = {}
+	gen_internal(searches)
+	if config.values.show_tags then
+		gen_tags(db, searches)
+	end
+	if config.values.show_excluded then
+		gen_excluded(config.values.exclude_tags, searches)
+	end
+	return searches
 end
 
 local function ppsearch(tag)
 	return string.format("%d(%d) %-30s (%s)", unpack(tag))
 end
 
+function Saved:refresh()
+	self:unlock()
+	self:clear()
+	local box = {}
+	runtime.with_db(function (db)
+		local searches = self.get_searches(db)
+		for _, value in pairs(searches) do
+			make_entry(db, box, value[1], value[2], value[3])
+		end
+	end)
+	local formated = vim.tbl_map(ppsearch, box)
+	self:set_lines(0, 0, true, formated)
+	self:set_lines(-2, -1, true, {})
+	self.State = box
+	--- Maybe not do this
+	vim.api.nvim_win_set_cursor(0, {1,0})
+	self:lock()
+end
+
 function Saved:select()
 	local line = vim.fn.line(".")
 	return self.State[line]
 end
-
-function Saved:get_searches()
-	local search
-	runtime.with_db(function (db)
-		search = get_search_info(config.values.saved_search, db)
-		if config.values.show_tags then
-			local tags = get_tags(db)
-			search = vim.tbl_extend("keep", search, tags)
-		end
-		if config.values.show_excluded then
-			local exclude = show_excluded(config.values.exclude_tags, db)
-			search = vim.tbl_extend("keep", search, exclude)
-		end
-		self.State = search
-	end)
-	return search
-end
-
 
 -- - [ ] A way to add searches not notmuch <-
 function Saved:create(kind)
@@ -86,10 +99,7 @@ function Saved:create(kind)
 		cursor = "top",
 		mappings = config.values.key_bindings.search,
 		init = function(buffer)
-			local search = buffer:get_searches()
-			local formated = vim.tbl_map(ppsearch, search)
-			v.nvim_buf_set_lines(buffer.handle, 0, 0, true, formated)
-			v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
+			buffer:refresh()
 		end,
 	}, Saved)
 end
