@@ -6,6 +6,9 @@ local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
 local ui = require("galore.ui")
+local runtime = require("galore.runtime")
+local nm = require("galore.notmuch")
+local nu = require("galore.notmuch-util")
 
 local Message = Buffer:new()
 Message.num = 0
@@ -13,26 +16,23 @@ Message.num = 0
 local function _view_attachment(self, filename, kind)
 	kind = kind or "floating"
 	if self.attachments[filename] then
-		if self.attachments[filename][2] then
-			Buffer.create({
-				name = filename,
-				ft = require("plenary.filetype").detect(filename),
-				kind = kind,
-				-- ref = ref,
-				cursor = "top",
-				init = function(buffer)
-					local content = u.format(gu.part_to_buf(self.attachments[filename][1]))
-					v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
-					v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
-				end,
-			})
-		else
-			-- pipe this some good way etc
-			-- config.values.external_view
-			return
-		end
+		Buffer.create({
+			name = filename,
+			ft = require("plenary.filetype").detect(filename),
+			kind = kind,
+			-- ref = ref,
+			cursor = "top",
+			init = function(buffer)
+				local content = u.format(gu.part_to_buf(self.attachments[filename]))
+				v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
+				v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
+			end,
+		})
+	else
+		-- pipe this some good way etc
+		-- config.values.external_view
+		return
 	end
-	-- print("No attachment with that name")
 end
 
 function Message:raw_mode(kind)
@@ -54,7 +54,7 @@ function Message:_save_attachment(filename, save_path)
 		if path:is_dir() then
 			path = path:joinpath(filename)
 		end
-		gu.save_part(self.attachments[filename][1], path:expand())
+		gu.save_part(self.attachments[filename], path:expand())
 		return
 	end
 	error("No attachment with that name")
@@ -117,17 +117,33 @@ function Message:redraw(filename)
 	self:update(filename)
 end
 
+local function make_read(browser, vline, line_info)
+	local new_info
+	nu.tag_unread(line_info.id)
+	runtime.with_db(function (db)
+		local message = nm.db_find_message(db, line_info.id)
+		new_info = nu.get_message(message)
+	end)
+	line_info.id = new_info.id
+	line_info.filename = new_info.filename
+	line_info.tags = new_info.tags
+	if vline and browser then
+		browser:update(vline)
+	end
+end
+
+
 function Message:next()
 	if self.vline then
-		local line, vline = self.parent:next(self.vline)
-		Message:create(line, "replace", self.parent, vline)
+		local vline, line_info = self.parent:next(self.vline)
+		Message:create(line_info, "replace", self.parent, vline)
 	end
 end
 --
 function Message:prev()
 	if self.vline then
-		local line, vline = self.parent:prev(self.vline)
-		Message:create(line, "replace", self.parent, vline)
+		local vline, line_info = self.parent:prev(self.vline)
+		Message:create(line_info, "replace", self.parent, vline)
 	end
 end
 
@@ -147,6 +163,7 @@ function Message:create(line, kind, parent, vline)
 			buffer.line = line
 			buffer.parent = parent
 			buffer.vline = vline
+			make_read(parent, vline, line)
 			buffer:update(line.filename)
 		end,
 	}, Message)
