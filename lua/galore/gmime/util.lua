@@ -15,12 +15,8 @@ function M.insert_current_date(message)
 	gp.message_set_date(message, time)
 end
 
-function M.make_id(message)
-	local from = gp.message_get_from(message)
-	local str = gc.internet_address_list_to_string(from, nil, false)
-	--- FIXME UGLY
-	str = str:gsub(".*@", "@")
-	local fqdn = str:gsub(">", "")
+function M.make_id(email)
+	local fqdn = email:gsub(".*@", "@")
 	return "<" .. gc.utils_generate_message_id(fqdn) .. ">"
 end
 
@@ -122,7 +118,7 @@ function M.write_message(path, object)
 end
 
 
---- XXX this should use
+--- XXX this should be async
 function M.save_part(part, filename)
 	local stream = assert(gs.stream_file_open(filename, "w"), "can't open file: " .. filename)
 	local content = gp.part_get_content(part)
@@ -221,8 +217,7 @@ end
 
 local function match_address(header, addresses)
 	for _, address in ipairs(addresses) do
-		local start = string.find(header, address)
-		if start then
+		if header:match(address) then
 			return address
 		end
 	end
