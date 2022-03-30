@@ -20,23 +20,6 @@ function M.render_attachments(attachments, buf)
 	buf:set_extmark(buf.ns, line, 0, opts)
 end
 
---- For compose, these will be merged, just trying some
---- things out
-function M.render_attachments2(attachments, buf)
-	local marks = {}
-	for _, k in ipairs(attachments) do
-		local str = string.format("-[%s]", k)
-		table.insert(marks, {str, "Comment"})
-	end
-	local line = vim.fn.line("$") - 1
-	local opts = {
-		virt_lines = {
-			marks
-		},
-	}
-	buf:set_extmark(buf.ns, line, 0, opts)
-end
-
 function M.exmark(buf, ns, style, text)
 	-- for now
 	if not ns then
