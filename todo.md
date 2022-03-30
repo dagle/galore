@@ -9,14 +9,16 @@
 
 * 0.1
   - [ ] Cleanup code
+  - [x] sort saved
   - [x] Unify the attachments api
   -- Cycles in requires, use "uml" to get it correct?
-  - [ ] Clunky stuff, init, setup etc
+  - [ ] Clunky stuff, setup etc
+  - [x] Init
   - [ ] Don't loose a compose, set better name etc
-  - [ ] Can we reuse the same crypto ctx
   -- How to make this not annoying:
   -- Shouldn't warn if the buffer have been saved to draft or sent etc
-  - [ ] Fix reader
+
+  - [ ] Fix builder
   -- [x] Rename to builder
   -- [ ] Generate a correct email
   -- [ ] Missing headers
@@ -28,15 +30,6 @@
   -- [ ] Have an opts to set return-path etc, maybe move ref to this?
   -- [x] Return-Path
   -- [x] Reply-To
-  - [ ] Fix config values we should generate if not set
-  - [x] telescope
-   - [x] Create a view from a search
-  -- [x] Ctrl-b to create a tmb
-  -- [x] Ctrl-q to create a mb 
-  -- [x] move stuff to config
-  - [x] Check Health 
-
-
 
 * 0.2
   - [ ] Maybe filter the whole message?
@@ -84,6 +77,8 @@
   -- [ ] Render the buffers async?
   -- [ ] Render everything async? (Does that even make sense?)
   -- [ ] Can we reuse the filters (or at least most parts)?
+  -- [ ] Can we reuse the same crypto ctx?
+  -- [ ] Verify async
 
 * 0.3 
   - [ ] Managed windows
