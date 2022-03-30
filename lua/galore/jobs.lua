@@ -75,8 +75,18 @@ function M.w3m(text)
 	return ret
 end
 
-function M.send_mail(to, from, message_str)
-	local cmd, args = config.values.send_cmd(to, from)
+local function to_string(any)
+	local object = ffi.cast("GMimeObject *", any)
+	local mem = gs.stream_mem_new()
+	go.object_write_to_stream(object, runtime.format_opts, mem)
+	gs.stream_flush(mem)
+	return gu.mem_to_string(mem)
+end
+
+--- XXX remove these string functions, in the future when the raw functions work
+function M.send_mail_str(message)
+	local message_str = to_string(message)
+	local cmd, args = config.values.send_cmd()
 	Job
 		:new({
 			command = cmd,
@@ -94,6 +104,27 @@ function M.send_mail(to, from, message_str)
 		:start()
 end
 
+function M.insert_mail_str(message, folder, tags)
+	local message_str = to_string(message)
+	local folderflag = string.format("--folder=%s", folder)
+	local args = vim.tbl_flatten({"insert", "--create-folder", folderflag, tags})
+	Job:new({
+			command = "notmuch",
+			args = args,
+			writer = message_str,
+			on_exit = function(j, return_val)
+				  if return_val == 0 then
+					vim.notify("Mail addedd to draft")
+				  else
+					local err = string.format("%s failed with error: %d", "notmuch insert", return_val)
+					vim.notify(err, vim.log.levels.ERROR)
+				  end
+			end,
+		})
+		:start()
+end
+
+--- Add a callback to this?
 local function raw_pipe(object, cmd, args)
 	local stdout = uv.new_pipe()
 	local stderr = uv.new_pipe()
@@ -139,14 +170,16 @@ local function raw_pipe(object, cmd, args)
 	end)
 end
 
-function M.insert_mail(mail, folder, tags)
-	raw_pipe(mail, "notmuch", {"insert", "--create-folder", folder, tags})
+function M.insert_mail(message, folder, tags)
+	local object = ffi.cast("GMimeObject *", message)
+	local folderflag = string.format("--folder=%s", folder)
+	local args = vim.tbl_flatten({"insert", "--create-folder", folderflag, tags})
+	raw_pipe(object, "notmuch", args)
 end
 
 --- being able to spawn in a terminal
-function M.send_mail_pipe(to, from, message)
-	-- create a pipe
-	local cmd, args = config.values.send_cmd(to, from)
+function M.send_mail(message)
+	local cmd, args = config.values.send_cmd(message)
 	local object = ffi.cast("GMimeObject *", message)
 	raw_pipe(object, cmd, args)
 end
