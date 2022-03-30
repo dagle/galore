@@ -95,8 +95,7 @@ function M.collect(it, t, i)
 end
 
 function M.add_prefix(str, prefix)
-	local start, _ = string.find(str, "^" .. prefix)
-	if not start then
+	if not str:match("^" .. prefix) then
 		str = prefix .. " " .. str
 	end
 	return str
@@ -155,8 +154,7 @@ local completion_headers = {
 function M.completion_header(line)
 	line = line:lower()
 	for _, v in ipairs(completion_headers) do
-		local start, _ = string.find(line, v)
-		if start then
+		if line:match(v) then
 			return true
 		end
 	end
