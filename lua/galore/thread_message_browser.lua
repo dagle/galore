@@ -16,6 +16,9 @@ local function get_message(message, tid, level, prestring, i, total)
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = nm.message_get_date(message)
+	-- Use enums for these
+	local matched = nm.message_get_flag(message, 0)
+	local excluded = nm.message_get_flag(message, 1)
 	return {
 		id = id,
 		tid = tid,
@@ -27,7 +30,9 @@ local function get_message(message, tid, level, prestring, i, total)
 		date = date,
 		from = from,
 		sub = sub,
-		tags = tags
+		tags = tags,
+		matched = matched,
+		excluded = excluded,
 	}
 end
 
@@ -37,8 +42,7 @@ local function sort(messages)
 end
 
 local function show_messages(messages, level, prestring, num, total, tid, box, state)
-	local j = 1
-	for _, message in ipairs(messages) do
+	for j, message in ipairs(messages) do
 		local newstring
 		if num == 0 then
 			newstring = prestring
@@ -64,7 +68,6 @@ local function show_messages(messages, level, prestring, num, total, tid, box, s
 			newstring = prestring .. "  "
 		end
 		num = show_messages(sorted, level + 1, newstring, num + 1, total, tid, box, state)
-		j = j + 1
 	end
 	return num
 end
@@ -151,7 +154,13 @@ function Tmb:get_messages(db, search)
 		local tid = nm.thread_get_id(thread)
 		show_messages(cmessages, 0, "", 0, total, tid, box, state)
 		stop = stop + total
-		local threadinfo = { thread, stop = stop, start = start, messages = box, expand = true }
+		local threadinfo = {
+			thread = tid,
+			stop = stop,
+			start = start,
+			messages = box,
+			expand = config.values.thread_expand,
+		}
 		table.insert(threads, threadinfo)
 		start = stop + 1
 	end
@@ -169,12 +178,14 @@ function Tmb:threads_to_buffer()
 		if thread.expand then
 			local lines = ppMessage(thread.messages)
 			self:set_lines(-1, -1, true, lines)
+
 			-- self:set_lines(-1, -1, true, item.messages)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
 			-- i = i + #item.messages
 		else
-			local lines = ppMessage(thread.messages)
-			self:set_lines(-1, -1, true, { lines[1]})
+			-- local lines = ppMessage(thread.messages)
+			local line = config.values.show_message_description(thread.messages[1])
+			self:set_lines(-1, -1, true, { line})
 			-- self:set_lines(-1, -1, true, { item.messages[1] })
 			if #thread.messages ~= 1 then
 				-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
@@ -263,14 +274,14 @@ end
 function Tmb:next(line)
 	line = math.min(line + 1, #self.State)
 	local line_info = self.State[line]
-	return line_info, line
+	return line, line_info
 end
 
 --
 function Tmb:prev(line)
 	line = math.max(line - 1, 1)
 	local line_info = self.State[line]
-	return line_info, line
+	return line, line_info
 end
 
 --- Maybe update the line when buffer is focused
