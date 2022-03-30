@@ -2,6 +2,7 @@ local nm = require("galore.notmuch")
 local gu = require("galore.gmime.util")
 local u = require("galore.util")
 local config = require("galore.config")
+local job = require("plenary.job")
 
 local M = {}
 
@@ -19,7 +20,7 @@ function M.message_with_thread(message, f)
 		return ret
 	end
 	-- this shouldn't really happen
-	nm.query_destroy(query)
+	-- nm.query_destroy(query)
 end
 
 --- Get a single message and convert it into a line
@@ -112,14 +113,6 @@ local function _change_tag(message, str, tags, state)
 	return special or _change_tag(message, string.sub(str, stop + 1, #str), tags, state)
 end
 
--- gets a single massage from an unique id
-local function id_get_message(db, id)
-	local q = nm.create_query(db, "id:" .. id)
-	for m in nm.query_get_messages(q) do
-		return m, q
-	end
-end
-
 -- can I make a async version of these
 function M.with_db_writer(db, func)
 	local path = nm.db_get_path(db)
@@ -127,30 +120,19 @@ function M.with_db_writer(db, func)
 	nm.db_atomic_begin(write_db)
 	func(write_db)
 	nm.db_atomic_end(write_db)
-	nm.db_destroy(write_db)
 end
-
--- function M.with_db_writer(db, func)
--- 	nm.db_reopen(db, 1)
--- 	nm.db_atomic_begin(db)
--- 	func(db)
--- 	nm.db_atomic_end(db)
--- 	nm.db_reopen(db, 0)
--- end
 
 function M.with_message_writer(message, func)
 	local id = nm.message_get_id(message)
 	local db = nm.message_get_db(message)
 	M.with_db_writer(db, function(new_db)
-		local new_message, q = id_get_message(new_db, id)
+		local new_message = id_get_message(new_db, id)
 		func(new_message)
-		nm.query_destroy(q)
 	end)
 end
 
 -- XXX this might be a bad idea since it makes it harder to re-render?
 local function _optimize_search(db, messages, str)
-	-- get all the messages
 	local querybuf = {}
 	for message in messages do
 		table.insert(querybuf, "id:" .. nm.message_get_id(message))
@@ -158,23 +140,7 @@ local function _optimize_search(db, messages, str)
 	local query = table.concat(querybuf, " or ")
 	local q = nm.create_query(db, query)
 	return nm.query_get_messages(q), q
-	-- update the query to only include the ones that needs to be updated
 end
-
-function M.line_info(message, i, tot)
-	return {
-		nm.message_get_id(message),
-		nm.message_get_filename(message),
-		u.collect(nm.message_get_tags(message)),
-		i,
-		tot,
-	}
-end
-
--- local function sync_message()
---
--- end
-
 
 --- do a deep copy now, test to do in place copy later
 local function update_message(message, str)
@@ -186,7 +152,7 @@ local function update_message(message, str)
 	return M.line_info(message)
 end
 
-function M.change_tag(db, line_infos, str)
+function M.change_tag(id, str)
 	-- if type(line_infos[1]) == "table" then
 	-- 	-- maybe do _optimized_query, so we fetch all the messages and only
 	-- 	-- messages that needs to be updated, that we we only need to do one query
@@ -200,15 +166,23 @@ function M.change_tag(db, line_infos, str)
 	-- 	end
 	-- 	return rets
 	-- else
-		local new_message, q = id_get_message(db, line_infos.id)
-		local ret = update_message(new_message, str)
-		nm.query_destroy(q)
-		return ret
+	-- local new_message, q = id_get_message(db, line_infos.id)
+	-- local ret = update_message(new_message, str)
+	-- nm.query_destroy(q)
+	-- return ret
+	local args = {"tag", str, "id:"..id}
+
+	job:new({
+		command = "notmuch",
+		args = args,
+		on_exit = function(j, ret_val)
+		end
+	}):sync()
 	-- end
 end
 
-function M.tag_unread(db, line_info)
-	return M.change_tag(db, line_info, "-unread")
+function M.tag_unread(id)
+	return M.change_tag(id, "-unread")
 end
 
 function M.add_search(search)
@@ -225,8 +199,7 @@ function M.message_description(l)
 	else
 		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, l.index, l.total, from, l.sub, t)
 	end
-	--- Can we do without this?
-	formated = string.gsub(formated, "\n", "")
+	formated = string.gsub(formated, "[\r\n]", "")
 	return formated
 end
 
