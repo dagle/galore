@@ -23,7 +23,6 @@ function Mb:ppMessage(messages)
 	local box = {}
 	for _, message in ipairs(messages) do
 		local formated = config.values.show_message_description(message)
-		formated = string.gsub(formated, "\n", "")
 		table.insert(box, formated)
 	end
 	self:set_lines(0, 0, true, box)
@@ -60,6 +59,16 @@ function Mb:set_line(line)
 	self.Line = line
 end
 
+function Mb:refresh()
+	self:unlock()
+	self:clear()
+	runtime.with_db(function (db)
+		self:get_messages(db, self.search)
+	end)
+	self:ppMessage(self.State)
+	self:lock()
+end
+
 function Mb:create(search, kind, parent)
 	Buffer.create({
 		name = "galore-messages: " .. search,
@@ -70,10 +79,7 @@ function Mb:create(search, kind, parent)
 		mappings = config.values.key_bindings.message_browser,
 		init = function(buffer)
 			buffer.search = search
-			runtime.with_db(function (db)
-				buffer:get_messages(db, search)
-			end)
-			buffer:ppMessage(buffer.State)
+			buffer:refresh()
 		end,
 	}, Mb)
 end
