@@ -5,13 +5,14 @@ local ui = require("galore.ui")
 local Buffer = require("galore.lib.buffer")
 local job = require("galore.jobs")
 local config = require("galore.config")
-local reader = require("galore.reader")
+local builder = require("galore.builder")
 local render = require("galore.render")
 local go = require("galore.gmime.object")
 local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
 local ffi = require("ffi")
 local runtime = require("galore.runtime")
+local nu = require("galore.notmuch-util")
 
 local Compose = Buffer:new()
 Compose.num = 0
@@ -20,7 +21,7 @@ Compose.num = 0
 -- Because it might exist later on during the process of sending email
 -- If you want a "safe", version wrap this one
 function Compose:add_attachment(file)
-	table.insert(self.attachments, file)
+	self.attachments[file] = true
 	self:update_attachments()
 end
 
@@ -31,6 +32,66 @@ function Compose:remove_attachment()
 		end
 	end)
 	self:update_attachments()
+end
+
+local function nop(value)
+	return value
+end
+
+local valid_options = {
+	["Return-Path"] = nop,
+	["Reply-To"] = nop,
+	-- Maybe add these
+	-- ["References"] = gc.references_format,
+	-- ["In-Reply-To"] = gc.references_format,
+}
+
+function Compose:set_compose_option(key, value)
+	if valid_options[key] then
+		local formated = valid_options[key](value)
+		if formated then
+			self.options[key] = formated
+			return
+		end
+		vim.notify("Bad value for option", vim.log.levels.ERROR)
+		return
+	end
+	vim.notify("Not a valid compose option", vim.log.levels.ERROR)
+end
+
+function Compose:set_option_menu()
+	local list = u.collect_keys(valid_options)
+	vim.ui.select(list,{
+		prompt = 'Value to set',
+		format_item = function (item)
+			return string.format("%s = %s", item, self.options[item] or "")
+		end,
+	},
+	function (item, _)
+		if item then
+			vim.ui.input(string.format("Value for %s: ", item),
+			function (input)
+				if input then
+					self:set_compose_option(item, input)
+				end
+			end)
+		end
+	end)
+end
+
+function Compose:unset_option()
+	local list = u.collect_keys(self.options)
+	vim.ui.select(list,{
+		prompt = 'Option to unset',
+		format_item = function (item)
+			return string.format("%s = %s", item, self.options[item])
+		end,
+	},
+	function (item, _)
+		if item then
+			self.options[item] = nil
+		end
+	end)
 end
 
 -- this should be move to some util function
@@ -67,29 +128,25 @@ end
 function Compose:send()
 	-- should check for nil
 	local buf = self:parse_buffer()
-	local message = reader.create_message(buf, self.reply, self.attachments)
-	local to = gc.internet_address_list_to_string(gp.message_get_address(message, "to"), runtime.format_opts, false)
-	local from = gc.internet_address_list_to_string(gp.message_get_address(message, "from"), runtime.format_opts, false)
+	local message = builder.create_message(buf, self.reply, self.attachments)
 	--- XXX add pre-hooks
-	-- local message_str = gm.write_message_mem(message)
-	job.send_mail_pipe(to, from, message)
+	job.send_mail_str(message)
+	job.insert_mail_str(message, config.values.sent_folder, config.value.sent_tags)
+	--- change the the old tag
+	if self.in_reply_to then
+		nu.change_tag(self.reply.in_reply_to, "+replied")
+	end
 	--- XXX add post-hooks
 end
 
-function Compose:save_draft(filename)
-	if filename == nil then
-		return
-	end
+function Compose:save_draft()
 	local buf = self:parse_buffer()
-	local message = reader.create_message(buf, self.reply, self.attachments)
+	local message = builder.create_message(buf, self.reply, self.attachments)
 	if ret ~= nil then
 		print("Failed to parse draft")
 		return ret
 	end
-	local id = gu.make_id(message)
-	go.object_set_header(ffi.cast("GMimeObject *", message), "Message-ID", id)
-	gu.insert_current_date(message)
-	job.insert_mail(message, config.values.draftdir, config.values.drafttags)
+	job.insert_mail_str(message, config.values.draftdir, "+draft")
 end
 
 local function make_template(message, reply_all)
@@ -104,7 +161,7 @@ local mark_name = "email-compose"
 
 function Compose:update_attachments()
 	if not vim.tbl_isempty(self.attachments) then
-		ui.render_attachments2(self.attachments, self)
+		ui.render_attachments(self.attachments, self)
 	end
 end
 
@@ -119,17 +176,23 @@ function Compose:create(kind, message, reply)
 	end
 	Buffer.create({
 		--- XXX maybe we shouldn't name it
-		name = "galore-compose",
+		name = "galore-compose: ",
 		ft = "mail",
 		kind = kind,
 		cursor = "top",
+		buftype = "",
 		modifiable = true,
+		-- autocmd = {
+		-- 	save = function (buffer)
+		-- 		buffer:save_draft()
+		-- 	end,
+		-- },
 		mappings = config.values.key_bindings.compose,
 		init = function(buffer)
 			buffer.message = message
 			buffer.reply = reply
 			buffer.attachments = {}
-
+			buffer.options = {}
 			-- this is a bit meh
 			buffer.ns = vim.api.nvim_create_namespace("email-compose")
 
