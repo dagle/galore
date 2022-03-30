@@ -210,42 +210,50 @@ function Buffer:del_extmark(ns, id)
 	return vim.api.nvim_buf_del_extmark(self.handle, ns, id)
 end
 
--- function Buffer:render()
--- 	if self.cache then
--- 		Buffer:set_lines(0, 0, true, self.cache)
--- 	end
--- 	self.cache = self:update()
--- end
+local function make_new(name)
+	if vim.fn.bufexists(name) ~= 0 then
+		local buf = vim.fn.bufnr(name)
+		vim.api.nvim_win_set_buf(0, buf)
+		return true
+	end
+end
 
 function Buffer.create(config, class)
 	config = config or {}
-
-	-- Something like this
-	if vim.fn.bufexists(config.name) ~= 0 then
-		local buf = vim.fn.bufnr(config.name)
-		vim.api.nvim_win_set_buf(0, buf)
-		return
-	end
-
 
 	local kind = config.kind or "split"
 	local buffer = nil
 	class = class or Buffer
 
 	if kind == "replace" then
+		if make_new(config.name) then
+			return
+		end
 		vim.cmd("enew")
 		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "tab" then
 		vim.cmd("tabnew")
+		if make_new(config.name) then
+			return
+		end
 		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "split" then
 		vim.cmd("below new")
+		if make_new(config.name) then
+			return
+		end
 		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "split_above" then
 		vim.cmd("top new")
+		if make_new(config.name) then
+			return
+		end
 		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "vsplit" then
 		vim.cmd("bot vnew")
+		if make_new(config.name) then
+			return
+		end
 		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "floating" then
 		-- Creates the border window
@@ -338,7 +346,10 @@ function Buffer.create(config, class)
 	if config.autocmds then
 		-- vim.api.nvim_create_augroup("") -- unique id?
 		for event, cb in pairs(config.autocmds) do
-			vim.api.nvim_create_autocmd(event, {callback = cb, buffer = buffer.handle})
+			local cbfunc = function ()
+				cb(buffer)
+			end
+			vim.api.nvim_create_autocmd(event, {callback = cbfunc, buffer = buffer.handle})
 		end
 		-- for event, cb in pairs(config.autocmds) do
 			-- buffer:define_autocmd(event, string.format("lua __BUFFER_AUTOCMD_STORE[%d]()", id))
