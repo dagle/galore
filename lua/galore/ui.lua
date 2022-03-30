@@ -20,12 +20,12 @@ function M.render_attachments(attachments, buf)
 	buf:set_extmark(buf.ns, line, 0, opts)
 end
 
-function M.exmark(buf, ns, style, text)
+function M.exmark(buf, ns, style, text, line)
 	-- for now
 	if not ns then
 		return
 	end
-	local line = vim.fn.line("$") - 1
+	line = line or vim.fn.line("$") - 1
 	local opts = {
 		virt_lines = {
 			{{text, style}}
