@@ -27,7 +27,6 @@ local function get_threads(db_path, search)
 		table.insert(box, { thread, ppdate, tot, matched, authors, sub, tags })
 	end
 	M.State = box
-	nm.db_close(db)
 	return box
 end
 
