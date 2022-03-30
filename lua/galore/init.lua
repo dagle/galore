@@ -21,8 +21,8 @@ function galore.connect(reconnect)
 		galore.connected = false
 	end
 	if not galore.connected then
-		if galore.config ~= nil then
-			config.values = vim.tbl_deep_extend("keep", galore.config, config.values)
+		if galore.user_config ~= nil then
+			config.values = vim.tbl_deep_extend("force", config.values, galore.user_config)
 		end
 	end
 	runtime.init()
