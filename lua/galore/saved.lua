@@ -6,6 +6,7 @@ local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local u = require("galore.util")
 local runtime = require("galore.runtime")
+local ordered = require("galore.lib.ordered")
 
 local Saved = Buffer:new()
 Saved.num = 0
@@ -26,31 +27,25 @@ end
 local function gen_tags(db, searches)
 	for tag in nm.db_get_all_tags(db) do
 		local search = "tag:" .. tag
-		if not searches[search] then
-			searches[search] = {search, tag, true}
-		end
+		ordered.insert(searches, search, {search, tag, true})
 	end
 end
 
 local function gen_internal(searches)
 	for search in runtime.iterate_saved() do
-		if not searches[search] then
-			searches[search] = {search, search, true}
-		end
+		ordered.insert(searches, search, {search, search, true})
 	end
 end
 
 local function gen_excluded(tags, searches)
 	for _, tag in ipairs(tags) do
 		local search = "tag:" .. tag
-		if not searches[search] then
-			searches[search] = {search, tag, false}
-		end
+		ordered.insert(searches, search, {search, tag, false})
 	end
 end
 
 function Saved.get_searches(db)
-	local searches = {}
+	local searches = ordered.new()
 	gen_internal(searches)
 	if config.values.show_tags then
 		gen_tags(db, searches)
@@ -71,7 +66,7 @@ function Saved:refresh()
 	local box = {}
 	runtime.with_db(function (db)
 		local searches = self.get_searches(db)
-		for _, value in pairs(searches) do
+		for k, value in ordered.pairs(searches) do
 			make_entry(db, box, value[1], value[2], value[3])
 		end
 	end)
