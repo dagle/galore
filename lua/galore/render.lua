@@ -15,11 +15,7 @@ local config = require("galore.config")
 local M = {}
 
 local function format(part)
-	local box = {}
-	for line in string.gmatch(part, "[^\n]+") do
-		table.insert(box, line)
-	end
-	return box
+	return vim.split(part, "\n", false)
 end
 
 function M.draw(buffer, input)
@@ -178,8 +174,7 @@ function M.show_part(object, buf, opts, state)
 		if gp.part_is_attachment(part) then
 			local filename = gp.part_get_filename(part)
 			--- XXX this should be in config
-			local viewable = gu.part_is_type(object, "text", "*")
-			state.attachments[filename] = { part, viewable }
+			state.attachments[filename] = part
 		else
 			local type = gu.part_mime_type(object)
 			if type == "text/plain" then
@@ -203,12 +198,21 @@ function M.show_part(object, buf, opts, state)
 			local function cb()
 				M.show_part(de_part, buf, opts, state)
 			end
+			--- XXX todo
+			local name = nil
 
 			-- should we pass cb as a string instead or is this "good enough?"
-			config.values.annotate_signature(buf, opts.ns, verified, cb)
+			config.values.annotate_signature(buf, opts.ns, verified, name, cb)
 		elseif gp.is_multipart_signed(object) then
+			if opts.preview then
+				local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
+				M.show_part(se_part, buf, opts, state)
+				return
+			end
+			--- this is slow
 			local verified = gcu.verify_signed(object)
 
+			--- this seems slow, maybe we are recreateing ctx etc when we should be just reuse it
 			local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
 			local function cb()
 				M.show_part(se_part, buf, opts, state)
