@@ -11,6 +11,7 @@ local finders = require("telescope.finders")
 local action_state = require("telescope.actions.state")
 local action_set = require("telescope.actions.set")
 local compose = require("galore.compose")
+local config = require("galore.config")
 
 local r = require("galore.render")
 local gu = require("galore.gmime.util")
@@ -118,7 +119,7 @@ local function open_draft(bufnr, type)
 	open_path(bufnr, type, path, load_draft)
 end
 
-local function compose_search(bufnr, type)
+function Telescope.compose_search(bufnr, type)
 	local entry = action_state.get_selected_entry()
 	open_path(bufnr, type, entry.value.filename, load_compose)
 end
@@ -127,17 +128,13 @@ local function open_search(bufnr, type)
 	local entry = action_state.get_selected_entry()
 	actions.close(bufnr)
 	local mode = type_to_kind(type)
-	local line = {
-		filename=entry.value.filename,
-		tags=entry.value.tags,
-	}
-	message_view:create(line, mode, nil, nil)
+	message_view:create(entry.value, mode, nil, nil)
 end
 
-local function open_browser(browser, bufnr)
+function Telescope.open_browser(browser, bufnr)
 	local search = action_state.get_current_line()
 	actions.close(bufnr)
-	browser:create(search, "split", nil)
+	browser:create(search, "split", nil, nil)
 end
 
 -- XXX honor opts
@@ -204,7 +201,7 @@ local function mime_preview(buf, winid, path)
 	end
 end
 
-Telescope.notmuch_search = function(opts, cb)
+Telescope.notmuch_search = function(opts)
 	opts = opts or {}
 	local live_notmucher = finders.new_job(function(prompt)
 		if opts.presearch then
@@ -236,18 +233,14 @@ Telescope.notmuch_search = function(opts, cb)
 		}),
 		attach_mappings = function(buf, map)
 			action_set.select:replace(open_search)
-			-- move this to config etc
-			map("i", "<c-q>", function ()
-				open_browser(mb, buf)
-			end)
-			--- We need better keymaps
-			map("i", "<c-f>", function ()
-				open_browser(tmb, buf)
-			end)
-			--- add the kinds
-			map("i", "<c-e>", function ()
-				compose_search(buf)
-			end)
+			for mode, binds in pairs(config.values.key_bindings.telescope) do
+				for key, func in pairs(binds) do
+					local function telecb()
+						func(buf)
+					end
+					map(mode, key, telecb)
+				end
+			end
 			return true
 		end,
 	}):find()
@@ -277,7 +270,7 @@ function Telescope.goto_tree(message, opts)
 	opts = opts or {}
 	local realsearch = gp.message_get_message_id(message)
 	opts.presearch = string.format("thread:{mid:%s}", realsearch)
-	opts.prompt_title = "Load References"
+	opts.prompt_title = "Load Message Tree"
 	opts.results_title = "Message"
 	opts.preview_title = "Message Preview"
 	Telescope.notmuch_search(opts)
@@ -305,6 +298,7 @@ end
 
 --- goto all emails after this one
 function Telescope.goto_references(message, opts)
+	opts = opts or {}
 	local realsearch = gp.message_get_message_id(message)
 	opts.search_group = {"message-after", realsearch}
 	opts.prompt_title = "Load References"
@@ -321,23 +315,21 @@ function Telescope.goto_parent(mv)
 		vim.notify("No reference")
 		return
 	end
-	local realsearch = gc.utils_decode_message_id(ref)
+	local mid = gc.utils_decode_message_id(ref)
 
 	local line
 	runtime.with_db(function (db)
-		local query = nm.create_query(db,  realsearch)
-		for nmmessage in nm.query_get_messages(query) do
-			line = nu.get_message(nmmessage)
-			break;
-		end
+		local message = nm.db_find_message(db, mid)
+		line = nu.get_message(message)
 	end)
 
 	local items = make_tag(mv.message)
 	vim.fn.settagstack(vim.fn.win_getid(), {items=items}, 't')
-	message_view:create(line, "replace", nil, nil)
+	--- We don't really know the vline
+	message_view:create(line, "replace", mv.parent, nil)
 end
 
-Telescope.attach_file = function(compose, opts)
+Telescope.attach_file = function(comp, opts)
 	opts = opts or {}
 	opts.prompt_title = "Attach file"
 	-- is this even the best way? works now tm
@@ -349,7 +341,7 @@ Telescope.attach_file = function(compose, opts)
 		end, function()
 			actions.close(prompt_bufnr)
 			local file = action_state.get_selected_entry().path
-			compose:add_attachment(file)
+			comp:add_attachment(file)
 		end)
 		return true
 	end
