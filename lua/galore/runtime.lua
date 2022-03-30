@@ -7,7 +7,11 @@ local gopt = require("galore.gmime.option")
 local convert = require("galore.gmime.convert")
 local ge = require("galore.gmime.crypt")
 local gs = require("galore.gmime.stream")
+local safe = require("galore.gmime.funcs")
 local ffi = require("ffi")
+
+local save_dir = vim.fn.stdpath('data')
+local save_file = save_dir .. '/nm_saved'
 
 local runtime = {}
 
@@ -20,6 +24,26 @@ local function gets(db, name)
 	return u.collect(nm.config_get_values_string(db, name))
 end
 
+function runtime.add_saved(str)
+	local fp = io.open(save_file, "a")
+	fp:write(str .. "\n")
+	fp:close()
+end
+
+function runtime.edit_saved()
+	if vim.fn.filereadable(save_file) ~= 0 then
+		vim.cmd(":e " .. save_file)
+	end
+end
+
+function runtime.iterate_saved()
+	if vim.fn.filereadable(save_file) == 0 then
+		return function ()
+		end
+	end
+	return io.lines(save_file)
+end
+
 --- By default, these variables should be null and use the notmuch default
 local function notmuch_init(path, conf, profile)
 	local mode = 0
@@ -30,16 +54,17 @@ local function notmuch_init(path, conf, profile)
 	local exclude_tags = gets(db, "search.exclude_tags")
 	-- runtime.db = db
 	config.values.name = config.values.name or name
+	config.values.draftdir = config.values.draftdir or "draft"
 	config.values.primary_email = config.values.primary_email or primary_email
 	config.values.other_email = config.values.other_email or other_email
 	config.values.exclude_tags = config.values.exclude_tags or exclude_tags
-	nm.db_close(db)
+	-- nm.db_close(db)
 end
 
 function runtime.with_db(func)
 	local db = nm.db_open_with_config(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
 	func(db)
-	nm.db_close(db)
+	-- nm.db_close(db)
 end
 
 function runtime.with_db_writer(func)
@@ -47,7 +72,7 @@ function runtime.with_db_writer(func)
 	-- nm.db_atomic_begin(db)
 	func(db)
 	-- nm.db_atomic_end(db)
-	nm.db_close(db)
+	-- nm.db_close(db)
 end
 
 --- @param offset number
@@ -56,10 +81,11 @@ end
 --- @param data nil
 local function parser_warning(offset, error, item, data)
 	local off = tonumber(offset)
-	local str = ffi.string(item)
+	local str = safe.safestring(item) or ""
 	local error_str = convert.show_parser_warning(error)
 	local level = convert.parser_warning_level(error)
 	local notification = string.format("Parsing error, %s: %s at: %d ", error_str, str, off)
+
 	vim.notify(notification, level)
 end
 
