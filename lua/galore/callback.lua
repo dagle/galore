@@ -19,22 +19,8 @@ function M.select_search(saved, mode)
 	end
 end
 
-local function update_line(tmb, line, update)
-	if update then
-		tmb:update(line, {update})
-	end
-end
-
 function M.select_message(browser, mode)
 	local vline, line_info = browser:select()
-	local id, file, tags
-	runtime.with_db_writer(function (db)
-		id, file, tags = unpack(nu.tag_unread(db, line_info))
-	end)
-	line_info.id = id
-	line_info.filename = file
-	line_info.tags = tags
-	browser:update(vline)
 	message_view:create(line_info, mode, browser, vline)
 end
 
@@ -79,15 +65,20 @@ function M.add_search(browser)
 	nu.add_search(browser.search)
 end
 
+local function update_line(browser, line, update)
+	if update then
+		browser:update(line, {update})
+	end
+end
 
-function M.change_tag(tmb, tag)
-	local line, line_info = tmb:select()
+function M.change_tag(browser, tag)
+	local line, line_info = browser:select()
 	if tag then
 		local update
 		runtime.with_db(function (db)
 			update = nu.change_tag(db, line_info, tag)
 		end)
-		update_line(tmb, line, update)
+		update_line(browser, line, update)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
@@ -95,7 +86,7 @@ function M.change_tag(tmb, tag)
 				runtime.with_db(function (db)
 					update = nu.change_tag(db, line_info, itag)
 				end)
-				update_line(tmb, line, update)
+				update_line(browser, line, update)
 			else
 				error("No tag")
 			end
