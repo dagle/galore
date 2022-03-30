@@ -4,16 +4,14 @@ local runtime = require("galore.runtime")
 local nu = require("galore.notmuch-util")
 require("galore.gmime.init").init()
 
+-- vim.fn.sign_define("uncollapsed", { text = "v" })
+-- vim.fn.sign_define("collapsed", { text = ">>" })
 local galore = {}
 function galore.open(opts)
 	opts = opts or {}
 	opts.open_mode = opts.open_mode or "replace"
-	require("galore.cmp_nm")
-	require("galore.cmp_vcard")
-	vim.fn.sign_define("uncollapsed", { text = "v" })
-	vim.fn.sign_define("collapsed", { text = ">>" })
 	galore.connect()
-	return saved:create(opts.open_mode)
+	config.values.start(opts)
 end
 
 function galore.connect(reconnect)
@@ -24,9 +22,9 @@ function galore.connect(reconnect)
 		if galore.user_config ~= nil then
 			config.values = vim.tbl_deep_extend("force", config.values, galore.user_config)
 		end
+		runtime.init()
+		nu.gen_config()
 	end
-	runtime.init()
-	nu.gen_config()
 	galore.connected = true
 end
 

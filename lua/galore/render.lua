@@ -102,8 +102,6 @@ function M.part_to_stream(part, opts, outstream)
 	gs.stream_write_to_stream(filters, outstream)
 end
 
-
-
 -- applies filters and writes it to memory
 -- @param part gmime.Part
 -- @return string of the part
@@ -194,31 +192,31 @@ function M.show_part(object, buf, opts, state)
 				return
 			end
 
+			local before = vim.fn.line('$') - 1
+			--- split this?
 			local de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password)
-			local function cb()
-				M.show_part(de_part, buf, opts, state)
-			end
-			--- XXX todo
-			local name = nil
+			M.show_part(de_part, buf, opts, state)
+			local after = vim.fn.line('$') - 1
+			local names
 
-			-- should we pass cb as a string instead or is this "good enough?"
-			config.values.annotate_signature(buf, opts.ns, verified, name, cb)
+			config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
 		elseif gp.is_multipart_signed(object) then
 			if opts.preview then
 				local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
 				M.show_part(se_part, buf, opts, state)
 				return
 			end
-			--- this is slow
-			local verified = gcu.verify_signed(object)
 
-			--- this seems slow, maybe we are recreateing ctx etc when we should be just reuse it
+			local before = vim.fn.line('$') - 1
 			local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
-			local function cb()
-				M.show_part(se_part, buf, opts, state)
-			end
+			M.show_part(se_part, buf, opts, state)
+			local after = vim.fn.line('$') - 1
+			local names
 
-			config.values.annotate_signature(buf, opts.ns, verified, cb)
+			--- this is slow
+			--- can we do this async now?
+			local verified = gcu.verify_signed(object)
+			config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
 		elseif config.values.alt_mode == 1 and gu.is_multipart_alt(object) then
 			local multi = ffi.cast("GMimeMultipart *", object)
 			local saved

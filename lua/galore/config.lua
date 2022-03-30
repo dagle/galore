@@ -31,6 +31,12 @@ config.values = {
 	end,
 	verify_flags = "keyserver", -- "none"|"session"|"noverify"|"keyserver"|"online"
 	decrypt_flags = "keyserver", -- "none"|"keyserver"|"online"
+	start = function (opts)
+		require("galore.cmp_nm")
+		require("galore.cmp_vcard")
+		local saved = require("galore.saved")
+		return saved:create(opts.open_mode)
+	end,
 	validate_key = function (status) --- what level of security we should accept?
 		local convert = require("galore.gmime.convert")
 		return convert.validate(status, "green") or convert.validate(status, "valid") or status == 0
@@ -50,18 +56,17 @@ config.values = {
 		return "msmtp", {"--read-envelope-from", "-t"}
 	end,
 	--- how to notify the user that a part has been verified
-	annotate_signature = function (buf, ns, status, user, cb)
+	annotate_signature = function (buf, ns, status, before, after, names)
 		local ui = require("galore.ui")
 		if status then
-			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature Passed ---------")
+			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature Passed ---------", before)
 		else
-			ui.exmark(buf, ns, "nmVerifyRed", "--------- Signature Failed ---------")
+			ui.exmark(buf, ns, "nmVerifyRed", "--------- Signature Failed ---------", before)
 		end
-		cb()
 		if status then
-			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature End ---------")
+			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature End ---------", after)
 		else
-			ui.exmark(buf, ns, "nmVerifyRed","--------- Signature End ---------")
+			ui.exmark(buf, ns, "nmVerifyRed","--------- Signature End ---------", after)
 		end
 	end,
 	from_length = 25, --- The from length the default show_message_descripiton
