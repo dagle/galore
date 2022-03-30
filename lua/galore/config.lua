@@ -1,66 +1,56 @@
 local config = {}
 
--- should read more stuff from notmuch config
+--- nil values are generated from the notmuch config
+--- they can be overriden and documented here
 config.values = {
-	primary_email = nil,
-	other_email = nil,
-	name = nil,
-	draftdir = "/home/dagle/gmail/drafts", -- relative path of the bd!
-	exclude_tags = nil,
+	primary_email = nil, -- String
+	other_email = nil, -- {String}
+	name = nil, -- String
+	draftdir = "draft", -- directory is relative to the nm root
+	exclude_tags = nil, -- {String}
 	show_excluded = true,  -- show all excluded tags as their own tags
-	saved_search = {{"jelle", "from:jelle"}},
-	show_tags = true,
-	threads_ratio = 0.6, -- just an idea to make it a bit
-	bind_prefix = "", -- maybe
-	thread_browser = true,
-	verify_flags = "keyserver",
-	validate_key = function (status)
-		local convert = require("galore.gmime.convert")
-		return convert.validate(status, "green") or convert.validate(status, "valid") or status == 0
-	end,
-	-- autocrypt = true,
-	reverse_thread = true,
+	show_tags = true, -- show tags in saved
+	thread_browser = true, -- show messages in a thread browser
+	thread_expand = true,
+	-- reverse_thread = false, -- Do we want the thread to start from top
 	empty_topyic = "no topic",
-	guess_email = false, -- if we can't determain your email use primary
+	guess_email = false, -- if we can't determain your email for reply use primary
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
-	make_html = false,
-	html_color = 0x878787,
-	show_html = function(text)
+	-- make_html = false, -- We don't generate html atm, dunno if we really should
+	-- html_color = 0x878787, -- colors to use in html mode
+	show_html = function(text) --- how to render a html
 		local jobs = require("galore.jobs")
 		return jobs.html(text)
-	end,
-	signature = function()
-		return nil
 	end,
 	tag_unread = function(message)
 		local nu = require("galore.notmuch-util")
 		return nu.tag_unread(message)
 	end,
-	sign = false,
-	encrypt = false,
-	gpg_id = "",
-	headers = { -- order is important
+	verify_flags = "keyserver", -- "none"|"session"|"noverify"|"keyserver"|"online"
+	decrypt_flags = "keyserver", -- "none"|"keyserver"|"online"
+	validate_key = function (status) --- what level of security we should accept?
+		local convert = require("galore.gmime.convert")
+		return convert.validate(status, "green") or convert.validate(status, "valid") or status == 0
+	end,
+	sign = false, -- Should we crypto sign the email?
+	encrypt = false, -- Should we encrypt the email by default?
+	gpg_id = nil, --- what gpg id to use
+	-- autocrypt = true, -- not used atm
+	headers = { -- What headers to show, order is important
 		"From",
 		"To",
 		"Cc",
 		"Date",
 		"Subject",
 	},
-	send_cmd = function(to, from)
-		from = from or "default"
-		local start, stop = string.find(from, "@%a*.%a*")
-		-- this only works if your entries is in the form of domain.tld
-		if start == nil then
-			return "msmtp", { "-a", "default", to }
-		end
-		local acc = string.sub(from, start+1, stop)
-		return "msmtp", { "-a", acc, to }
+	send_cmd = function(message) --- sendmail command to pipe the email into
+		return "msmtp", {"--read-envelope-from", "-t"}
 	end,
-	--- What more do we need? Start line, stop line?
-	annotate_signature = function (buf, ns, status, cb)
+	--- how to notify the user that a part has been verified
+	annotate_signature = function (buf, ns, status, user, cb)
 		local ui = require("galore.ui")
 		if status then
 			ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature Passed ---------")
@@ -74,7 +64,7 @@ config.values = {
 			ui.exmark(buf, ns, "nmVerifyRed","--------- Signature End ---------")
 		end
 	end,
-	from_length = 25,
+	from_length = 25, --- The from length the default show_message_descripiton
 	show_message_descripiton = function(line)
 	end,
 	key_bindings = {
@@ -91,6 +81,28 @@ config.values = {
 			["<leader>mn"] = function ()
 				require("galore.jobs").new()
 			end,
+			["<leader>me"] = function ()
+				require("galore.runtime").edit_saved()
+			end,
+		},
+		telescope = {
+			i = {
+				--- Dunno if this is the correct way to solve this
+				["<C-q>"] = function (buf)
+					local tele = require("galore.telescope")
+					local mb = require("galore.message_browser")
+					tele.open_browser(mb, buf)
+				end,
+				["<C-f>"] = function (buf)
+					local tele = require("galore.telescope")
+					local tmb = require("galore.thread_message_browser")
+					tele.open_browser(tmb, buf)
+				end,
+				["<C-e>"] = function (buf)
+					local tele = require("galore.telescope")
+					tele.compose_search(buf)
+				end,
+			}
 		},
 		search = {
 			n = {
@@ -108,6 +120,9 @@ config.values = {
 				["<C-x>"] = function (saved)
 					local cb = require("galore.callback")
 					cb.select_search(saved, "split")
+				end,
+				["="] = function (saved)
+					saved:refresh()
 				end,
 			},
 		},
@@ -146,6 +161,12 @@ config.values = {
 					local cb = require("galore.callback")
 					cb.toggle(tmb)
 				end,
+				["A"] = function (tmb)
+					require("galore.runtime").add_saved(tmb.search)
+				end,
+				["="] = function (tmb)
+					tmb:refresh()
+				end,
 			},
 		},
 		message_browser = {
@@ -166,12 +187,18 @@ config.values = {
 					local cb = require("galore.callback")
 					cb.select_message(mb, "split")
 				end,
-				["ymi"] = function (tmb)
+				["ymi"] = function (mb)
 					local cb = require("galore.callback")
-					cb.yank_browser(tmb, "id")
+					cb.yank_browser(mb, "id")
 				end,
 				["q"] = function (mb)
 					mb:close(true)
+				end,
+				["A"] = function (mb)
+					require("galore.runtime").add_saved(mb.search)
+				end,
+				["="] = function (mb)
+					mb:refresh()
 				end,
 			},
 		},
@@ -231,10 +258,6 @@ config.values = {
 					local telescope = require("galore.telescope")
 					telescope.goto_references(message_view.message)
 				end,
-				["gM"] = function (message_view)
-					local telescope = require("galore.telescope")
-					telescope.goto_tree(message_view.message)
-				end,
 			},
 		},
 		compose = {
@@ -251,7 +274,13 @@ config.values = {
 				end,
 				["<leader>mq"] = function (compose)
 					compose:save_draft()
-				end
+				end,
+				["<leader>mo"] = function (compose)
+					compose:set_option_menu()
+				end,
+				["<leader>mO"] = function (compose)
+					compose:unset_option()
+				end,
 			},
 		},
 		default = {
