@@ -7,11 +7,7 @@ local job = require("galore.jobs")
 local config = require("galore.config")
 local builder = require("galore.builder")
 local render = require("galore.render")
-local go = require("galore.gmime.object")
 local gp = require("galore.gmime.parts")
-local gc = require("galore.gmime.content")
-local ffi = require("ffi")
-local runtime = require("galore.runtime")
 local nu = require("galore.notmuch-util")
 
 local Compose = Buffer:new()
@@ -46,6 +42,7 @@ local valid_options = {
 	-- ["In-Reply-To"] = gc.references_format,
 }
 
+
 function Compose:set_compose_option(key, value)
 	if valid_options[key] then
 		local formated = valid_options[key](value)
@@ -57,6 +54,16 @@ function Compose:set_compose_option(key, value)
 		return
 	end
 	vim.notify("Not a valid compose option", vim.log.levels.ERROR)
+end
+
+local function make_default_options(self, from)
+	--- XXX get the email from the IA in from
+	if not self.options["Return-Path"] then
+		self.set_compose_option("Return-Path", from)
+	end
+	if not self.options["Reply-To"] then
+		self.set_compose_option("Reply-To", from)
+	end
 end
 
 function Compose:set_option_menu()
@@ -128,7 +135,8 @@ end
 function Compose:send()
 	-- should check for nil
 	local buf = self:parse_buffer()
-	local message = builder.create_message(buf, self.reply, self.attachments)
+	make_default_options(self, buf.from)
+	local message = builder.create_message(buf, self.reply, self.attachments, self.options)
 	--- XXX add pre-hooks
 	job.send_mail_str(message)
 	job.insert_mail_str(message, config.values.sent_folder, config.value.sent_tags)
@@ -168,25 +176,22 @@ end
 function Compose:create(kind, message, reply)
 	self.num = self.num + 1
 	local template
+	local name
 	-- local ref = util.get_ref()
 	if message then
 		template = make_template(message)
+		name = string.format("galore-reply: %s", tonumber(self.num))
 	else
 		template = u.default_template()
+		name = string.format("galore-compose: %s", tonumber(self.num))
 	end
 	Buffer.create({
-		--- XXX maybe we shouldn't name it
-		name = "galore-compose: ",
+		name = name,
 		ft = "mail",
 		kind = kind,
 		cursor = "top",
 		buftype = "",
 		modifiable = true,
-		-- autocmd = {
-		-- 	save = function (buffer)
-		-- 		buffer:save_draft()
-		-- 	end,
-		-- },
 		mappings = config.values.key_bindings.compose,
 		init = function(buffer)
 			buffer.message = message
