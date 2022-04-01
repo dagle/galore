@@ -1,11 +1,17 @@
 local Buffer = {}
 
+local buffer_ids = {}
+
 function Buffer:new(this)
 	this = this or {}
 	self.__index = self
 	setmetatable(this, self)
 
 	return this
+end
+
+function Buffer.get(bufid)
+	return buffer_ids[bufid]
 end
 
 function Buffer:focus()
@@ -57,6 +63,7 @@ function Buffer:close(delete)
 			self.parent:focus()
 		end
 	end
+	buffer_ids[self.handle] = nil
 	if delete then
 		vim.api.nvim_buf_delete(self.handle, {})
 	end
@@ -132,7 +139,6 @@ function Buffer:replace_content_with(lines)
 	self:set_lines(0, -1, false, lines)
 end
 
--- XXX
 function Buffer:open_fold(line, reset_pos)
 	local pos
 	if reset_pos == true then
@@ -337,12 +343,6 @@ function Buffer.create(config, class)
 		vim.api.nvim_win_set_cursor(0, { 1, 0 })
 	end
 
-	-- if config.render then
-	--   buffer.ui:render(unpack(config.render(buffer)))
-	-- end
-
-	--- BufDelete
-	--- BufWipeout
 	if config.autocmds then
 		-- vim.api.nvim_create_augroup("") -- unique id?
 		for event, cb in pairs(config.autocmds) do
@@ -351,12 +351,7 @@ function Buffer.create(config, class)
 			end
 			vim.api.nvim_create_autocmd(event, {callback = cbfunc, buffer = buffer.handle})
 		end
-		-- for event, cb in pairs(config.autocmds) do
-			-- buffer:define_autocmd(event, string.format("lua __BUFFER_AUTOCMD_STORE[%d]()", id))
-		-- end
 	end
-
-	-- buffer.mmanager.register()
 
 	if not config.modifiable then
 		buffer:set_option("modifiable", false)
@@ -366,13 +361,7 @@ function Buffer.create(config, class)
 		buffer:set_option("readonly", true)
 	end
 
-	-- buffer:call(function()
-	--   local hl = vim.wo.winhl
-	--   if hl ~= "" then
-	--     hl = hl .. ","
-	--   end
-	--   vim.wo.winhl = hl .. "Folded:NeogitFold"
-	-- end)
+	buffer_ids[buffer.handle] = buffer
 
 	return buffer
 end
