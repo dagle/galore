@@ -131,20 +131,58 @@ function Compose:parse_buffer()
 	return box
 end
 
+local function get_sent_folder(sent_folder, from)
+	if type(sent_folder) == "string" then
+		return sent_folder
+	elseif type(sent_folder) == "function" then
+		return sent_folder(from)
+	end
+	return "sent"
+end
+
 -- Tries to send what is in the current buffer
 function Compose:send()
 	-- should check for nil
 	local buf = self:parse_buffer()
-	make_default_options(self, buf.from)
+	-- dunno about this
+	-- make_default_options(self, buf.from)
 	local message = builder.create_message(buf, self.reply, self.attachments, self.options)
 	--- XXX add pre-hooks
 	job.send_mail_str(message)
-	job.insert_mail_str(message, config.values.sent_folder, config.value.sent_tags)
+	-- we should try to figure out the sent folder from the message
+	local folder = get_sent_folder(config.values.sent_folder, buf.from)
+	job.insert_mail_str(message, folder, config.values.sent_tags)
 	--- change the the old tag
 	if self.in_reply_to then
 		nu.change_tag(self.reply.in_reply_to, "+replied")
 	end
 	--- XXX add post-hooks
+end
+
+local ffi = require("ffi")
+local gs = require("galore.gmime.stream")
+local go = require("galore.gmime.object")
+local runtime = require("galore.runtime")
+
+function Compose:preview(kind)
+	local buf = self:parse_buffer()
+	-- make_default_options(self, buf.from)
+	local message = builder.create_message(buf, self.reply, self.attachments, self.options)
+	local object = ffi.cast("GMimeObject *", message)
+	local mem = gs.stream_mem_new()
+	go.object_write_to_stream(object, runtime.format_opts, mem)
+	gs.stream_flush(mem)
+	local str = gu.mem_to_string(mem)
+	local tbl = vim.split(str, "\n")
+	Buffer.create({
+		name = "Galore-preview",
+		ft = "mail",
+		kind = kind or "floating",
+		cursor = "top",
+		init = function(buffer)
+			buffer:set_lines(0, 0, true, tbl)
+		end,
+	})
 end
 
 function Compose:save_draft()
