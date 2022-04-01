@@ -31,6 +31,7 @@ Other than the basic notmuch features Galore has support for:
 ## Installation
 WIP, mail galore is under heavy development, expect crashes and thing changing.
 Atm it's pre 0.1 software. If you don't intend to read code / write patches, you should wait.
+Galore requires the git branch of neovim or 0.7 to work.
 
 Galore uses luajit and the C-bindings to do its magic, depending on notmuch and gmime.
 To view html emails, you need a htmlviewer, by default it uses html2text.
