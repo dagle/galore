@@ -1,6 +1,4 @@
 -- saved is saved searches, the first view you get when you start notmuch
-local v = vim.api
--- change everything to galore
 local nm = require("galore.notmuch")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
@@ -24,11 +22,13 @@ local function make_entry(db, box, search, name, exclude)
 	table.insert(box, { i, unread_i, name, search})
 end
 
-local function gen_tags(db, searches)
-	for tag in nm.db_get_all_tags(db) do
-		local search = "tag:" .. tag
-		ordered.insert(searches, search, {search, tag, true})
-	end
+local function gen_tags(searches)
+	runtime.with_db(function (db)
+		for tag in nm.db_get_all_tags(db) do
+			local search = "tag:" .. tag
+			ordered.insert(searches, search, {search, tag, true})
+		end
+	end)
 end
 
 local function gen_internal(searches)
@@ -37,23 +37,25 @@ local function gen_internal(searches)
 	end
 end
 
-local function gen_excluded(tags, searches)
-	for _, tag in ipairs(tags) do
+local function gen_excluded(searches)
+	for _, tag in ipairs(config.values.exclude_tags) do
 		local search = "tag:" .. tag
 		ordered.insert(searches, search, {search, tag, false})
 	end
 end
 
-function Saved.get_searches(db)
+local generators = {}
+
+function Saved.get_searches()
 	local searches = ordered.new()
-	gen_internal(searches)
-	if config.values.show_tags then
-		gen_tags(db, searches)
-	end
-	if config.values.show_excluded then
-		gen_excluded(config.values.exclude_tags, searches)
+	for _, gen in ipairs(generators) do
+		gen(searches)
 	end
 	return searches
+end
+
+function Saved.Register(generator)
+	table.insert(generators, generator)
 end
 
 local function ppsearch(tag)
@@ -64,9 +66,9 @@ function Saved:refresh()
 	self:unlock()
 	self:clear()
 	local box = {}
+	local searches = self.get_searches()
 	runtime.with_db(function (db)
-		local searches = self.get_searches(db)
-		for k, value in ordered.pairs(searches) do
+		for _, value in ordered.pairs(searches) do
 			make_entry(db, box, value[1], value[2], value[3])
 		end
 	end)
@@ -84,7 +86,6 @@ function Saved:select()
 	return self.State[line]
 end
 
--- - [ ] A way to add searches not notmuch <-
 function Saved:create(kind)
 	self.num = self.num + 1
 	return Buffer.create({
@@ -92,8 +93,11 @@ function Saved:create(kind)
 		ft = "galore-saved",
 		kind = kind,
 		cursor = "top",
-		mappings = config.values.key_bindings.search,
+		mappings = config.values.key_bindings.saved,
 		init = function(buffer)
+			buffer.Register(gen_tags)
+			buffer.Register(gen_internal)
+			buffer.Register(gen_excluded)
 			buffer:refresh()
 		end,
 	}, Saved)
