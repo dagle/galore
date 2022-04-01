@@ -30,7 +30,7 @@ function Mb:ppMessage(messages)
 end
 
 function Mb:update(start)
-	local message = self.State
+	local message = self.State[start]
 	local formated = config.values.show_message_description(message)
 	self:unlock()
 	self:set_lines(start-1, start, true, {formated})
