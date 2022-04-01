@@ -8,10 +8,9 @@ config.values = {
 	name = nil, -- String
 	draftdir = "draft", -- directory is relative to the nm root
 	exclude_tags = nil, -- {String}
-	show_excluded = true,  -- show all excluded tags as their own tags
-	show_tags = true, -- show tags in saved
-	thread_browser = true, -- show messages in a thread browser
 	thread_expand = true,
+	sent_folder = "Sent", -- String|function(from)
+	sent_tags = "+sent",
 	-- reverse_thread = false, -- Do we want the thread to start from top
 	empty_topyic = "no topic",
 	guess_email = false, -- if we can't determain your email for reply use primary
@@ -19,8 +18,6 @@ config.values = {
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
-	-- make_html = false, -- We don't generate html atm, dunno if we really should
-	-- html_color = 0x878787, -- colors to use in html mode
 	show_html = function(text) --- how to render a html
 		local jobs = require("galore.jobs")
 		return jobs.html(text)
@@ -109,22 +106,30 @@ config.values = {
 				end,
 			}
 		},
-		search = {
+		saved = {
 			n = {
 				["<CR>"] = function (saved)
 					local cb = require("galore.callback")
-					cb.select_search(saved, "replace")
+					local tmb = require("galore.thread_message_browser")
+					cb.select_search(saved, tmb, "replace")
+				end,
+				["m"] = function (saved)
+					local cb = require("galore.callback")
+					local mb = require("galore.message_browser")
+					cb.select_search(saved, mb, "replace")
 				end,
 				["q"] = function (saved)
 					saved:close(true)
 				end,
 				["<C-v>"] = function (saved)
 					local cb = require("galore.callback")
-					cb.select_search(saved, "vsplit")
+					local tmb = require("galore.thread_message_browser")
+					cb.select_search(saved, tmb, "vsplit")
 				end,
 				["<C-x>"] = function (saved)
 					local cb = require("galore.callback")
-					cb.select_search(saved, "split")
+					local tmb = require("galore.thread_message_browser")
+					cb.select_search(saved, tmb, "split")
 				end,
 				["="] = function (saved)
 					saved:refresh()
@@ -285,6 +290,9 @@ config.values = {
 				end,
 				["<leader>mO"] = function (compose)
 					compose:unset_option()
+				end,
+				["<leader>mh"] = function (compose)
+					compose:preview()
 				end,
 			},
 		},
