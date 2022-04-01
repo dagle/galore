@@ -16,7 +16,7 @@ function M.insert_current_date(message)
 end
 
 function M.make_id(email)
-	local fqdn = email:gsub(".*@", "@")
+	local fqdn = email:gsub(".*@", "")
 	return "<" .. gc.utils_generate_message_id(fqdn) .. ">"
 end
 
