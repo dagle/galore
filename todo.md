@@ -7,7 +7,7 @@
     version: 0.0.11
 @end
 
-* 0.1
+* 0.0.1
   - [ ] Cleanup code
   - [x] sort saved
   - [x] Unify the attachments api
@@ -18,20 +18,19 @@
   -- How to make this not annoying:
   -- Shouldn't warn if the buffer have been saved to draft or sent etc
 
-  - [ ] Fix builder
+  - [x] Fix builder
   -- [x] Rename to builder
-  -- [ ] Generate a correct email
-  -- [ ] Missing headers
-  --- Content-Type and Content-Disposition
-  --- References and  in-reply-to
-  --- Remove html for now, if we should generate html, it should be good at least
+  -- [x] Generate a correct email
   - [x] Set headers? Or is that up to sendmail? 
   -- [x] Message id? Makes both send and save draft easier
-  -- [ ] Have an opts to set return-path etc, maybe move ref to this?
+  -- [x] Have an opts to set return-path etc, maybe move ref to this?
   -- [x] Return-Path
   -- [x] Reply-To
+  -- [x] Registering to saved
 
-* 0.2
+* 0.0.2
+  - [ ] Missing headers in sending?
+  - [ ] Can we make it so that we don't have to decrypt the message twice?
   - [ ] Maybe filter the whole message?
   - [ ] Highlights, maybe don't link?
   - [ ] Responds to mailing list
@@ -41,7 +40,6 @@
   -- Easy to write rules
   -- Reply, reply-all, compose to sender, compose, forward, unsubsribe
   - [-] Notmuch saved queries 
-  -- [ ] Read queries from the notmuch config
   -- [x] Being able to save queries and write them to notmuch config
   -- [x] Easy way to create new queries or should we rely on telescope?
   -- [ ] How easy is it to build on an old search, can we help?
@@ -81,6 +79,7 @@
   -- [ ] Verify async
 
 * 0.3 
+  - [ ] Don't assume utf8 but convert from and to the charset in vim?
   - [ ] Managed windows
   - [ ] Doing GaloreNew should update the UI
   - [ ] Rewrite notmuch-rs, the state of the lib is quite horrible
