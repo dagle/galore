@@ -1,14 +1,11 @@
 --- Runtime keeps track of the following:
---- notmuchdb_handler, parser_opts, format_opts, and crypto-ctx 
 local config = require("galore.config")
 local u = require("galore.util")
 local nm = require("galore.notmuch")
 local gopt = require("galore.gmime.option")
 local convert = require("galore.gmime.convert")
-local ge = require("galore.gmime.crypt")
 local gs = require("galore.gmime.stream")
 local safe = require("galore.gmime.funcs")
-local ffi = require("ffi")
 
 local save_dir = vim.fn.stdpath('data')
 local save_file = save_dir .. '/nm_saved'

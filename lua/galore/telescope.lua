@@ -25,9 +25,6 @@ local ffi = require("ffi")
 local runtime = require("galore.runtime")
 local nm = require("galore.notmuch")
 
-local mb = require("galore.message_browser")
-local tmb = require("galore.thread_message_browser")
-
 local Telescope = {}
 
 -- parses the tree and outputs the parts

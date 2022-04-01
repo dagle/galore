@@ -1,7 +1,5 @@
-local v = vim.api
 local nm = require("galore.notmuch")
 local nu = require("galore.notmuch-util")
-local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
 local runtime = require("galore.runtime")

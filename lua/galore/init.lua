@@ -1,5 +1,4 @@
 local config = require("galore.config")
-local saved = require("galore.saved")
 local runtime = require("galore.runtime")
 local nu = require("galore.notmuch-util")
 require("galore.gmime.init").init()
