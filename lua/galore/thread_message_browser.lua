@@ -4,7 +4,6 @@ local nm = require("galore.notmuch")
 local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
-local nu = require("galore.notmuch-util")
 local runtime = require("galore.runtime")
 
 local Tmb = Buffer:new()
@@ -172,8 +171,6 @@ end
 
 function Tmb:threads_to_buffer()
 	-- Tmb.threads_buffer:clear_sign_group("thread-expand")
-	self:unlock()
-	self:clear()
 	for _, thread in ipairs(self.Threads) do
 		if thread.expand then
 			local lines = ppMessage(thread.messages)
@@ -194,14 +191,16 @@ function Tmb:threads_to_buffer()
 		end
 	end
 	self:set_lines(0, 1, true, {})
-	self:lock()
 end
 
-function Tmb:refresh(search)
+function Tmb:refresh()
+	self:unlock()
+	self:clear()
 	runtime.with_db(function(db)
-		self:get_messages(db, search)
+		self:get_messages(db, self.search)
 		self:threads_to_buffer()
 	end)
+	self:lock()
 end
 
 local function tail(list)
