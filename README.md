@@ -2,7 +2,7 @@
 
 <img src="res/galore.svg" width=315>
 
-<a href="https://github.com/neovim/neovim"> ![Requires](https://img.shields.io/badge/requires-neovim%200.6%2B-green?style=flat-square&logo=neovim) </a>
+<a href="https://github.com/neovim/neovim"> ![Requires](https://img.shields.io/badge/requires-neovim%200.7%2B-green?style=flat-square&logo=neovim) </a>
 
 <a href="/LICENSE"> ![License](https://img.shields.io/badge/license-GPL%20v2-brightgreen?style=flat-square) </a>
 <a href="#wip"> ![Status](https://img.shields.io/badge/status-WIP-informational?style=flat-square) </a>
