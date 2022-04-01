@@ -190,6 +190,10 @@ function M.show_part(object, buf, opts, state)
 			if opts.preview then
 				opts.preview(buf, "Encrypted")
 				return
+			elseif opts.preview then
+				local de_part, _ = gcu.decrypt_and_verify(object, runtime.get_password)
+				M.show_part(de_part, buf, opts, state)
+				return
 			end
 
 			local before = vim.fn.line('$') - 1
@@ -201,7 +205,7 @@ function M.show_part(object, buf, opts, state)
 
 			config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
 		elseif gp.is_multipart_signed(object) then
-			if opts.preview then
+			if opts.preview or opts.reply then
 				local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
 				M.show_part(se_part, buf, opts, state)
 				return
