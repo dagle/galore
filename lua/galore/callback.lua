@@ -1,6 +1,3 @@
-local thread_message = require("galore.thread_message_browser")
-local config = require("galore.config")
-local mb = require("galore.message_browser")
 local message_view = require("galore.message_view")
 local compose = require("galore.compose")
 local gu = require("galore.gmime.util")
@@ -10,13 +7,9 @@ local nm = require("galore.notmuch")
 
 local M = {}
 
-function M.select_search(saved, mode)
+function M.select_search(saved, browser, mode)
 	local search = saved:select()[4]
-	if config.values.thread_browser then
-		thread_message:create(search, mode, saved)
-	else
-	mb:create(search, mode, saved)
-	end
+	browser:create(search, mode, saved)
 end
 
 function M.select_message(browser, mode)
@@ -27,11 +20,8 @@ end
 function M.get_message(unique, mode)
 	local line_info
 	runtime.with_db(function (db)
-		local query = nm.create_query(db, unique)
-		for message in nm.query_get_messages(query) do
-			line_info = nu.get_message(message)
-			break
-		end
+		local message = nm.db_find_message(db, unique)
+		line_info = nu.get_message(message)
 	end)
 	message_view:create(line_info, mode, nil, nil)
 end
@@ -65,28 +55,31 @@ function M.add_search(browser)
 	nu.add_search(browser.search)
 end
 
-local function update_line(browser, line, update)
-	if update then
-		browser:update(line, {update})
+local function update_line(browser, line_info, vline)
+	local new_info
+	runtime.with_db(function (db)
+		local message = nm.db_find_message(db, line_info.id)
+		new_info = nu.get_message(message)
+	end)
+	line_info.id = new_info.id
+	line_info.filename = new_info.filename
+	line_info.tags = new_info.tags
+	if vline and browser then
+		browser:update(vline)
 	end
+	browser:update(vline)
 end
 
 function M.change_tag(browser, tag)
 	local line, line_info = browser:select()
 	if tag then
-		local update
-		runtime.with_db(function (db)
-			update = nu.change_tag(db, line_info, tag)
-		end)
-		update_line(browser, line, update)
+		nu.change_tag(line_info.id, tag)
+		update_line(browser, line_info, line)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				local update
-				runtime.with_db(function (db)
-					update = nu.change_tag(db, line_info, itag)
-				end)
-				update_line(browser, line, update)
+				nu.change_tag(line_info.id, itag)
+				update_line(browser, line_info, line)
 			else
 				error("No tag")
 			end
