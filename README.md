@@ -108,6 +108,10 @@ Telescope
 
 <img src="res/telescope.png" width=315>
 
+And with a couple of windows together
+
+<img src="res/overview.png" width=315>
+
 ## Customize
 
 config values
