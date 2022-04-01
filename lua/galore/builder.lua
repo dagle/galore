@@ -1,4 +1,3 @@
--- local gm = require("galore.gmime")
 local gp = require("galore.gmime.parts")
 local gcu = require("galore.crypt-utils")
 local gf = require("galore.gmime.filter")
@@ -34,26 +33,6 @@ local function create_attachment(filename)
 	gp.part_set_content(attachment, content)
 	gp.part_set_content_encoding(attachment, "base64")
 	return attachment
-end
-
-local function make_html(part)
-	-- overly complicated?
-	local content = gp.part_get_content(part)
-	local stream = gs.data_wrapper_get_stream(content)
-	local filters = gs.stream_filter_new(stream)
-	-- No flags atm, flags can convert tabs into spaces etc
-	local flags = 0
-	local color = config.values.html_color
-
-	local filter = gf.filter_html_new(flags, color)
-	gs.stream_filter_add(filters, filter)
-	-- XXX update
-	local html_body = gp.text_part_new_with_subtype("html")
-	local new_content = gp.part_get_content(html_body)
-	gs.wrapper_set_stream(new_content, filter)
-	--- Do I need to do this?
-	gs.part_set_content(html_body, new_content)
-	gs.stream_flush(filter)
 end
 
 -- encrypt a part and return the multipart
@@ -121,9 +100,7 @@ function M.create_message(buf, reply, attachments, opts)
 	gu.insert_current_date(message)
 
 	--- this shouldn't be optional, set it to no-topic
-	if buf.subject then
-		gp.message_set_subject(message, buf.subject, nil)
-	end
+	gp.message_set_subject(message, buf.subject, nil)
 
 	--- XXX USE header_list instead and insert these? That way we don't need to do it by hand
 	--- and we don't need to format etc
@@ -141,17 +118,6 @@ function M.create_message(buf, reply, attachments, opts)
 	--- XXX bad, we wan't to roll our own or maybe we can set format_opts
 	gp.text_part_set_text(body, table.concat(buf.body, "\n"))
 	current = body
-
-	if config.values.make_html then
-		local alt = gp.multipart_new_with_subtype("alternative")
-
-		local html_body = gp.text_part_new_with_subtype("html")
-		gp.text_part_set_text(html_body, buf.body)
-		local html = make_html(html_body)
-		gp.multipart_add(alt, body)
-		gp.multipart_add(alt, html)
-		current = alt
-	end
 
 	if attachments ~= nil and not vim.tbl_isempty(attachments) then
 		local multipart = gp.multipart_new_with_subtype("mixed")
