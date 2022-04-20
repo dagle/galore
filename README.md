@@ -42,14 +42,13 @@ Then using your favorite plugin-manager install galore.
 
 With packer:
 ``` lua
-use {'
-	dagle/galore', run = 'make', 
+use {'dagle/galore', run = 'make', 
 	requires = {
-      'nvim-telescope/telescope.nvim',
-      'nvim-lua/popup.nvim',
-	  'nvim-lua/plenary.nvim',
-	  'nvim-telescope/telescope-file-browser.nvim',
-	  'hrsh7th/nvim-cmp',
+		'nvim-telescope/telescope.nvim',
+		'nvim-lua/popup.nvim',
+		'nvim-lua/plenary.nvim',
+		'nvim-telescope/telescope-file-browser.nvim',
+		'hrsh7th/nvim-cmp',
 	}
 }
 ```
@@ -84,13 +83,18 @@ Galore exports the following telescope functions (require 'galore.telescope' to 
 - attach_file (only works in compose)
 
 ### Cmp
-add
+Galore has 2 ways to find emails addresses,
+first uses mates vcard system and seconds uses notmuch to fetch addresses.
 
+Add
+``` lua
+{ name = 'vcard_addr'},
+```
+and/or
 ``` lua
 {name = 'notmuch_addr'}
 ```
-to you sources and update your formating, to complete email addresses
-(atm it only has support for notmuch)
+to you sources and update your formatting
 
 ## Pictures
 Saved searches
@@ -115,6 +119,26 @@ And with a couple of windows together
 
 ## Customize
 
+Global functions
+----------------
+The following global functions exist
+```lua
+-- compose a new message in a tab
+require("galore.compose"):create("tab")
+
+-- browse drafts in telescope
+require("galore.telescope").load_draft()
+
+-- construct a new search in telescope
+require("galore.telescope").notmuch_search()
+
+-- pull new messages from notmuch
+require("galore.jobs").new()
+
+-- edit the file for local saved searches
+require("galore.runtime").edit_saved()
+```
+
 config values
 -------------
 
@@ -125,8 +149,11 @@ the print functions but also the syntax files.
 So if you want to customize the thread-viewer, you need to create your own
 syntax/galore-threads.vim that matches your syntax.
 
+If you only wanna customize the colors, you can just 
+
 ## TODO:
 See the todo-file, even the todo has stuff missing.
+
 
 Tips and trix
 -------------
@@ -149,3 +176,22 @@ end
 
 vim.keymap.set('n', '<leader>mg', gpgtui_toggle, {noremap = true, silent = true})
 ```
+
+If you wanna manually add vcards you can do the following:
+``` lua
+local terms = require("toggleterm.terminal")
+local gpgtui = terms.Terminal:new({
+  cmd = "khard add",
+  direction = "float",
+  float_opts = {
+    border = "single",
+  },
+})
+
+local function gpgtui_toggle()
+  gpgtui:toggle()
+end
+
+vim.keymap.set('n', '<leader>mk', gpgtui_toggle, {noremap = true, silent = true})
+```
+etc etc
