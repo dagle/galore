@@ -120,13 +120,6 @@ function Buffer:set_option(name, value)
 	vim.api.nvim_buf_set_option(self.handle, name, value)
 end
 
-local function gen_name(num)
-	if num == 1 then
-		return "galore-saved"
-	end
-	return string.format("galore-saved-%d", num)
-end
-
 function Buffer:set_name(name)
 	vim.api.nvim_buf_set_name(self.handle, name)
 end
@@ -153,8 +146,12 @@ function Buffer:open_fold(line, reset_pos)
 	end
 end
 
-function Buffer:add_highlight(line, col_start, col_end, name, ns_id)
-	ns_id = ns_id or 0
+function Buffer:set_ns(name)
+	self.ns = vim.api.nvim_create_namespace(name)
+end
+
+function Buffer:add_highlight(line, col_start, col_end, name)
+	local ns_id = self.ns or 0
 	vim.api.nvim_buf_add_highlight(self.handle, ns_id, name, line, col_start, col_end)
 end
 
