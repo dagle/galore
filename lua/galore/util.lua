@@ -2,6 +2,8 @@ local conf = require("galore.config")
 local ffi = require("ffi")
 local M = {}
 
+
+-- change to tbl_keys
 local function collect_keys(t)
 	local box = {}
 	for k, _ in pairs(t) do
@@ -14,6 +16,7 @@ function M.trim(s)
 	return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
+-- change to tbl_keys
 M.collect_keys = collect_keys
 
 function M.safestring(ptr)
@@ -145,6 +148,7 @@ function M.format(part, qoute)
 	return box
 end
 
+--- maybe add from
 local completion_headers = {
 	"to:",
 	"cc:",
@@ -154,7 +158,7 @@ local completion_headers = {
 function M.completion_header(line)
 	line = line:lower()
 	for _, v in ipairs(completion_headers) do
-		if line:match(v) then
+		if vim.startswith(line, v) then
 			return true
 		end
 	end
