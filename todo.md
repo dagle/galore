@@ -45,17 +45,29 @@ Ideas:
   - [-] Render multipart messages
   -- [ ] Not tested
 
-  - [ ] Searching
-
-  - [ ] Missing headers in sending?
   - [ ] After a send, we should mark it as written
   -- [ ] Why is the buffer edited, how do we fix this
+  --- Create a tmp file? That way, if we don't do anything, we don't need to save etj
+  --- On save it should create a draft, make sure that the draft code overwrites
+  --- On send, do hooks like:
+  ---- Unset modified
+  ---- Hooks, close buffer on send?
+
+
+  - [-] Searching
+  -- [-] Highlight messages matching description
+  -- [x] Movement between matches
+
+  - [ ] Missing headers in sending?
 
   - [ ] Hooks, where and why? (init, send, sent ...)
 
   - [ ] Being able to render trees in reverse
   - [ ] FIXME and XXX
   - [ ] Why does tab before enter in save make searches fail?
+
+  - [ ] AutoEncrypt headers support
+---- 
   - [ ] Fix Subject names, can we convert these to unicode, we still need to sub newline.
 
 
@@ -66,12 +78,9 @@ Ideas:
   -- [ ] Test it, do we actually need all of that?
 
   - [ ] Do we unref messages etc?
-
-
   - [ ] Can we make it so that we don't have to decrypt the message twice, should we really need to decrypt a message after we press reply?
 
 
-  - [ ] AutoEncrypt headers support
 
   - [ ] Telescope
   -- [ ] Make it less clunky to use, costumize 
@@ -79,7 +88,7 @@ Ideas:
 
   -- [ ] Can we make it into a telescope extension?
   -- [ ] Remove presearch and just use default_text?
-  --- [ ] add an and by default? Maybe a setting?
+  --- [ ] add an "and" by default? Maybe a setting?
 
   - [-] Notmuch saved queries 
   -- [x] Being able to save queries and write them to notmuch config
