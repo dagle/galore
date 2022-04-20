@@ -3,6 +3,7 @@ local gu = require("galore.gmime.util")
 local u = require("galore.util")
 local config = require("galore.config")
 local job = require("plenary.job")
+local runtime = require("galore.runtime")
 
 local M = {}
 
@@ -26,14 +27,15 @@ end
 --- Get a single message and convert it into a line
 function M.get_message(message)
 	local id = nm.message_get_id(message)
-	local filename = nm.message_get_filename(message)
+	-- local filename = nm.message_get_filename(message)
+	local filenames = u.collect(nm.message_get_filenames(message))
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_header(message, "Subject"))
 	return {
 		id = id,
-		filename = filename,
+		filenames = filenames,
 		level = 1,
 		pre = "",
 		index = 1,
@@ -181,12 +183,33 @@ function M.change_tag(id, str)
 	-- end
 end
 
-function M.tag_unread(id)
-	return M.change_tag(id, "-unread")
-end
-
 function M.add_search(search)
 	-- check if the search
+end
+
+function M.tag_if_nil(line_info, tag)
+	local tags
+	runtime.with_db(function (db)
+		local message = nm.db_find_message(db, line_info.id)
+		tags = u.collect(nm.message_get_tags(message))
+	end)
+	if vim.tbl_isempty(tags) and tag then
+		M.change_tag(line_info.id, tag)
+	end
+end
+
+function M.update_line(browser, line_info, vline)
+	local new_info
+	runtime.with_db(function (db)
+		local message = nm.db_find_message(db, line_info.id)
+		new_info = M.get_message(message)
+	end)
+	line_info.id = new_info.id
+	line_info.filename = new_info.filenames
+	line_info.tags = new_info.tags
+	if vline and browser then
+		browser:update(vline)
+	end
 end
 
 function M.message_description(l)
