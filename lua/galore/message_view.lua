@@ -1,4 +1,3 @@
-local v = vim.api
 local r = require("galore.render")
 local u = require("galore.util")
 local gu = require("galore.gmime.util")
@@ -6,9 +5,9 @@ local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
 local ui = require("galore.ui")
-local runtime = require("galore.runtime")
-local nm = require("galore.notmuch")
 local nu = require("galore.notmuch-util")
+local pv = require("galore.part_view")
+local gp = require("galore.gmime.parts")
 
 local Message = Buffer:new()
 Message.num = 0
@@ -16,22 +15,7 @@ Message.num = 0
 local function _view_attachment(self, filename, kind)
 	kind = kind or "floating"
 	if self.attachments[filename] then
-		Buffer.create({
-			name = filename,
-			ft = require("plenary.filetype").detect(filename),
-			kind = kind,
-			-- ref = ref,
-			cursor = "top",
-			init = function(buffer)
-				local content = u.format(gu.part_to_buf(self.attachments[filename]))
-				v.nvim_buf_set_lines(buffer.handle, 0, 0, true, content)
-				v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
-			end,
-		})
-	else
-		-- pipe this some good way etc
-		-- config.values.external_view
-		return
+		pv.create(self.attachments[filename], filename, require("plenary.filetype").detect(filename))
 	end
 end
 
@@ -92,19 +76,18 @@ function Message:save_attach()
 	end)
 end
 
-
-function Message:update(filename)
+function Message:update(filenames)
 	self:unlock()
 	self:clear()
-	local gmessage = gu.parse_message(filename)
-	if gmessage then
+	local message = gu.construct(filenames)
+	if message then
 		if self.ns then
 			vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
 		end
 		self.ns = vim.api.nvim_create_namespace("galore-message-view")
-		self.message = gmessage
-		r.show_header(gmessage, self.handle, { ns = self.ns }, self.line)
-		self.attachments = r.show_message(gmessage, self.handle, {ns = self.ns})
+		self.message = message
+		r.show_header(message, self.handle, { ns = self.ns }, self.line)
+		self.attachments = r.show_message(message, self.handle, {ns = self.ns})
 		if not vim.tbl_isempty(self.attachments) then
 			ui.render_attachments(self.attachments, self)
 		end
@@ -117,19 +100,10 @@ function Message:redraw(filename)
 	self:update(filename)
 end
 
-local function make_read(browser, vline, line_info)
-	local new_info
-	nu.tag_unread(line_info.id)
-	runtime.with_db(function (db)
-		local message = nm.db_find_message(db, line_info.id)
-		new_info = nu.get_message(message)
-	end)
-	line_info.id = new_info.id
-	line_info.filename = new_info.filename
-	line_info.tags = new_info.tags
-	if vline and browser then
-		browser:update(vline)
-	end
+local function make_read(browser, line_info, vline)
+	config.values.tag_unread(line_info.id)
+	nu.tag_if_nil(line_info, config.values.empty_tag)
+	nu.update_line(browser, line_info, vline)
 end
 
 
@@ -153,7 +127,7 @@ end
 
 function Message:create(line, kind, parent, vline)
 	Buffer.create({
-		name = "galore-view: " .. line.filename,
+		name = "galore-view: " .. line.filenames[1],
 		ft = "mail",
 		kind = kind,
 		parent = parent,
@@ -163,8 +137,8 @@ function Message:create(line, kind, parent, vline)
 			buffer.line = line
 			buffer.parent = parent
 			buffer.vline = vline
-			make_read(parent, vline, line)
-			buffer:update(line.filename)
+			make_read(parent, line, vline)
+			buffer:update(line.filenames)
 		end,
 	}, Message)
 end

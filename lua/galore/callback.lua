@@ -55,31 +55,23 @@ function M.add_search(browser)
 	nu.add_search(browser.search)
 end
 
-local function update_line(browser, line_info, vline)
-	local new_info
-	runtime.with_db(function (db)
-		local message = nm.db_find_message(db, line_info.id)
-		new_info = nu.get_message(message)
-	end)
-	line_info.id = new_info.id
-	line_info.filename = new_info.filename
-	line_info.tags = new_info.tags
-	if vline and browser then
-		browser:update(vline)
-	end
-	browser:update(vline)
-end
+--- move this
+-- local function update_line(browser, line_info, vline)
+-- 	nu.update_line(browser, line_info, vline)
+-- end
 
 function M.change_tag(browser, tag)
-	local line, line_info = browser:select()
+	local vline, line_info = browser:select()
 	if tag then
 		nu.change_tag(line_info.id, tag)
-		update_line(browser, line_info, line)
+		nu.tag_if_nil(line_info, config.value.empty_tag)
+		nu.update_line(browser, line_info, vline)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
 				nu.change_tag(line_info.id, itag)
-				update_line(browser, line_info, line)
+				nu.tag_if_nil(line_info, config.value.empty_tag)
+				nu.update_line(browser, line_info, vline)
 			else
 				error("No tag")
 			end
