@@ -104,6 +104,7 @@ function M.send_mail_str(message)
 		:start()
 end
 
+
 function M.insert_mail_str(message, folder, tags)
 	local message_str = to_string(message)
 	local folderflag = string.format("--folder=%s", folder)
@@ -128,16 +129,31 @@ end
 local function raw_pipe(object, cmd, args)
 	local stdout = uv.new_pipe()
 	local stderr = uv.new_pipe()
+	local stdin = uv.new_pipe()
+
 	local fds = uv.pipe({nonblock=true}, {nonblock=true})
 	local stream = gs.stream_pipe_new(fds.write)
+	stdin:open(fds.read)
+	local handle
+	local pid
 
-	local opts = {}
-	opts.args = args
-	opts.stdio = { fds.read, stdout, stderr}
+	local opts = {
+		args = args,
+		-- stdio = { fds.read, stdout, stderr}
+		stdio = { stdin, stdout, stderr}
+	}
 
-	local handle, pid = uv.spawn(cmd, opts, function(code, signal)
+	handle, pid = uv.spawn(cmd, opts, function(code, signal)
+		stdin:close()
+		stdout:close()
+		stderr:close()
+		if code ~= 0 then
+			print(cmd .. " existed with: ", code)
+			vim.notify(cmd .. " exited with: ".. tostring(code), vim.log.levels.ERROR)
+		else
+			vim.notify("Email sent")
+		end
 	end)
-
 	--- Maybe something like this
 	--- If you wanna pipe the buffer, don't use this
 	if gp.is_part(object) then
@@ -154,6 +170,8 @@ local function raw_pipe(object, cmd, args)
 	end
 
 	gs.stream_flush(stream)
+	gs.stream_close(stream)
+
 
 	uv.read_start(stdout, function(err, data)
 		assert(not err, err)
@@ -167,6 +185,13 @@ local function raw_pipe(object, cmd, args)
 		if data then
 			print("stderr: ", data)
 		end
+	end)
+
+	uv.shutdown(stdin, function()
+		print("stdin shutdown", stdin)
+		uv.close(handle, function()
+			print("process closed", handle, pid)
+		end)
 	end)
 end
 

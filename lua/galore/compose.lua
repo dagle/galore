@@ -148,10 +148,10 @@ function Compose:send()
 	-- make_default_options(self, buf.from)
 	local message = builder.create_message(buf, self.reply, self.attachments, self.options)
 	--- XXX add pre-hooks
-	job.send_mail_str(message)
+	job.send_mail(message)
 	-- we should try to figure out the sent folder from the message
-	local folder = get_sent_folder(config.values.sent_folder, buf.from)
-	job.insert_mail_str(message, folder, config.values.sent_tags)
+	-- local folder = get_sent_folder(config.values.sent_folder, buf.from)
+	-- job.insert_mail(message, folder, config.values.sent_tags)
 	--- change the the old tag
 	if self.in_reply_to then
 		nu.change_tag(self.reply.in_reply_to, "+replied")
@@ -192,7 +192,7 @@ function Compose:save_draft()
 		print("Failed to parse draft")
 		return ret
 	end
-	job.insert_mail_str(message, config.values.draftdir, "+draft")
+	job.insert_mail(message, config.values.draftdir, "+draft")
 end
 
 local function make_template(message, reply_all)
