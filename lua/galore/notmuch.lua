@@ -762,7 +762,9 @@ local function filename_iterator(filenames)
 		if nm.notmuch_filenames_valid(filenames) == 1 then
 			local filename = ffi.string(nm.notmuch_filenames_get(filenames))
 			nm.notmuch_filenames_move_to_next(filenames)
-			return filename
+			if filename ~= nil then
+				return ffi.string(filename)
+			end
 		end
 	end
 end
