@@ -79,7 +79,8 @@ function Telescope.parts_browser(message, selected)
 end
 
 local function type_to_kind(type)
-	local mode = "replace"
+	-- local mode = "replace"
+	local mode
 	if type == "default" then
 		mode = "replace"
 	elseif type == "horizontal" then
@@ -128,10 +129,11 @@ local function open_search(bufnr, type)
 	message_view:create(entry.value, mode, nil, nil)
 end
 
-function Telescope.open_browser(browser, bufnr)
+function Telescope.create_search(browser, bufnr, type, parent)
+	type = type_to_kind(type) or "split"
 	local search = action_state.get_current_line()
 	actions.close(bufnr)
-	browser:create(search, "split", nil, nil)
+	browser:create(search, type, parent)
 end
 
 -- XXX honor opts
@@ -245,8 +247,8 @@ end
 
 Telescope.load_draft = function(opts)
 	opts = opts or {}
-	local search = opts.search or ""
-	opts.presearch = search .. "tag:draft"
+	-- local search = opts.search or ""
+	opts.default_text = "tag:draft"
 	opts.prompt_title = "Load draft"
 	opts.results_title = "Drafts"
 	opts.preview_title = "Draft preview"
