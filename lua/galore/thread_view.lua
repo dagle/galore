@@ -1,7 +1,5 @@
 -- When we view an thread, this is the view
-
 local v = vim.api
-local u = require("galore.util")
 local nm = require("galore.notmuch")
 local Buffer = require("galore.lib.buffer")
 local M = {}
@@ -9,6 +7,7 @@ local M = {}
 --use vim.split(str, "\n")
 local function split_lines(str)
 	local lines = {}
+	-- return vim.split(str, "[^\r\n]+", false)
 	for s in str:gmatch("[^\r\n]+") do
 		table.insert(lines, s)
 	end
