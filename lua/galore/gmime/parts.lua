@@ -111,7 +111,7 @@ function M.part_iter(message)
 			local new_message = gmime.g_mime_message_part_get_message(message_part)
 			if new_message then
 				local mime_part = gmime.g_mime_message_get_mime_part(new_message)
-				-- XXX do we need to do this? Maybe because of ordering?
+				-- XXX do we need to do this? Maybe because of ordering? Maybe just return part
 				-- table.insert(queue, { current, child })
 				-- if M.is_multipart(mime_part) then
 				-- 	local multi = ffi.cast("GMimeMultipart *", mime_part)
@@ -820,6 +820,12 @@ end
 --- @return boolean
 function M.is_multipart_signed(object)
 	return gmime.gmime_is_multipart_signed(object) ~= 0
+end
+
+--- @param message gmime.Message
+--- @return gmime.MimeObject
+function M.message_part(message)
+	return gmime.message_part(message)
 end
 
 -- function M.set_text(part, texts)
