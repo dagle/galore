@@ -41,6 +41,47 @@ local function sort(messages)
 	return messages
 end
 
+local function sort_reverse(messages)
+	local rev = {}
+	for i=#messages, 1, -1 do
+		rev[#rev+1] = messages[i]
+	end
+	return rev
+end
+
+--- this doesn't work at all
+local function show_messages_reverse(messages, level, prestring, num, total, tid, box, state)
+	for j, message in ipairs(messages) do
+		local newstring
+		if num == 0 then
+			newstring = prestring
+		elseif j == #messages then
+			newstring = prestring .. "└─"
+		else
+			newstring = prestring .. "├─"
+		end
+		local sorted = sort_reverse(u.collect(nm.message_get_replies(message)))
+		-- local sorted = sort(u.collect(nm.message_get_replies(message)))
+		if #sorted > 0 then
+			newstring = newstring .. "┬"
+		else
+			newstring = newstring .. "─"
+		end
+		local tm = get_message(message, tid, level, newstring, num + 1, total)
+		table.insert(box, tm)
+		table.insert(state, tm)
+		if num == 0 then
+			newstring = prestring
+		elseif #messages > j then
+			newstring = prestring .. "│ "
+		else
+			newstring = prestring .. "  "
+		end
+		num = show_messages_reverse(sorted, level + 1, newstring, num + 1, total, tid, box, state)
+	end
+	return num
+end
+
 local function show_messages(messages, level, prestring, num, total, tid, box, state)
 	for j, message in ipairs(messages) do
 		local newstring
@@ -51,7 +92,7 @@ local function show_messages(messages, level, prestring, num, total, tid, box, s
 		else
 			newstring = prestring .. "├─"
 		end
-		local sorted = u.collect(sort(nm.message_get_replies(message)))
+		local sorted = sort(u.collect(nm.message_get_replies(message)))
 		if #sorted > 0 then
 			newstring = newstring .. "┬"
 		else
@@ -146,13 +187,18 @@ function Tmb:get_messages(db, search)
 	for _, ex in ipairs(config.values.exclude_tags) do
 		nm.query_add_tag_exclude(query, ex)
 	end
+	nm.query_set_sort(query, config.values.sort)
 	for thread in nm.query_get_threads(query) do
 		local box = {}
 		local total = nm.thread_get_total_messages(thread)
 		local messages = nm.thread_get_toplevel_messages(thread)
 		local cmessages = u.collect(messages)
 		local tid = nm.thread_get_id(thread)
+		if config.values.thread_reverse then
+		show_messages_reverse(cmessages, 0, "", 0, total, tid, box, state)
+	else
 		show_messages(cmessages, 0, "", 0, total, tid, box, state)
+	end
 		stop = stop + total
 		local threadinfo = {
 			thread = tid,
@@ -169,28 +215,31 @@ function Tmb:get_messages(db, search)
 	return threads
 end
 
+local function match(cond, line)
+	if cond == nil then
+		return false
+	end
+	if type(cond) ~= type(line) then
+		return false
+	end
 
-
--- how should this work?
--- should we be able to match multiple tags
--- against multiple tags?
-local function match_tag(tag, tags)
-	for t in ipairs(tags) do
-		if t == tag then
-			return true
+	if vim.tbl_islist(cond) and vim.tbl_islist(line) then
+		-- if both are lists, we don't care about the order
+		for _, value in ipairs(cond) do
+			if not vim.tbl_contains(line, value) then
+				return false
+			end
 		end
 	end
-	return false
-end
 
-local function match(cond, line)
-	for k, val in pairs(cond) do
-		-- we match one tag, not all tags
-		if k == "tags" then
-			match_tag(cond[k], line[k])
-		elseif line[k] ~= val then
-			return false
+	if type(cond) == 'table' then
+		for k, _ in pairs(cond) do
+				if not match(cond[k], line[k]) then
+					return false
+				end
 		end
+	elseif cond == line then
+		return false
 	end
 	return true
 end
@@ -202,7 +251,7 @@ function Tmb:threads_to_buffer()
 		if thread.expand then
 			local lines = ppMessage(thread.messages)
 			self:set_lines(-1, -1, true, lines)
-			self:highlights(thread.messages, i, {matched=true})
+			self:highlights(thread.messages, i, self.emph)
 			i = i + #thread.messages
 			-- self:set_lines(-1, -1, true, item.messages)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
@@ -211,7 +260,7 @@ function Tmb:threads_to_buffer()
 			-- local lines = ppMessage(thread.messages)
 			local line = config.values.show_message_description(thread.messages[1])
 			self:set_lines(-1, -1, true, {line})
-			self:highlights({thread.messages[1]}, i, {matched=true})
+			self:highlights({thread.messages[1]}, i, self.emph)
 			i=i+1
 			-- self:set_lines(-1, -1, true, { item.messages[1] })
 			if #thread.messages ~= 1 then
@@ -231,6 +280,12 @@ function Tmb:highlights(messages, offset, cond)
 		end
 		i = i + 1
 	end
+end
+
+--- XXX this is really slow
+function Tmb:match(cond)
+	self.cond = cond
+	self:redraw()
 end
 
 function Tmb:match_next(cond)
@@ -377,9 +432,10 @@ function Tmb:create(search, kind, parent)
 		mappings = config.values.key_bindings.thread_browser,
 		init = function(buffer)
 			buffer.search = search
+			buffer.line = 1
+			buffer.emph = nil
 			vim.api.nvim_win_set_option(0, "number", true)
 			buffer:refresh(search)
-			buffer.line = 1
 			buffer:set_ns("galore_tmb")
 		end,
 	}, Tmb)
