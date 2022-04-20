@@ -138,7 +138,18 @@ end
 -- @return a {body, attachments}, where body is a string and attachments is GmimePart
 --- XXX something here converts nil to string
 function M.show_message(message, buf, opts)
+	-- We set this to "unsafe", this is to battle
+	-- This is to handle https://efail.de/ problems
+	-- You can ignore this if you want
+	-- opts.unsafe = true
+	local function find_encrypted(_, part, state)
+		if gp.is_multipart_encrypted(part) then
+			state.unsafe = true
+		end
+	end
+
 	local box = {}
+	gp.message_foreach(message, find_encrypted, box)
 	box.attachments = {}
 	show_message_helper(message, buf, opts, box)
 	return box.attachments
@@ -161,10 +172,9 @@ function M.show_part(object, buf, opts, state)
 		local mp = ffi.cast("GMimeMessagePart *", object)
 		local message = gp.message_part_get_message(mp)
 		show_message_helper(message, buf, opts, state)
-	elseif gp.is_partial(object) then
-		--- XXX todo, handle partial
+		-- elseif gp.is_partial(object) then
 		-- local mp = ffi.cast("GMimeMessagePartial *", object)
-		-- local full = gm.partial_collect(object)
+		-- local full = gp.partial_collect(object)
 		-- do we want to show that it's a collected message?
 		-- show_message_helper(full, buf, opts, state)
 	elseif gp.is_part(object) then
@@ -180,7 +190,7 @@ function M.show_part(object, buf, opts, state)
 				M.draw(buf, format(str))
 			elseif type == "text/html" then
 				local str = M.part_to_string(part, opts)
-				local html = config.values.show_html(str)
+				local html = config.values.show_html(str, state.unsafe)
 				M.draw(buf, html)
 			end
 		end
@@ -190,20 +200,17 @@ function M.show_part(object, buf, opts, state)
 			if opts.preview then
 				opts.preview(buf, "Encrypted")
 				return
-			elseif opts.preview then
-				local de_part, _ = gcu.decrypt_and_verify(object, runtime.get_password)
-				M.show_part(de_part, buf, opts, state)
-				return
 			end
 
 			local before = vim.fn.line('$') - 1
-			--- split this?
 			local de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password)
 			M.show_part(de_part, buf, opts, state)
 			local after = vim.fn.line('$') - 1
 			local names
 
-			config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
+			vim.schedule(function()
+				config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
+			end)
 		elseif gp.is_multipart_signed(object) then
 			if opts.preview or opts.reply then
 				local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
@@ -215,12 +222,13 @@ function M.show_part(object, buf, opts, state)
 			local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
 			M.show_part(se_part, buf, opts, state)
 			local after = vim.fn.line('$') - 1
-			local names
 
-			--- this is slow
-			--- can we do this async now?
-			local verified = gcu.verify_signed(object)
-			config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
+			-- verifying keys can be rather slow
+			vim.schedule(function()
+				local verified = gcu.verify_signed(object)
+				local names
+				config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
+			end)
 		elseif config.values.alt_mode == 1 and gu.is_multipart_alt(object) then
 			local multi = ffi.cast("GMimeMultipart *", object)
 			local saved
