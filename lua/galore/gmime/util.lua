@@ -108,6 +108,47 @@ function M.parse_message(path)
 	return message, err
 end
 
+local function number_of_parts(filename)
+	local message = M.parse_message(filename)
+	local part = gp.message_part(message)
+	if not gp.is_partial(part) then
+		return nil
+	end
+	local partial = ffi.cast("GMimeMessagePartial *", part)
+	return gp.message_partial_get_total(partial)
+end
+
+--- @param filenames string[]
+--- @return gmime.Message
+function M.construct(filenames)
+	if #filenames == 1 then
+		local message = M.parse_message(filenames[1])
+		return message
+	end
+	local parts = {}
+	local messages = {} -- ugly hack
+	for _, filename in ipairs(filenames) do
+		local message = M.parse_message(filename)
+		if message == nil then
+			return nil
+		end
+		local part = gp.message_part(message)
+		if not gp.is_partial(part) then
+			return nil
+		end
+		local partial = ffi.cast("GMimeMessagePartial *", part)
+		table.insert(messages, message)
+		table.insert(parts, partial)
+	end
+	local num = number_of_parts(filenames[1])
+	if num ~= #filenames then
+		vim.notify("More parts than files", vim.log.levels.ERROR)
+		--- this isn't implemented
+		--- we need to search the emails if this isn't the case
+	end
+	return gp.message_partial_reconstruct_message(parts, #filenames)
+end
+
 function M.write_message(path, object)
 	local stream, err = gs.stream_file_open(path, "w+")
 	if err == nil and stream ~= nil then
