@@ -5,6 +5,15 @@ require("galore.gmime.init").init()
 
 -- vim.fn.sign_define("uncollapsed", { text = "v" })
 -- vim.fn.sign_define("collapsed", { text = ">>" })
+
+-- use setlocal and move this
+-- vim.cmd("hi Folded guibg=None")
+-- function _G.custom_fold_text()
+-- 	local line = vim.fn.getline(vim.v.foldstart)
+-- 	local line_count = vim.v.foldend - vim.v.foldstart + 1
+-- 	return line
+-- end
+-- vim.opt.foldtext = 'v:lua.custom_fold_text()'
 local galore = {}
 function galore.open(opts)
 	opts = opts or {}
@@ -32,9 +41,6 @@ function galore.setup(opts)
 	vim.cmd("highlight nmVerifyGreen	ctermfg=224 guifg=Green")
 	vim.cmd("highlight nmVerifyRed		ctermfg=224 guifg=Red")
 	galore.user_config = opts
-	for bind, func in pairs(config.values.key_bindings.global) do
-		vim.keymap.set("n", bind, func, { noremap = true, silent = true})
-	end
 end
 
 return galore
