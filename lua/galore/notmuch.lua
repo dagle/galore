@@ -49,7 +49,12 @@ ffi.cdef([[
 	typedef long time_t;
 	typedef int notmuch_query_syntax_t;
 	typedef int notmuch_exclude_t;
-	typedef int notmuch_sort_t;
+	typedef enum {
+		NOTMUCH_SORT_OLDEST_FIRST,
+		NOTMUCH_SORT_NEWEST_FIRST,
+		NOTMUCH_SORT_MESSAGE_ID,
+		NOTMUCH_SORT_UNSORTED
+	} notmuch_sort_t;
 	typedef int notmuch_message_flag_t;
 	typedef int notmuch_config_key_t;
 	typedef int notmuch_decryption_policy_t;
@@ -880,13 +885,13 @@ end
 function M.query_set_sort(query, sort)
 	local sortint
 	if sort == "oldest" then
-		sortint = 0
+		sortint = nm.NOTMUCH_SORT_OLDEST_FIRST
 	elseif sort == "newest" then
-		sortint = 1
+		sortint = nm.NOTMUCH_SORT_NEWEST_FIRST
 	elseif sort == "message-id" then
-		sortint = 2
+		sortint = nm.NOTMUCH_SORT_MESSAGE_ID
 	elseif sort == nil or sort == "unsorted" then
-		sortint = 3
+		sortint = nm.NOTMUCH_SORT_UNSORTED
 	else
 		assert(false, "Can't find sorting algorithm")
 	end
