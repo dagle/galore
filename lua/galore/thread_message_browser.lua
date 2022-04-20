@@ -10,18 +10,19 @@ local Tmb = Buffer:new()
 
 local function get_message(message, tid, level, prestring, i, total)
 	local id = nm.message_get_id(message)
-	local filename = nm.message_get_filename(message)
+	-- local filename = nm.message_get_filename(message)
+	local filenames = u.collect(nm.message_get_filenames(message))
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = nm.message_get_date(message)
-	-- Use enums for these
+	-- Use enums for these?
 	local matched = nm.message_get_flag(message, 0)
 	local excluded = nm.message_get_flag(message, 1)
 	return {
 		id = id,
 		tid = tid,
-		filename = filename,
+		filenames = filenames,
 		level = level,
 		pre = prestring,
 		index = i,
@@ -169,20 +170,49 @@ function Tmb:get_messages(db, search)
 end
 
 
+
+-- how should this work?
+-- should we be able to match multiple tags
+-- against multiple tags?
+local function match_tag(tag, tags)
+	for t in ipairs(tags) do
+		if t == tag then
+			return true
+		end
+	end
+	return false
+end
+
+local function match(cond, line)
+	for k, val in pairs(cond) do
+		-- we match one tag, not all tags
+		if k == "tags" then
+			match_tag(cond[k], line[k])
+		elseif line[k] ~= val then
+			return false
+		end
+	end
+	return true
+end
+
 function Tmb:threads_to_buffer()
 	-- Tmb.threads_buffer:clear_sign_group("thread-expand")
+	local i = 1
 	for _, thread in ipairs(self.Threads) do
 		if thread.expand then
 			local lines = ppMessage(thread.messages)
 			self:set_lines(-1, -1, true, lines)
-
+			self:highlights(thread.messages, i, {matched=true})
+			i = i + #thread.messages
 			-- self:set_lines(-1, -1, true, item.messages)
 			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
-			-- i = i + #item.messages
+			-- i = i + #thread.messages
 		else
 			-- local lines = ppMessage(thread.messages)
 			local line = config.values.show_message_description(thread.messages[1])
-			self:set_lines(-1, -1, true, { line})
+			self:set_lines(-1, -1, true, {line})
+			self:highlights({thread.messages[1]}, i, {matched=true})
+			i=i+1
 			-- self:set_lines(-1, -1, true, { item.messages[1] })
 			if #thread.messages ~= 1 then
 				-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
@@ -191,6 +221,45 @@ function Tmb:threads_to_buffer()
 		end
 	end
 	self:set_lines(0, 1, true, {})
+end
+
+function Tmb:highlights(messages, offset, cond)
+	local i = offset
+	for _, message in ipairs(messages) do
+		if match(cond, message) then
+			self:add_highlight(i, 0, -1, "nmEmph")
+		end
+		i = i + 1
+	end
+end
+
+function Tmb:match_next(cond)
+	local cur = vim.api.nvim_win_get_cursor(0)
+	local virt_line = self.to_virtualline(self.Threads, cur[1])
+	local next
+	for i = virt_line, #self.State do
+		if match(cond, self.State[i]) then
+			next = i
+			break
+		end
+	end
+	local real_line = self.to_realline(self.Threads, next)
+	vim.api.nvim_win_set_cursor(0, {real_line, cur[2]})
+end
+
+function Tmb:prev_matched(cond)
+	local cur = vim.api.nvim_win_get_cursor(0)
+	local virt_line = self.to_virtualline(self.Threads, cur[1])
+	local next
+	for i = 1, virt_line do
+		local index = virt_line - i
+		if match(cond, self.State[index]) then
+			next = index
+			break
+		end
+	end
+	local real_line = self.to_realline(self.Threads, next)
+	vim.api.nvim_win_set_cursor(0, {real_line, cur[2]})
 end
 
 function Tmb:refresh()
@@ -228,7 +297,9 @@ function Tmb:redraw(expand, to, stop, thread)
 		self:threads_to_buffer()
 	else
 		if expand then
-			self:set_lines(to, to, true, tail(ppMessage(thread.messages)))
+			local messages = tail(thread.messages)
+			self:set_lines(to, to, true, ppMessage(messages))
+			self:highlights(messages, to, {matched=true})
 		else
 			self:set_lines(to, stop, true, {})
 		end
@@ -309,6 +380,7 @@ function Tmb:create(search, kind, parent)
 			vim.api.nvim_win_set_option(0, "number", true)
 			buffer:refresh(search)
 			buffer.line = 1
+			buffer:set_ns("galore_tmb")
 		end,
 	}, Tmb)
 end

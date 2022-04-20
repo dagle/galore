@@ -25,3 +25,5 @@ highlight link nmDate		String
 highlight link nmThreadCount	Comment
 highlight link nmSubject	Statement
 highlight link nmTags		Comment
+highlight nmEmph gui=underline cterm=underline
+" highlight nmEmph gui=bold cterm=bold
