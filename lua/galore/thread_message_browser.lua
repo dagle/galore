@@ -36,50 +36,14 @@ local function get_message(message, tid, level, prestring, i, total)
 	}
 end
 
--- NOP for now
-local function sort(messages)
-	return messages
-end
-
-local function sort_reverse(messages)
-	local rev = {}
-	for i=#messages, 1, -1 do
-		rev[#rev+1] = messages[i]
-	end
-	return rev
-end
-
---- this doesn't work at all
-local function show_messages_reverse(messages, level, prestring, num, total, tid, box, state)
-	for j, message in ipairs(messages) do
-		local newstring
-		if num == 0 then
-			newstring = prestring
-		elseif j == #messages then
-			newstring = prestring .. "└─"
-		else
-			newstring = prestring .. "├─"
-		end
-		local sorted = sort_reverse(u.collect(nm.message_get_replies(message)))
-		-- local sorted = sort(u.collect(nm.message_get_replies(message)))
-		if #sorted > 0 then
-			newstring = newstring .. "┬"
-		else
-			newstring = newstring .. "─"
-		end
-		local tm = get_message(message, tid, level, newstring, num + 1, total)
-		table.insert(box, tm)
-		table.insert(state, tm)
-		if num == 0 then
-			newstring = prestring
-		elseif #messages > j then
-			newstring = prestring .. "│ "
-		else
-			newstring = prestring .. "  "
-		end
-		num = show_messages_reverse(sorted, level + 1, newstring, num + 1, total, tid, box, state)
-	end
-	return num
+local function reverse(t)
+  local n = #t
+  local i = 1
+  while i < n do
+    t[i],t[n] = t[n],t[i]
+    i = i + 1
+    n = n - 1
+  end
 end
 
 local function show_messages(messages, level, prestring, num, total, tid, box, state)
@@ -92,8 +56,11 @@ local function show_messages(messages, level, prestring, num, total, tid, box, s
 		else
 			newstring = prestring .. "├─"
 		end
-		local sorted = sort(u.collect(nm.message_get_replies(message)))
-		if #sorted > 0 then
+		local children = u.collect(nm.message_get_replies(message))
+		if config.values.thread_reverse then
+			reverse(children)
+		end
+		if #children > 0 then
 			newstring = newstring .. "┬"
 		else
 			newstring = newstring .. "─"
@@ -108,7 +75,7 @@ local function show_messages(messages, level, prestring, num, total, tid, box, s
 		else
 			newstring = prestring .. "  "
 		end
-		num = show_messages(sorted, level + 1, newstring, num + 1, total, tid, box, state)
+		num = show_messages(children, level + 1, newstring, num + 1, total, tid, box, state)
 	end
 	return num
 end
@@ -194,11 +161,7 @@ function Tmb:get_messages(db, search)
 		local messages = nm.thread_get_toplevel_messages(thread)
 		local cmessages = u.collect(messages)
 		local tid = nm.thread_get_id(thread)
-		if config.values.thread_reverse then
-		show_messages_reverse(cmessages, 0, "", 0, total, tid, box, state)
-	else
 		show_messages(cmessages, 0, "", 0, total, tid, box, state)
-	end
 		stop = stop + total
 		local threadinfo = {
 			thread = tid,
