@@ -157,6 +157,8 @@ function Compose:send()
 		nu.change_tag(self.reply.in_reply_to, "+replied")
 	end
 	--- XXX add post-hooks
+	--- maybe move this to hooks?
+	self:set_option("modified", false)
 end
 
 local ffi = require("ffi")
@@ -211,11 +213,16 @@ function Compose:update_attachments()
 	end
 end
 
+function Compose:delete_tmp()
+	-- vim.fn.delete()
+end
+
+-- change message to file
+-- change reply to opts?
 function Compose:create(kind, message, reply)
 	self.num = self.num + 1
 	local template
 	local name
-	-- local ref = util.get_ref()
 	if message then
 		template = make_template(message)
 		name = string.format("galore-reply: %s", tonumber(self.num))
@@ -253,6 +260,12 @@ function Compose:create(kind, message, reply)
 				render.show_message(message, buffer.handle, { reply = true })
 			end
 			buffer.marks = buffer:set_extmark(buffer.ns, line_num, col_num, opts)
+			vim.api.nvim_create_autocmd("BufWritePost", {
+				callback = function ()
+					buffer:save_draft()
+					buffer:delete_tmp()
+				end,
+				buffer = buffer.handle})
 		end,
 	}, Compose)
 end
