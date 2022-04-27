@@ -85,14 +85,14 @@ function M.create_message(buf, reply, attachments, opts)
 
 	for _, v in ipairs(headers) do
 		if buf[v] then
-			for name, email in gu.internet_address_list_iter(runtime.parser_opts, buf[v]) do
+			for name, email in gu.internet_address_list_iter_str(runtime.parser_opts, buf[v]) do
 				gp.message_add_mailbox(message, v, name, email)
 			end
 		end
 	end
 	local list = go.object_get_header_list(ffi.cast("GMimeObject *", message))
 
-	for _, email in gu.internet_address_list_iter(runtime.parser_opts, buf.from) do
+	for _, email in gu.internet_address_list_iter_str(runtime.parser_opts, buf.from) do
 		local id = gu.make_id(email)
 		go.object_set_header(mobj, "Message-ID", id)
 	end
