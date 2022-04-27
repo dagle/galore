@@ -34,13 +34,18 @@ function M.reference_iterator(ref)
 	end
 end
 
-function M.internet_address_list_iter(opt, str)
+function M.internet_address_list_iter_str(opt, str)
 	local list = gc.internet_address_list_parse(opt, str)
 	if list == nil then
 		return function ()
 			return nil
 		end
 	end
+	return M.internet_address_list_iter(list)
+end
+
+-- Doesn't work with groups
+function M.internet_address_list_iter(list)
 	local i = 0
 	return function()
 		if i < gc.internet_address_list_length(list) then
@@ -110,7 +115,7 @@ end
 
 local function number_of_parts(filename)
 	local message = M.parse_message(filename)
-	local part = gp.message_part(message)
+	local part = gp.message_get_mime_part(message)
 	if not gp.is_partial(part) then
 		return nil
 	end
@@ -132,7 +137,7 @@ function M.construct(filenames)
 		if message == nil then
 			return nil
 		end
-		local part = gp.message_part(message)
+		local part = gp.message_get_mime_part(message)
 		if not gp.is_partial(part) then
 			return nil
 		end
@@ -240,7 +245,7 @@ end
 
 function M.preview_addr(addr, minlen)
 	local strbuf = {}
-	for name, mail in M.internet_address_list_iter(runtime.parser_opts, addr) do
+	for name, mail in M.internet_address_list_iter_str(runtime.parser_opts, addr) do
 		-- if the addr doesn't follow the mbox standard, we we nop
 		if not (name and mail) then
 			table.insert(strbuf, addr)
@@ -308,8 +313,8 @@ local function get_list(message)
 end
 
 -- Get the first none-nil value in a list of fields
-local function get_backup(message, list)
-	for _, v in ipairs(list) do
+local function get_to(message, headers)
+	for _, v in ipairs(headers) do
 		local addr = gp.message_get_address(message, v)
 		if addr ~= nil then
 			if gc.internet_address_list_length(addr) > 0 then
@@ -321,10 +326,10 @@ local function get_backup(message, list)
 end
 
 local function append_no_dups(dst, src)
-	for _, semail in M.internet_address_list_iter(runtime.parser_opts, src) do
+	for _, semail in M.internet_address_list_iter(src) do
 		local matched = false
-		for _, demail in M.internet_address_list_iter(runtime.parser_opts, dst) do
-			if semail == demail then
+		for _, demail in M.internet_address_list_iter(dst) do
+			if semail == demail and semail then
 				matched = true
 				break;
 			end
@@ -349,7 +354,7 @@ end
 function M.respone_headers(message, type)
 	local addr = M.get_from(message)
 	local our = gc.internet_address_mailbox_new(config.values.name, addr)
-	local from = get_backup(message, { "reply_to", "sender", "from" })
+	local from = get_to(message, { "reply_to", "sender", "from" })
 	if not type then
 		from = gc.internet_address_list_to_string(from, runtime.format_opts, false)
 		return {
@@ -362,15 +367,12 @@ function M.respone_headers(message, type)
 		gc.internet_address_list_remove(to, our)
 
 		local cc = gp.message_get_address(message, "cc")
-		gc.address_list_remove(cc, our)
+		gc.internet_address_list_remove(cc, our)
 
-		local bcc = gp.message_get_address(message, "bcc")
-		gc.address_list_remove(bcc, our)
 		return {
 			{ "From: ", gc.internet_address_to_string(our, runtime.format_opts, false)},
 			{ "To: ", gc.internet_address_list_to_string(to, runtime.format_opts, false)},
 			{ "Cc: ", gc.internet_address_list_to_string(cc, runtime.format_opts, false)},
-			{ "Bcc: ", gc.internet_address_list_to_string(bcc, runtime.format_opts, false)},
 		}
 	elseif type == "mailinglist" then
 		local list = get_list()
@@ -383,6 +385,35 @@ function M.respone_headers(message, type)
 	end
 	-- remove our from the list of to, cc, and bcc
 	-- add from to the list of to
+end
+
+--- generate a fortward message
+--- make to_str optional?
+function M.forward(message, to_str)
+	local addr = M.get_from(message)
+	local new_subject = "FWD: " .. gp.message_get_subject(message)
+
+	local new = gp.new_message(true)
+	gp.message_add_mailbox(new, "from", config.values.name, addr)
+	for name, email in M.internet_address_list_iter_str(runtime.parser_opts, to_str) do
+		gp.message_add_mailbox(new, "to", name, email)
+	end
+	M.insert_current_date(new)
+	gp.message_set_subject(new, new_subject, nil)
+
+	local date = gp.message_get_date(message)
+	local from = gp.message_get_from(message)
+	local to = gp.message_get_to(message)
+
+	local body = gp.message_get_body(message)
+	local text = gp.text_part_get_text(body)
+	local fwd = "---- Forward Message ----\n"
+	fwd = string.format("%s ---- Original sent the %s from %s to %s ----\n",
+	      fwd, os.date("%x", date), from, to)
+	fwd = fwd .. text
+	local new_plain = gp.text_part_new_with_subtype("plain")
+	gp.text_part_set_text(new_plain, fwd)
+	return new
 end
 
 return M
