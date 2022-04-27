@@ -1422,7 +1422,6 @@ void g_object_unref (gpointer object);
 gpointer            g_object_ref                        (gpointer object);
 
 
-GMimeObject *message_part(GMimeMessage *message);
 // guint multipart_len(GMimeMultipart *mp);
 // GMimeObject *multipart_child(GMimeMultipart *mp, int i);
 ]])

@@ -822,12 +822,6 @@ function M.is_multipart_signed(object)
 	return gmime.gmime_is_multipart_signed(object) ~= 0
 end
 
---- @param message gmime.Message
---- @return gmime.MimeObject
-function M.message_part(message)
-	return gmime.message_part(message)
-end
-
 -- function M.set_text(part, texts)
 -- 	local text = table.concat(texts, "\n")
 -- 	local charset = "utf-8"
