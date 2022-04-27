@@ -98,7 +98,7 @@ function M.collect(it, t, i)
 end
 
 function M.add_prefix(str, prefix)
-	if not str:match("^" .. prefix) then
+	if not vim.startswith(str, prefix) then
 		str = prefix .. " " .. str
 	end
 	return str
