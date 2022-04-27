@@ -9,7 +9,7 @@ config.values = {
 	draftdir = "draft", -- directory is relative to the nm root
 	exclude_tags = nil, -- {String}
 	thread_expand = true,
-	thread_reverse = true,
+	thread_reverse = false,
 	sort = "newest",
 	sent_folder = "Sent", -- String|function(from)
 	sent_tags = "+sent",
@@ -49,9 +49,8 @@ config.values = {
 	decrypt_flags = "keyserver", -- "none"|"keyserver"|"online"
 	sign = false, -- Should we crypto sign the email?
 	encrypt = false, -- Should we encrypt the email by default?
-	autocrypt = false, -- If we encrypt the email, should include autocrypt headers?
-	gpg_id = nil, --- what gpg id to use
-	-- autocrypt = true, -- not used atm
+	gpg_id = nil, --- what gpg id to use, string or {email = string}[]
+	autocrypt = true, -- insert the gpg_id in our emails
 	headers = { -- What headers to show, order is important
 		"From",
 		"To",
@@ -309,6 +308,10 @@ config.values = {
 					local tele = require("galore.telescope")
 					local jobs = require("galore.jobs")
 					local function cb(object)
+						-- local datawrapper = gp.part_get_content(part)
+						-- local stream = gs.data_wrapper_get_stream(datawrapper)
+						-- local ctx = gc.gpg_context_new()
+						-- local num, err = gc.crypto_context_import_keys(ctx, stream)
 						jobs.pipe({"gpg", "--import"}, object)
 					end
 					tele.parts_browser(message_view.message, cb)
