@@ -7,6 +7,8 @@ local Path = require("plenary.path")
 local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
 local pv = require("galore.part_view")
+local gc = require("galore.gmime.crypt")
+local gcu = require("galore.crypt-utils")
 local gp = require("galore.gmime.parts")
 
 local Message = Buffer:new()
@@ -76,10 +78,22 @@ function Message:save_attach()
 	end)
 end
 
+local function with_key(message, func)
+	local time = os.time()
+	local header = gp.message_get_autocrypt_header(message, time)
+	-- local addr = gc.autocrypt_header_get_address(header)
+	local data = gc.autocrypt_header_get_keydata(header)
+	local array = g_bytes_unref_to_array(data)
+	local stream = gs.stream_mem_new_with_byte_array(array)
+	--- import into our local autocrypt gpg keyring
+	gc.crypto_context_import_keys(ctx, stream)
+end
+
 function Message:update(filenames)
 	self:unlock()
 	self:clear()
 	local message = gu.construct(filenames)
+	gcu.add_autocrypt_keys(message)
 	if message then
 		if self.ns then
 			vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)

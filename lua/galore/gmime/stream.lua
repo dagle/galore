@@ -316,9 +316,9 @@ end
 
 -- GMimeStream *g_mime_stream_mem_new_with_byte_array (GByteArray *array);
 --- XXX
--- function M.stream_mem_new_with_byte_array()
--- 	return gmime.g_mime_stream_mem_new_with_byte_array()
--- end
+function M.stream_mem_new_with_byte_array(array)
+	return gmime.g_mime_stream_mem_new_with_byte_array(array)
+end
 
 --- Use a buffer as a stream, example:
 --- local buf = ffi.new("char[?]", len)
@@ -552,6 +552,7 @@ end
 --- @param encoding gmime.ContentEncoding
 --- @return gmime.DataWrapper
 function M.data_wrapper_new_with_stream(stream, encoding)
+	--- XXX add convert
 	return gmime.g_mime_data_wrapper_new_with_stream(stream, encoding)
 end
 
