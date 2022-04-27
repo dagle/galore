@@ -47,6 +47,7 @@ function Buffer:set_parent(parent)
 	self.parent = parent
 end
 
+-- split up this and add a callback handler for when the buffer is deleted
 function Buffer:close(delete)
 	if self.cleanup then
 		self.cleanup(self)
@@ -63,10 +64,13 @@ function Buffer:close(delete)
 			self.parent:focus()
 		end
 	end
-	buffer_ids[self.handle] = nil
 	if delete then
 		vim.api.nvim_buf_delete(self.handle, {})
 	end
+end
+
+local function buffer_delete(bufnr)
+	buffer_ids[bufnr] = nil
 end
 
 function Buffer:get_lines(first, last, strict)
@@ -349,6 +353,12 @@ function Buffer.create(config, class)
 			vim.api.nvim_create_autocmd(event, {callback = cbfunc, buffer = buffer.handle})
 		end
 	end
+	vim.api.nvim_create_autocmd("BufDelete", {
+		callback = function ()
+			buffer_delete(buffer.handle)
+		end,
+		buffer = buffer.handle
+	})
 
 	if not config.modifiable then
 		buffer:set_option("modifiable", false)
