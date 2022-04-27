@@ -245,13 +245,13 @@ end
 --
 -- void g_mime_autocrypt_header_set_keydata (GMimeAutocryptHeader *ah, GBytes *data);
 --- XXX
-function M.autocrypt_header_set_keydata()
-	gmime.g_mime_autocrypt_header_set_keydata()
+function M.autocrypt_header_set_keydata(ah, data)
+	gmime.g_mime_autocrypt_header_set_keydata(ah, data)
 end
 --- XXX
 -- GBytes *g_mime_autocrypt_header_get_keydata (GMimeAutocryptHeader *ah);
-function M.autocrypt_header_get_keydata()
-	gmime.g_mime_autocrypt_header_get_keydata()
+function M.autocrypt_header_get_keydata(ah)
+	return gmime.g_mime_autocrypt_header_get_keydata(ah)
 end
 
 --- @param ah gmime.AutocryptHeader
