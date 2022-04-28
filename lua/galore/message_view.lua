@@ -79,14 +79,8 @@ function Message:save_attach()
 end
 
 local function with_key(message, func)
-	local time = os.time()
-	local header = gp.message_get_autocrypt_header(message, time)
-	-- local addr = gc.autocrypt_header_get_address(header)
-	local data = gc.autocrypt_header_get_keydata(header)
-	local array = g_bytes_unref_to_array(data)
-	local stream = gs.stream_mem_new_with_byte_array(array)
-	--- import into our local autocrypt gpg keyring
-	gc.crypto_context_import_keys(ctx, stream)
+	local header = gp.message_get_autocrypt_header(message, nil)
+	update(ah)
 end
 
 function Message:update(filenames)

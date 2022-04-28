@@ -69,7 +69,6 @@ Ideas:
 
   - [ ] Make a directory for all of files etc and don't polute the data directory.
 
-
   - [ ] Autocrypt headers support
   --- When to add key? When we open an email, when we reply, never?
   -- [ ] If we reply to an email with an autocrypt
@@ -84,6 +83,8 @@ Compose mode:
   - [ ] After a send, we should mark it as written
   -- [ ] Why is the buffer edited, how do we fix this
   --- Create a tmp file? That way, if we don't do anything, we don't need to save etj
+  - [ ] If we reply to an email that is encrypted bet we can't encrypt, we shouldn't 
+    qoute the message.
 
   - System Mailer Setup
   -- [x] On save it should create a draft, make sure that the draft code overwrites
