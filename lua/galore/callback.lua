@@ -35,30 +35,21 @@ function M.yank_message(mv, select)
 	vim.fn.setreg('', mv.line[select])
 end
 
-function M.message_reply(mv)
+function M.message_reply(mv, opts)
+	opts = opts or {}
 	local ref
 	if vim.tbl_contains(mv.line.tags, "draft") then
 		ref = gu.get_ref(mv.message)
 	else
 		ref = gu.make_ref(mv.message)
 	end
-	compose:create("replace", mv.message, ref)
-end
-
---- XXX todo!
-function M.message_reply_all(mv)
-	local ref = gu.make_ref(mv.message)
-	compose:create("replace", mv.message, ref)
+	opts = vim.tbl_extend("keep", opts, ref)
+	compose:create("replace", mv.message, opts)
 end
 
 function M.add_search(browser)
 	nu.add_search(browser.search)
 end
-
---- move this
--- local function update_line(browser, line_info, vline)
--- 	nu.update_line(browser, line_info, vline)
--- end
 
 function M.change_tag(browser, tag)
 	local vline, line_info = browser:select()
