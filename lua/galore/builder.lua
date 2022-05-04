@@ -1,6 +1,5 @@
 local gp = require("galore.gmime.parts")
 local gcu = require("galore.crypt-utils")
-local gf = require("galore.gmime.filter")
 local gs = require("galore.gmime.stream")
 local go = require("galore.gmime.object")
 local ge = require("galore.gmime.crypt")
@@ -63,6 +62,11 @@ local function required_headers(buf)
 	return buf.from and buf.to and buf.subject
 end
 
+function M.textbuilder(text)
+	local body = gp.text_part_new_with_subtype("plain")
+	gp.text_part_set_text(body, table.concat(text, "\n"))
+	return body
+end
 -- create a message from strings
 -- @param buf parsed data from the screen, only visual data
 -- @param reply, message or nil we use to set reference to
@@ -70,7 +74,7 @@ end
 -- @return a gmime message
 -- XXX We want to set the reply_to (and other mailinglist things)
 -- XXX We need error handling, this should could return nil
-function M.create_message(buf, reply, attachments, opts)
+function M.create_message(buf, attachments, opts, builder)
 	opts = opts or {}
 	local current
 	local message = gp.new_message(true)
@@ -85,12 +89,18 @@ function M.create_message(buf, reply, attachments, opts)
 
 	for _, v in ipairs(headers) do
 		if buf[v] then
-			for name, email in gu.internet_address_list_iter_str(runtime.parser_opts, buf[v]) do
-				gp.message_add_mailbox(message, v, name, email)
+			local list = gc.internet_address_list_parse(runtime.parser_opts, buf[v])
+			local address = gp.message_get_address(message, v)
+			if not list then
+				local err = string.format(
+					"Failed to parse %s-address:\n%s", v, buf[v]
+				)
+				vim.notify(err, vim.log.levels.ERROR)
+				return
 			end
+			gc.internet_address_list_append(address, list)
 		end
 	end
-	local list = go.object_get_header_list(ffi.cast("GMimeObject *", message))
 
 	for _, email in gu.internet_address_list_iter_str(runtime.parser_opts, buf.from) do
 		local id = gu.make_id(email)
@@ -102,22 +112,11 @@ function M.create_message(buf, reply, attachments, opts)
 	--- this shouldn't be optional, set it to no-topic
 	gp.message_set_subject(message, buf.subject, nil)
 
-	--- XXX USE header_list instead and insert these? That way we don't need to do it by hand
-	--- and we don't need to format etc
-	if reply then
-		go.object_set_header(mobj, "References", gc.references_format(reply.reference))
-		go.object_set_header(mobj, "In-Reply-To", gc.references_format(reply.in_reply_to))
-	end
-
 	for k, v in pairs(opts) do
 		go.object_set_header(mobj, k, v)
 	end
 
-
-	local body = gp.text_part_new_with_subtype("plain")
-	--- XXX bad, we wan't to roll our own or maybe we can set format_opts
-	gp.text_part_set_text(body, table.concat(buf.body, "\n"))
-	current = body
+	current = builder(buf.body)
 
 	if attachments ~= nil and not vim.tbl_isempty(attachments) then
 		local multipart = gp.multipart_new_with_subtype("mixed")
@@ -130,8 +129,9 @@ function M.create_message(buf, reply, attachments, opts)
 	end
 
 	if config.values.encrypt or config.values.sign then
-		local ctx = ge.new_gpg_contex()
+		local ctx = ge.gpg_context_new()
 		local secure = M.secure(ctx, current, { buf.To })
+		--- if we fail here,
 		if secure then
 			current = secure
 		end
