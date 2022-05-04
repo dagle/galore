@@ -7,8 +7,8 @@ local convert = require("galore.gmime.convert")
 local gs = require("galore.gmime.stream")
 local safe = require("galore.gmime.funcs")
 
-local save_dir = vim.fn.stdpath('data')
-local save_file = save_dir .. '/nm_saved'
+local runtime_dir = vim.fn.stdpath('data') .. '/galore'
+local save_file = runtime_dir .. '/nm_saved.txt'
 
 local runtime = {}
 
@@ -61,7 +61,6 @@ end
 function runtime.with_db(func)
 	local db = nm.db_open_with_config(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
 	func(db)
-	-- nm.db_close(db)
 end
 
 function runtime.with_db_writer(func)
@@ -114,7 +113,17 @@ function runtime.get_password(ctx, uid, prompt, reprompt, response_stream)
 	return false
 end
 
+function runtime.runtime_dir()
+	return runtime_dir
+end
+
 function runtime.init()
+	if vim.fn.isdirectory(runtime_dir) == 0 then
+		if vim.fn.glob(runtime_dir) ~= "" then
+			error "runtime_dir exist but isn't a directory"
+		end
+		vim.fn.mkdir(runtime_dir, "p", "0o700")
+	end
 	notmuch_init(config.values.db_path, config.values.nm_config, config.values.nm_profile)
 	make_gmime_parser_options()
 	make_gmime_format_options()
