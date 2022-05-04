@@ -205,8 +205,8 @@ function M.get_ref(message)
 		reply = gc.references_parse(runtime.parser_opts, ref_str)
 	end
 	return {
-		reference = ref,
-		in_reply_to = reply,
+		References = ref,
+		["In-Reply-To"] = reply,
 	}
 end
 
@@ -226,8 +226,8 @@ function M.make_ref(message)
 		gc.references_append(ref, reply_str)
 	end
 	return {
-		reference = ref,
-		in_reply_to = reply,
+		References = ref,
+		["In-Reply-To"] = reply,
 	}
 end
 
@@ -375,7 +375,7 @@ function M.respone_headers(message, type)
 			{ "Cc: ", gc.internet_address_list_to_string(cc, runtime.format_opts, false)},
 		}
 	elseif type == "mailinglist" then
-		local list = get_list()
+		local list = get_list(message)
 		-- maybe return to sender?
 		-- maybe reply_all? (list + to, cc: cc, bcc: bcc)
 		return {
@@ -387,6 +387,33 @@ function M.respone_headers(message, type)
 	-- add from to the list of to
 end
 
+local function unbracket()
+end
+
+function M.smart_response(message)
+	local list = get_list(message)
+	if list ~= nil then
+		M.respone_headers(message, "mailinglist")
+	end
+end
+
+function M.Unsubscribe(message)
+	local unsub = go.object_get_header(ffi.cast("GMimeObject *", message), "List-Post")
+	local resp = gp.new_message(true)
+
+	gp.message_add_mailbox(resp, "to", "", unsub)
+	-- send(message)
+end
+
+function M.Subscribe()
+end
+
+function M.ListHelp()
+end
+
+function M.OpenArchive()
+end
+
 --- generate a fortward message
 --- make to_str optional?
 function M.forward(message, to_str)
@@ -395,15 +422,23 @@ function M.forward(message, to_str)
 
 	local new = gp.new_message(true)
 	gp.message_add_mailbox(new, "from", config.values.name, addr)
-	for name, email in M.internet_address_list_iter_str(runtime.parser_opts, to_str) do
-		gp.message_add_mailbox(new, "to", name, email)
+
+	local list = gc.internet_address_list_parse(runtime.parser_opts, to_str)
+	local address = gp.message_get_address(message, "to")
+	if not list then
+		vim.notify("Couldn't parse to address", vim.log.levels.ERROR)
+		return
 	end
+	gc.internet_address_list_append(address, list)
+
 	M.insert_current_date(new)
 	gp.message_set_subject(new, new_subject, nil)
 
 	local date = gp.message_get_date(message)
-	local from = gp.message_get_from(message)
-	local to = gp.message_get_to(message)
+	local from = gc.internet_address_list_to_string(
+		gp.message_get_from(message), runtime.format_opts, false)
+	local to = gc.internet_address_list_to_string(
+		gp.message_get_to(message), runtime.format_opts, false)
 
 	local body = gp.message_get_body(message)
 	local text = gp.text_part_get_text(body)
