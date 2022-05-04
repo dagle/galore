@@ -23,12 +23,12 @@ end
 
 function Message:raw_mode(kind)
 	Buffer.create({
-		name = self.line.filename,
+		name = self.line.filenames[1],
 		ft = "mail",
 		kind = kind or "floating",
 		cursor = "top",
 		init = function(buffer)
-			vim.cmd(":e " .. self.line.filename)
+			vim.cmd(":e " .. self.line.filenames[1])
 		end,
 	})
 end
@@ -45,6 +45,19 @@ function Message:_save_attachment(filename, save_path)
 	end
 	error("No attachment with that name")
 end
+
+-- Maybe do something like this
+-- The idea is we can 
+-- function Message:reindex()
+-- 	if #self.filenames ~= 1 then
+-- 		vim.notify("We can only reindex non-split messages", vim.log.levels.WARN)
+-- 	end
+-- 	runtime.with_db(function (db)
+-- 		local message = nm.db_find_message(db, mid)
+-- 		--- Can we reindex without changing the file?
+-- 		---
+-- 	end)
+-- end
 
 function Message:view_attach()
 	local files = u.collect_keys(self.attachments)
@@ -79,8 +92,16 @@ function Message:save_attach()
 end
 
 local function with_key(message, func)
-	local header = gp.message_get_autocrypt_header(message, nil)
-	update(ah)
+	local ah = gp.message_get_autocrypt_header(message, nil)
+	--- we don't add spam emails or "unsafe" messages
+	if is_spam(message) then
+		return
+	end
+	if ah then
+		update(ah)
+	else
+		update_seen(addr, date)
+	end
 end
 
 function Message:update(filenames)
