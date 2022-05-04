@@ -182,7 +182,7 @@ function M.message_get_bcc(message)
 end
 
 --- @param message gmime.Message
---- @param type gmime.AddressType
+--- @param type string
 --- @param name string
 --- @param addr string
 function M.message_add_mailbox(message, type, name, addr)
@@ -191,7 +191,7 @@ function M.message_add_mailbox(message, type, name, addr)
 end
 
 --- @param message gmime.Message
---- @param type gmime.AddressType
+--- @param type string
 --- @return gmime.InternetAddressList
 function M.message_get_address(message, type)
 	local ctype = convert.to_address_type(type)
@@ -254,9 +254,9 @@ function M.message_get_mime_part(message)
 end
 
 --- @param message gmime.Message
---- @return gmime.MimeObject
+--- @param part gmime.MimeObject
 function M.message_set_mime_part(message, part)
-	return gmime.g_mime_message_set_mime_part(message, part)
+	gmime.g_mime_message_set_mime_part(message, part)
 end
 
 --- @param message gmime.Message
