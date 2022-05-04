@@ -20,6 +20,7 @@ config.values = {
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
+	alias = nil, -- a list of {alias, expand}. expand can be a value, list etc. It's then fed into luasnp (support for others later).
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
 	show_html = function(text, unsafe) --- how to render a html
 		-- unsafe means that the email
@@ -215,7 +216,7 @@ config.values = {
 						default_text=browser.search,
 						attach_mappings = function (buf, map)
 							local cb = function (bufnr, type)
-								tele.open_browser(tmb, bufnr, type, browser)
+								tele.create_search(tmb, bufnr, type, browser)
 							end
 							action_set.select:replace(cb)
 							return true
@@ -332,15 +333,20 @@ config.values = {
 				end,
 				["gD"] = function (message_view)
 					local telescope = require("galore.telescope")
-					telescope.goto_tree(message_view.message)
+					local gp = require("galore.gmime.parts")
+					local message_id = gp.message_get_message_id(message_view.message)
+					telescope.goto_tree(message_id)
 				end,
 				["gr"] = function (message_view)
 					local telescope = require("galore.telescope")
-					telescope.goto_reference(message_view.message)
+					local refs = telescope.get_header(message_view.message, "References")
+					telescope.goto_reference(refs)
 				end,
 				["gR"] = function (message_view)
 					local telescope = require("galore.telescope")
-					telescope.goto_references(message_view.message)
+					local gp = require("galore.gmime.parts")
+					local message_id = gp.message_get_message_id(message_view.message)
+					telescope.goto_references(message_id)
 				end,
 			},
 		},
@@ -367,6 +373,17 @@ config.values = {
 				end,
 				["<leader>mh"] = function (compose)
 					compose:preview()
+				end,
+				["gd"] = function (compose)
+					-- local telescope = require("galore.telescope")
+					-- telescope.goto_parent(message_view)
+				end,
+				["gr"] = function (compose)
+					local telescope = require("galore.telescope")
+					local refs = compose.opts.References
+					if refs then
+						telescope.goto_reference(refs)
+					end
 				end,
 			},
 		},
