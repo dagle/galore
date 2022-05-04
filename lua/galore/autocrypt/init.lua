@@ -1,29 +1,20 @@
+--- Because of the limitations of gpg, we are "forced" to do this.
+
 local ok, sqlite = pcall(require, "sqlite.db")
 if not ok then
 	return
 end
 
-
 local gc = require("galore.gmime.crypt")
+local gs = require("galore.gmime.stream")
+local runtime = require("galore.runtime")
 
 local tbl = require "sqlite.tbl"
 
 local M = {}
-local uri = vim.fn.stdpath('data') .. "/autocrypt.db"
-
--- defaults?
-local peer = tbl("peer", {
-	addr = {type = "text", required = true, primary = true},
-	last_seen = "date",
-	timestamp = "date",
-	keyid = "text",
-	keydata = "text",
-	prefer_encrypt = {"number", default = 0},
-	-- expires = expires,
-	-- gossip_timestamp = "date",
-	-- gossip_keyid = "text",
-	-- gossip_keydata = "text";
-})
+local uri = runtime.runtime_dir() .. "/autocrypt"
+local db_path = uri .. "/db.db"
+local keyring_path = uri
 
 local account = tbl("account", {
 	addr = {type = "text", required = true, primary = true},
@@ -31,7 +22,25 @@ local account = tbl("account", {
 	secret_key = "text",
 	public_key = "text",
 	prefer = "number"
-	-- enabled
+})
+
+-- defaults?
+-- maybe keydata should be blob?
+local peer = tbl("peer", {
+	addr = {type = "text", required = true, primary = true},
+	--- from account?
+	--- user agent?
+	last_seen = "date",
+	timestamp = "date",
+	keydata = "blob",
+	prefer = {"number", default = 0},
+})
+
+local gossip = tbl("gossip", {
+	addr = "text",
+	from = "text",
+	timestamp = "date",
+	keydata = "blob",
 })
 
 local peer_history = tbl("peer_history", {
@@ -47,34 +56,35 @@ local gossip_history = tbl("gossip_history", {
 })
 
 local db = sqlite {
-  uri = uri,
+  uri = db_path,
   peer = peer,
   account = account,
+  gossip = gossip,
 }
 
---- add history
+local function create_ctx()
+	return ffi.gc(gmime.create_ctx(keyring_path), gmime.gpgme_release)
+end
+
+function M.with_ctx(func)
+	local ctx = create_ctx()
+	func(ctx)
+end
+
+--- add history?
 function M.update(ah)
 	local addr = gc.autocrypt_header_get_address_as_string(ah)
-	-- local seen = os.time()
 	local timestamp = gc.autocrypt_header_get_effective_date(ah)
-	--- get keyid and keydata?
 	local key = gc.autocrypt_header_get_keydata(ah)
-	--- get id from key somehow
-	local keyid
-	-- local expires
-	--- get expire date
 	local prefer = gc.autocrypt_header_get_prefer_encrypt(ah)
 
 	local row = peer:where { addr = addr }
 	if not row then
 		local new_row = {
 			addr = addr,
-			last_seen = timestamp,
 			timestamp = timestamp,
-			keyid = keyid,
 			keydata = key,
-			-- expires = expires,
-			prefer_encrypt = prefer,
+			prefer = prefer,
 			enabled = 1,
 		}
 		peer:insert(new_row)
@@ -83,84 +93,81 @@ function M.update(ah)
 		--- maybe compare timestamp and not sent?
 		if row.timestamp >= timestamp then
 			return
-		else
-			peer:update {
-				where = { addr = addr },
-				set = {
-					last_seen = math.max(timestamp, row.last_seen),
-					timestamp = timestamp,
-					keyid = keyid,
-					keydata = key,
-					prefer_encrypt = prefer,
-				}
+		end
+		peer:update {
+			where = { addr = addr },
+			set = {
+				last_seen = math.max(timestamp, row.last_seen),
+				timestamp = timestamp,
+				keydata = key,
+				prefer_encrypt = prefer,
 			}
-			if row.key ~= key then
-				--- update the keyring
-			end
+		}
+		if key ~= row.key then
+			--- XXX inplement string_streamer
+			local stream = gs.string_streamer(key)
+			M.with_ctx(function (ctx)
+				--- XXX implement this
+				gc.gpg_import_keys(ctx, stream)
+			end)
 		end
 	end
 end
 
 -- if the message doesn't contain a autocrypt header, we just update the seen
-function M.update_seen(addr, sent)
+function M.update_seen(addr, date)
 	local row = peer:where { addr = addr }
 	if not row then
 		return
 	end
-	if row.timestamp >= sent then
+	if row.timestamp >= date then
 		return
-	elseif row.last_seen < sent then
+	elseif row.last_seen < date then
 		peer:update {
 			where = {addr = addr },
 			set = {
-				last_seen = math.max(row.last_seen, sent),
+				last_seen = math.max(row.last_seen, date),
 			}
 		}
 	end
 end
 
-----
-function M.update_gossip(ah,sent)
-	local addr = gc.autocrypt_header_get_address_as_string(ah)
-	local seen = os.time()
-	local timestamp = gc.autocrypt_header_get_effective_date(ah)
-	--- get keyid and keydata?
-	local key = gc.autocrypt_header_get_keydata(ah)
-	--- get id from key somehow
-	local keyid
-	local expires
-	--- get expire date
-	local prefer = gc.autocrypt_header_get_prefer_encrypt(ah)
+---
+function M.update_gossip(from, ahlist)
+	for ah in gc.autocrypt_header_list_iter(ahlist) do
+		local addr = gc.autocrypt_header_get_address_as_string(ah)
+		local timestamp = gc.autocrypt_header_get_effective_date(ah)
+		local key = gc.autocrypt_header_get_keydata(ah)
 
-	local row = autocrypt:where { addr = addr }
-	if not row then
-		local new_row = {
-			addr = addr,
-			last_seen = seen,
-			timestamp = timestamp,
-			keyid = keyid,
-			keydata = key,
-			expires = expires,
-			prefer_encrypt = prefer,
-			enabled = 1,
-		}
-		autocrypt:insert(new_row)
-		--- insert the key
-	else
-		--- XXX what time should we compare to? timestamp?
-		if row.timestamp >= sent then
-			return
-		end
-		if row.last_seen < sent then
-			autocrypt:update {
+		local row = gossip:where { addr = addr }
+		if not row then
+			local new_row = {
+				addr = addr,
+				from = from,
+				timestamp = timestamp,
+				keydata = key,
+			}
+			gossip:insert(new_row)
+		else
+			if row.timestamp >= timestamp then
+				return
+			end
+			gossip:update {
 				where = { addr = addr },
 				set = {
-					last_seen = seen,
+					addr = addr,
+					from = from,
 					timestamp = timestamp,
+					keydata = key,
 				}
 			}
-			if row.key ~= key then
-				--- update the key
+			if key ~= row.key then
+				--- XXX inplement string_streamer
+				local stream = gs.string_streamer(key)
+				M.with_ctx(function (ctx)
+					--- XXX implement this
+					gc.gpg_import_keys(ctx, stream)
+				end)
 			end
 		end
 	end
@@ -169,13 +176,36 @@ end
 local function make_keys(addr, import)
 	--- if import is set, we try to import a key from gpg
 	--- if not, we just generate a new pair of keys
+	local key
+	if import then
+		key = getkey(addr)
+		if not key then
+			vim.notify("tried to import key from gpg but couldn't find one", vim.log.levels.ERROR)
+			return
+		end
+		-- check that the key is "ed25519", if not, we won't allow it
+	else
+		local ctx = create_ctx()
+		local algo = "ed25519"
+		local expire
+		key = createkey(ctx, addr, algo, 0, expire, nil, 0)
+	end
+	account:insert({
+		addr = addr,
+		enabled = 1,
+		key = key,
+		prefer = 1,
+	})
+	return key
 end
 
-function M.make_account()
+function M.make_account(import)
 	local addr
-	vim.input({prompt="Email address: "}, on_confirm: any)
-	local private, public = make_keys()
-	M.insert_account(addr, true, public, private, true)
+	vim.ui.input({prompt="Email address: "}, function (input)
+		if input then
+			make_keys(addr, import)
+		end
+	end)
 end
 
 --- XXX move
@@ -199,12 +229,44 @@ function M.insert_account(addr, enabled, public_key, private_key, prefer)
 end
 
 function M.update_account(addr, fields)
+	account:update {
+		where = { addr = addr},
+		set = fields
+	}
 end
 
-function M.export_private_key(addr)
+function M.multipart_decrypt(ctx, part, flags, fun, session_key)
+	local err = ffi.new("GError*[1]")
+	local res = ffi.new("GMimeDecryptResult*[1]")
+	local eflags = convert.to_decrytion_flag(flags)
+	local obj = gmime.g_mime_autocrypt_decrypt(ctx, part, eflags, session_key, fun, res, err)
+	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
 end
 
-function M.export_public_key(addr)
+function M.multipart_encryt(ctx)
+	local err = ffi.new("GError*[1]")
+	local res = ffi.new("GMimeDecryptResult*[1]")
+	local eflags = convert.to_decrytion_flag(flags)
+	local obj = gmime.g_mime_autocrypt_crypt(part, eflags, session_key, fun, res, err)
+	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
+end
+
+--- Export all accounts
+--- Export all keys
+--- Export all gossip
+--- In an email
+--- @return string, Gmime.message
+function M.setup_create()
+end
+
+--- Import all accounts
+--- Import all keys
+--- Import all gossip
+--- In an email
+function M.setup_import(message)
+end
+
+local function expired(key)
 end
 
 function M.update_key(addr, force)
@@ -229,8 +291,18 @@ function M.delete_account(addr)
 end
 
 function M.status()
+	local accounts = account:get()
+	local peers = peer:get()
+	--- improve this, this should be as useful as lspinfo
 	--- show accounts names, enabled, public(short), prefer for all keys.
-	--- show the number of keys
+	local str = string.format("You have %d of accounts with %d amount of peers", #accounts, #peers)
+	vim.notify(str)
+end
+
+function M.init()
+	vim.fn.mkdir(uri, nil, 0700)
+	-- create the db and the keyring if the don't exist
+	-- init the ctx
 end
 
 return M
