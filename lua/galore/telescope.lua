@@ -265,10 +265,18 @@ local function make_tag(message)
 	return {{tagname=subject, from=from}}
 end
 
-function Telescope.goto_tree(message, opts)
+function Telescope.get_header(message, header)
+	local refs = go.object_get_header(ffi.cast("GMimeObject *", message), header)
+	if refs == nil then
+		vim.notify("No " .. header)
+		return
+	end
+	return refs
+end
+
+function Telescope.goto_tree(message_id, opts)
 	opts = opts or {}
-	local realsearch = gp.message_get_message_id(message)
-	opts.presearch = string.format("thread:{mid:%s}", realsearch)
+	opts.presearch = string.format("thread:{mid:%s}", message_id)
 	opts.prompt_title = "Load Message Tree"
 	opts.results_title = "Message"
 	opts.preview_title = "Message Preview"
@@ -276,13 +284,8 @@ function Telescope.goto_tree(message, opts)
 end
 
 --- go to all emails before this one
-function Telescope.goto_reference(message, opts)
+function Telescope.goto_reference(refs, opts)
 	opts = opts or {}
-	local refs = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
-	if refs == nil then
-		vim.notify("No reference")
-		return
-	end
 	local search = opts.search or ""
 	local buf = {}
 	for ref in gc.reference_iter_str(refs) do
@@ -296,10 +299,9 @@ function Telescope.goto_reference(message, opts)
 end
 
 --- goto all emails after this one
-function Telescope.goto_references(message, opts)
+function Telescope.goto_references(message_id, opts)
 	opts = opts or {}
-	local realsearch = gp.message_get_message_id(message)
-	opts.search_group = {"message-after", realsearch}
+	opts.search_group = {"message-after", message_id}
 	opts.prompt_title = "Load References"
 	opts.results_title = "Message"
 	opts.preview_title = "Message Preview"
@@ -307,6 +309,7 @@ function Telescope.goto_references(message, opts)
 end
 
 --- Move this
+--- XXX fix this
 function Telescope.goto_parent(mv)
 	local nu = require("galore.notmuch-util")
 	local ref = go.object_get_header(ffi.cast("GMimeObject *", mv.message), "In-Reply-To")
