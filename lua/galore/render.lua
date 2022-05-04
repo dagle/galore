@@ -149,7 +149,7 @@ function M.show_message(message, buf, opts)
 	end
 
 	local box = {}
-	gp.message_foreach(message, find_encrypted, box)
+	-- gp.message_foreach(message, find_encrypted, box)
 	box.attachments = {}
 	show_message_helper(message, buf, opts, box)
 	return box.attachments
@@ -172,16 +172,10 @@ function M.show_part(object, buf, opts, state)
 		local mp = ffi.cast("GMimeMessagePart *", object)
 		local message = gp.message_part_get_message(mp)
 		show_message_helper(message, buf, opts, state)
-		-- elseif gp.is_partial(object) then
-		-- local mp = ffi.cast("GMimeMessagePartial *", object)
-		-- local full = gp.partial_collect(object)
-		-- do we want to show that it's a collected message?
-		-- show_message_helper(full, buf, opts, state)
 	elseif gp.is_part(object) then
 		local part = ffi.cast("GMimePart *", object)
 		if gp.part_is_attachment(part) then
 			local filename = gp.part_get_filename(part)
-			--- XXX this should be in config
 			state.attachments[filename] = part
 		else
 			local type = gu.part_mime_type(object)
