@@ -67,30 +67,29 @@ Ideas:
   -- [x] How easy is it to build on an old search, can we help?
   --- Toy around with ideas to do this in a good way
 
-  - [ ] Make a directory for all of files etc and don't polute the data directory.
+  - [x] Make a directory for all of files etc and don't polute the data directory.
 
+--- almost done, take a break from this ----
   - [ ] Autocrypt headers support
   --- When to add key? When we open an email, when we reply, never?
   -- [ ] If we reply to an email with an autocrypt
   --- Add to keyring for the future?
   --- Encrypt the response
   -- [ ] Add autocrypt header to our messages
+  -- [ ] History so we can uncrypt old messages?
 
 --------
 Compose mode:
   https://www.gnu.org/software/emacs/manual/html_mono/message.html
   - [ ] Missing headers in sending?
-  - [ ] After a send, we should mark it as written
-  -- [ ] Why is the buffer edited, how do we fix this
-  --- Create a tmp file? That way, if we don't do anything, we don't need to save etj
-  - [ ] If we reply to an email that is encrypted bet we can't encrypt, we shouldn't 
-    qoute the message.
+  -- [x] Why is the buffer edited, how do we fix this
 
-  - System Mailer Setup
-  -- [x] On save it should create a draft, make sure that the draft code overwrites
-	but only if we are editing a new draft, creating the exact same draft twice shouldn't
-	delete it
-  -- [ ] Use tmp files etc, that way save works better
+  -- Create a tmp file? That way, if we don't do anything, we don't need to save etc
+  - [x] After a send, we should mark it as written
+  - [ ] Have a way to indicate that we are sending an encrypted email?
+  - [ ] Don't double decrypt
+  - [ ] Don't qoute an decrypt that we can't encrypt
+
   -- [ ] When we create a compose, we don't take the original message 
 	but we generate a new one from the buffer, apply hooks on that, generate a file
 	and then send that to compose? That way we get the power of vim and gmime?
@@ -115,8 +114,6 @@ Compose mode:
   - [ ] FIXME and XXX
   - [ ] Why does tab before enter in save make searches fail?
   - [ ] Fix Subject names, can we convert these to unicode, we still need to sub newline.
-  - [ ] Do we unref messages etc?
-  - [ ] Can we make it so that we don't have to decrypt the message twice, should we really need to decrypt a message after we press reply?
 
   - [ ] Telescope
   -- [ ] Make it less clunky to use/costumize 
@@ -145,6 +142,12 @@ Compose mode:
   - [ ] Add tests to the project that actually work
   - [ ] Benchmark, dunno if galore is that slow but we need to benchmark
 
+  - [ ] Being able to reindex message (esp for decrypted messages)
+  -- How should this be done? Do we need to edit the file? 
+  -- If we need to decrypt this forever, we can just let notmuch do this?
+
+  -- Mailinglist functions
+  -- ListArchive, ListHelp, ListId, ListOwner, ListPost, ListSubscribe, ListUnsubscribe,
 
   - [ ] Slowdowns:
   -- [ ] Render the buffers async?
@@ -154,28 +157,45 @@ Compose mode:
   -- [x] Verify async
 
 * 0.0.3 
+  - Out of scope:
+	  - [ ] Managed windows
+	  - [ ] Rewrite notmuch-rs, the state of the lib is meh, maybe
+
   - [ ] Don't assume utf8 but convert from and to the charset in vim?
-  - [ ] Managed windows
+
   - [ ] Doing GaloreNew should be able to update UI?
-  - [ ] Rewrite notmuch-rs, the state of the lib is meh
+
   - [ ] Decouple notmuch.lua and gmime.lua to their own projects
+
   - [ ] Make different tiers, so it's easier to lazy load more of the code etc
   - [ ] Different kind of builder modes
+	- [ ] A way to format markdown, neorg etc and get html
+
   - [ ] Fcc outside of notmuch, not in 0.1
   -- [ ] Make fcc automatically detect if it should insert or not, abs path vs relative
-  - [ ] A way to format markdown, neorg etc and get html
+
   - [ ] Add limit and offset to searches.
-  - [ ] Gmime iterator stateless
+  - [ ] Make Gmime iterator stateless
+
   - [ ] Add support other encryption methoods
-  - [ ] Add support for sq to gmime?
+	- [ ] Add support for sq to gmime?
+
   - [ ] Move tmb to folds
   - [ ] Make the buffer class into buffer variable
 
+  - [ ] Modular design: 
+  -- [ ] cmp
+  -- [ ] autocrypt
+  -- [ ] telescope
+  -- [ ] ...
+
   - [ ] Non-standard headers: ‘Mail-Reply-To’, ‘Mail-Followup-To’
-  - [ ] Multiple builders
   - [ ] Template system
   -- [ ] Responds to mailing list
   -- [ ] Forwarding a message and add the passed tag the message
+
   -- Easy to use
   -- Easy to write rules
   -- Reply, reply-all, compose to sender, compose, forward, unsubsribe
+
+  - [ ] Is it worth doing your own gpg functions instead of adding the keys into a autocrypt keyring?
