@@ -8,10 +8,10 @@ local config = require("galore.config")
 local builder = require("galore.builder")
 local render = require("galore.render")
 local gp = require("galore.gmime.parts")
+local gc = require("galore.gmime.content")
 local nu = require("galore.notmuch-util")
 
 local Compose = Buffer:new()
-Compose.num = 0
 
 -- This shouldn't control that the file exists
 -- Because it might exist later on during the process of sending email
@@ -34,20 +34,18 @@ local function nop(value)
 	return value
 end
 
-local valid_options = {
+local headers = {
 	["Return-Path"] = nop,
 	["Reply-To"] = nop,
-	-- Maybe add these
-	-- ["References"] = gc.references_format,
-	-- ["In-Reply-To"] = gc.references_format,
+	["References"] = gc.references_format,
+	["In-Reply-To"] = gc.references_format,
 }
 
-
 function Compose:set_compose_option(key, value)
-	if valid_options[key] then
-		local formated = valid_options[key](value)
+	if headers[key] then
+		local formated = headers[key](value)
 		if formated then
-			self.options[key] = formated
+			self.opts[key] = formated
 			return
 		end
 		vim.notify("Bad value for option", vim.log.levels.ERROR)
@@ -56,22 +54,18 @@ function Compose:set_compose_option(key, value)
 	vim.notify("Not a valid compose option", vim.log.levels.ERROR)
 end
 
-local function make_default_options(self, from)
-	--- XXX get the email from the IA in from
-	if not self.options["Return-Path"] then
-		self.set_compose_option("Return-Path", from)
-	end
-	if not self.options["Reply-To"] then
-		self.set_compose_option("Reply-To", from)
+local function make_options(self, opts)
+	for key, value in pairs(opts) do
+		self:set_compose_option(key, value)
 	end
 end
 
 function Compose:set_option_menu()
-	local list = u.collect_keys(valid_options)
+	local list = u.collect_keys(headers)
 	vim.ui.select(list,{
 		prompt = 'Value to set',
 		format_item = function (item)
-			return string.format("%s = %s", item, self.options[item] or "")
+			return string.format("%s = %s", item, self.opts[item] or "")
 		end,
 	},
 	function (item, _)
@@ -87,16 +81,16 @@ function Compose:set_option_menu()
 end
 
 function Compose:unset_option()
-	local list = u.collect_keys(self.options)
+	local list = u.collect_keys(self.opts)
 	vim.ui.select(list,{
 		prompt = 'Option to unset',
 		format_item = function (item)
-			return string.format("%s = %s", item, self.options[item])
+			return string.format("%s = %s", item, self.opts[item])
 		end,
 	},
 	function (item, _)
 		if item then
-			self.options[item] = nil
+			self.opts[item] = nil
 		end
 	end)
 end
@@ -146,7 +140,7 @@ function Compose:send()
 	local buf = self:parse_buffer()
 	-- dunno about this
 	-- make_default_options(self, buf.from)
-	local message = builder.create_message(buf, self.reply, self.attachments, self.options)
+	local message = builder.create_message(buf, self.reply, self.attachments, self.opts)
 	--- XXX add pre-hooks
 	job.send_mail(message)
 	-- we should try to figure out the sent folder from the message
@@ -169,7 +163,7 @@ local runtime = require("galore.runtime")
 function Compose:preview(kind)
 	local buf = self:parse_buffer()
 	-- make_default_options(self, buf.from)
-	local message = builder.create_message(buf, self.reply, self.attachments, self.options)
+	local message = builder.create_message(buf, self.attachments, self.opts, builder.textbuilder)
 	local object = ffi.cast("GMimeObject *", message)
 	local mem = gs.stream_mem_new()
 	go.object_write_to_stream(object, runtime.format_opts, mem)
@@ -189,7 +183,7 @@ end
 
 function Compose:save_draft()
 	local buf = self:parse_buffer()
-	local message = builder.create_message(buf, self.reply, self.attachments)
+	local message = builder.create_message(buf, self.attachments, self.opts, builder.textbuilder)
 	if ret ~= nil then
 		print("Failed to parse draft")
 		return ret
@@ -198,11 +192,11 @@ function Compose:save_draft()
 end
 
 local function make_template(message, reply_all)
-	local headers = gu.respone_headers(message, reply_all)
+	local response = gu.respone_headers(message, reply_all)
 	local sub = gp.message_get_subject(message)
 	sub = "Subject: " .. u.add_prefix(sub, "Re:")
-	table.insert(headers, sub)
-	return headers
+	table.insert(response, sub)
+	return response
 end
 
 local mark_name = "email-compose"
@@ -218,20 +212,16 @@ function Compose:delete_tmp()
 end
 
 -- change message to file
--- change reply to opts?
-function Compose:create(kind, message, reply)
-	self.num = self.num + 1
+function Compose:create(kind, message, opts)
 	local template
-	local name
 	if message then
-		template = make_template(message)
-		name = string.format("galore-reply: %s", tonumber(self.num))
+		template = make_template(message, opts.response_mode)
 	else
 		template = u.default_template()
-		name = string.format("galore-compose: %s", tonumber(self.num))
 	end
+	-- vim.fn.writefile()
 	Buffer.create({
-		name = name,
+		name = vim.fn.tempname(),
 		ft = "mail",
 		kind = kind,
 		cursor = "top",
@@ -240,16 +230,16 @@ function Compose:create(kind, message, reply)
 		mappings = config.values.key_bindings.compose,
 		init = function(buffer)
 			buffer.message = message
-			buffer.reply = reply
 			buffer.attachments = {}
-			buffer.options = {}
+			buffer.opts = {}
+			make_options(buffer, opts)
 			-- this is a bit meh
 			buffer.ns = vim.api.nvim_create_namespace("email-compose")
 
 			local line_num = #template
 			local col_num = 0
 
-			local opts = {
+			local virt_lines = {
 				virt_lines = { { { "Email body", "Comment" } } },
 			}
 			buffer:clear()
@@ -259,13 +249,14 @@ function Compose:create(kind, message, reply)
 			if message then
 				render.show_message(message, buffer.handle, { reply = true })
 			end
-			buffer.marks = buffer:set_extmark(buffer.ns, line_num, col_num, opts)
+			buffer.marks = buffer:set_extmark(buffer.ns, line_num, col_num, virt_lines)
 			vim.api.nvim_create_autocmd("BufWritePost", {
 				callback = function ()
 					buffer:save_draft()
 					buffer:delete_tmp()
 				end,
 				buffer = buffer.handle})
+			buffer:set_option("modified", false)
 		end,
 	}, Compose)
 end
