@@ -1,4 +1,5 @@
 local ok, cmp = pcall(require, "cmp")
+local config = require("galore.config")
 if not ok then
 	print("Error can't load cmp needed for address book")
 	return
@@ -52,7 +53,7 @@ end
 function source:complete(params, callback)
 	local bufnr = vim.api.nvim_get_current_buf()
 
-	if not u.completion_header(params.context.cursor_before_line) then
+	if not config.values.always_complete and not u.completion_header(params.context.cursor_before_line) then
 		callback(nil)
 		return
 	end

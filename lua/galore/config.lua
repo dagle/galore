@@ -20,7 +20,9 @@ config.values = {
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
+	always_complete = false, -- always complete addresses, even if not in address header
 	alias = nil, -- a list of {alias, expand}. expand can be a value, list etc. It's then fed into luasnp (support for others later).
+	-- alias = {{"work", "apa@bepa.com"}, {"kalle", {"depa@repa", "andro@dromeda.com"}}}
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
 	show_html = function(text, unsafe) --- how to render a html
 		-- unsafe means that the email
