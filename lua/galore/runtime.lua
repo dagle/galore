@@ -119,7 +119,7 @@ end
 
 function runtime.init()
 	if vim.fn.isdirectory(runtime_dir) == 0 then
-		if vim.fn.glob(runtime_dir) ~= "" then
+		if vim.fn.empty(vim.fn.glob(runtime_dir)) == 1 then
 			error "runtime_dir exist but isn't a directory"
 		end
 		vim.fn.mkdir(runtime_dir, "p", "0o700")
