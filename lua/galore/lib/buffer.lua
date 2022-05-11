@@ -129,7 +129,8 @@ function Buffer:set_name(name)
 end
 
 function Buffer:set_foldlevel(level)
-	vim.cmd("setlocal foldlevel=" .. level)
+	local windows = vim.fn.win_findbuf(self.handle)
+	vim.api.nvim_win_set_option(0, "foldlevel", level)
 end
 
 function Buffer:replace_content_with(lines)
@@ -295,8 +296,8 @@ function Buffer.create(config, class)
 	buffer.cleanup = config.cleanup
 	buffer.update = config.update
 
-	vim.cmd("setlocal nonu")
-	vim.cmd("setlocal nornu")
+	vim.wo.nu = false
+	vim.wo.rnu = false
 
 	buffer:set_name(config.name)
 
