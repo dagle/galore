@@ -42,6 +42,11 @@ Ideas:
   -- [x] Registering to saved
 
 * 0.0.2
+today: 
+-- A way to see if all our to, cc, bcc are in the keyring
+-- Use nvim_buf_create_user_command 
+-- Finish autocrypt
+
   - [x] Guard against untagged messages: No tags => +archive?
   - [-] Render multipart messages
   -- [ ] Not tested
@@ -77,6 +82,7 @@ Ideas:
   --- Encrypt the response
   -- [ ] Add autocrypt header to our messages
   -- [ ] History so we can uncrypt old messages?
+  use g_mime_crypto_context_register
 
 --------
 Compose mode:
@@ -86,9 +92,11 @@ Compose mode:
 
   -- Create a tmp file? That way, if we don't do anything, we don't need to save etc
   - [x] After a send, we should mark it as written
-  - [ ] Have a way to indicate that we are sending an encrypted email?
   - [ ] Don't double decrypt
   - [ ] Don't qoute an decrypt that we can't encrypt
+
+  - [ ] Have a way to indicate that we are sending an encrypted email?
+  - [ ] Custom headers
 
   -- [ ] When we create a compose, we don't take the original message 
 	but we generate a new one from the buffer, apply hooks on that, generate a file
@@ -116,7 +124,7 @@ Compose mode:
   - [ ] Fix Subject names, can we convert these to unicode, we still need to sub newline.
 
   - [ ] Telescope
-  -- [ ] Make it less clunky to use/costumize 
+  -- [ ] Make it less clunky to use/costumize
   -- [ ] Split everything up, thing that isn't telescope should be moved
 
   -- [ ] Can we make it into a telescope extension?
@@ -126,18 +134,29 @@ Compose mode:
   - [ ] Autocmd and UI
   -- Parts
 
+  - [ ] Use a window for attachments
+  -- Doesn't scroll correctly, maybe a bad idea?
+
+  - [ ] Remove all commands and use vim.api.nvim_buf_create_user_command
+
+  - [x] Do snippets for aliases
+
   - [x] Closing a window with q or :q should be the same?
   -- And it doesn't do that now? Be specific.
 
   -- Should we list buffers etc
   -- What about compose? How do we not lose data? (:wq to send?)
 
-  - [ ] Email groups, maybe this is vcard?
+  - [x] Email groups, maybe this is vcard?
   --- How the fuck do I use groups?
   - [x] Write an example using khards
   - [x] Write an example using pipe and mates
   
   - [ ] Add opts to config so simple customizations doesn't require you to rewrite code
+  - [ ] Use telescope when selecting parts and attachments
+  -- [ ] Make preview telescope with media view?
+
+  - [ ] A way to close the window if it's the last one
 
   - [ ] Add tests to the project that actually work
   - [ ] Benchmark, dunno if galore is that slow but we need to benchmark
