@@ -36,7 +36,8 @@ end
 
 -- encrypt a part and return the multipart
 -- XXX can we get more graceful crashes?
-function M.secure(ctx, part, recipients)
+function M.secure(part, recipients)
+	local ctx = ge.gpg_context_new()
 	if config.values.encrypt then
 		-- It should be more than just too To, should be all recipients
 		local encrypt, err = gcu.encrypt(ctx, part, recipients)
@@ -44,8 +45,13 @@ function M.secure(ctx, part, recipients)
 			return encrypt
 		else
 			-- err isn't a string
-			print("Error: " .. err)
+			local auctx = au.ctx()
+			encrypt, err = gcu.encrypt(autoctx, part, recipients)
+			if encrypt then
+				return encrypt
+			end
 		end
+		print("Error: " .. err)
 	end
 	if config.values.sign then
 		-- check if we should do (RFC 4880 and 3156)
@@ -79,7 +85,7 @@ function M.create_message(buf, attachments, opts, builder)
 	local current
 	local message = gp.new_message(true)
 	local mobj = ffi.cast("GMimeObject *", message)
-	local headers = {"from", "to", "cc", "bcc"} -- etc
+	local address_headers = {"from", "to", "cc", "bcc"} -- etc
 	--- From and too should be required
 
 	if not required_headers(buf) then
@@ -87,7 +93,7 @@ function M.create_message(buf, attachments, opts, builder)
 		return
 	end
 
-	for _, v in ipairs(headers) do
+	for _, v in ipairs(address_headers) do
 		if buf[v] then
 			local list = gc.internet_address_list_parse(runtime.parser_opts, buf[v])
 			local address = gp.message_get_address(message, v)
@@ -104,7 +110,7 @@ function M.create_message(buf, attachments, opts, builder)
 
 	for _, email in gu.internet_address_list_iter_str(runtime.parser_opts, buf.from) do
 		local id = gu.make_id(email)
-		go.object_set_header(mobj, "Message-ID", id)
+		gp.message_set_message_id(message, id)
 	end
 
 	gu.insert_current_date(message)
@@ -113,7 +119,7 @@ function M.create_message(buf, attachments, opts, builder)
 	gp.message_set_subject(message, buf.subject, nil)
 
 	for k, v in pairs(opts) do
-		go.object_set_header(mobj, k, v)
+		go.object_set_header(mobj, k, v, nil)
 	end
 
 	current = builder(buf.body)
@@ -129,8 +135,7 @@ function M.create_message(buf, attachments, opts, builder)
 	end
 
 	if config.values.encrypt or config.values.sign then
-		local ctx = ge.gpg_context_new()
-		local secure = M.secure(ctx, current, { buf.To })
+		local secure = M.secure(current, { buf.To })
 		--- if we fail here,
 		if secure then
 			current = secure
