@@ -262,11 +262,10 @@ function M.utils_header_decode_date()
 	local date = gmime.g_mime_utils_header_decode_date()
 end
 
---- XXX do I need this?
 -- char *g_mime_utils_header_format_date (GDateTime *date);
--- function M.utils_header_format_date()
--- 	g_mime_utils_header_format_date()
--- end
+function M.utils_header_format_date(date)
+	return gmime.g_mime_utils_header_format_date(date)
+end
 
 -- char *g_mime_utils_generate_message_id (const char *fqdn);
 --- @param fqdn string
