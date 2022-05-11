@@ -9,7 +9,9 @@ local builder = require("galore.builder")
 local render = require("galore.render")
 local gp = require("galore.gmime.parts")
 local gc = require("galore.gmime.content")
+local ge = require("galore.gmime.crypt")
 local nu = require("galore.notmuch-util")
+local runtime = require("galore.runtime")
 
 local Compose = Buffer:new()
 
@@ -18,7 +20,6 @@ local Compose = Buffer:new()
 -- If you want a "safe", version wrap this one
 function Compose:add_attachment(file)
 	self.attachments[file] = true
-	self:update_attachments()
 end
 
 function Compose:remove_attachment()
@@ -34,7 +35,7 @@ local function nop(value)
 	return value
 end
 
-local headers = {
+local extra_headers = {
 	["Return-Path"] = nop,
 	["Reply-To"] = nop,
 	["References"] = gc.references_format,
@@ -42,8 +43,8 @@ local headers = {
 }
 
 function Compose:set_compose_option(key, value)
-	if headers[key] then
-		local formated = headers[key](value)
+	if extra_headers[key] then
+		local formated = extra_headers[key](value)
 		if formated then
 			self.opts[key] = formated
 			return
@@ -55,13 +56,15 @@ function Compose:set_compose_option(key, value)
 end
 
 local function make_options(self, opts)
-	for key, value in pairs(opts) do
-		self:set_compose_option(key, value)
+	if opts then
+		for key, value in pairs(opts) do
+			self:set_compose_option(key, value)
+		end
 	end
 end
 
 function Compose:set_option_menu()
-	local list = u.collect_keys(headers)
+	local list = u.collect_keys(extra_headers)
 	vim.ui.select(list,{
 		prompt = 'Value to set',
 		format_item = function (item)
@@ -95,9 +98,27 @@ function Compose:unset_option()
 	end)
 end
 
+local function get_headers(self)
+	local headers = {}
+	local lines = v.nvim_buf_get_lines(0, 0, -1, true)
+	local body_line = vim.api.nvim_buf_get_extmark_by_id(self.handle, self.ns, self.marks, {})[1]
+	for i = 1, body_line do
+		local start, stop = string.find(lines[i], "^%a+:")
+		-- ignore lines that isn't xzy: abc
+		if start ~= nil then
+			local word = string.sub(lines[i], start, stop - 1)
+			word = string.lower(word)
+			local content = string.sub(lines[i], stop + 1)
+			content = u.trim(content)
+			headers[word] = content
+		end
+	end
+	return headers
+end
+
 -- this should be move to some util function
 -- maybe us virtual lines to split between header and message
--- XXX Adds an empty line to body
+-- XXX Adds an empty line to body, maybe it's suppose to be like that?
 function Compose:parse_buffer()
 	local box = {}
 	local body = {}
@@ -123,6 +144,55 @@ function Compose:parse_buffer()
 	end
 	box.body = body
 	return box
+end
+
+--- address = boolean
+local key_cache = {}
+
+local ffi = require("ffi")
+
+local function check_encrypted(self)
+	local headers = get_headers(self)
+	if vim.tbl_isempty(headers) then
+		return false
+	end
+
+	--- We need to track that we atleast have a to header
+	local ctx = ge.get_gpg_ctx()
+	for key, value in pairs(headers) do
+		if key_cache[value] == nil then
+			if key == "cc" or key == "bcc" or key == "to" then
+				local addrs = gc.internet_address_list_parse(runtime.parser_opts, value)
+				for addr in gu.internet_address_list_iter(addrs) do
+					if gc.internet_address_is_mailbox(addr) then
+						local mb = ffi.cast("InternetAddressMailbox *", addr)
+						local name = gc.internet_address_get_name(addr)
+						local email = gc.internet_address_mailbox_get_addr(mb)
+						if ge.gpg_key_exists(ctx, name, false) then
+							key_cache[value] = true
+						else
+							key_cache[value] = false
+							return false
+						end
+					end
+					--- XXX add support for email groups?
+				end
+			end
+		elseif key_cache[value] == false then
+			return false
+		end
+	end
+	return true
+end
+
+function Compose:notify_encrypted()
+	local enc = check_encrypted(self)
+	if enc then
+		vim.b.galore_encrypt = "🔑"
+	else
+		--- we clear it if not 
+		vim.b.galore_encrypt = nil
+	end
 end
 
 local function get_sent_folder(sent_folder, from)
@@ -211,6 +281,7 @@ function Compose:delete_tmp()
 	-- vim.fn.delete()
 end
 
+
 -- change message to file
 function Compose:create(kind, message, opts)
 	local template
@@ -257,6 +328,22 @@ function Compose:create(kind, message, opts)
 				end,
 				buffer = buffer.handle})
 			buffer:set_option("modified", false)
+			vim.api.nvim_create_autocmd("InsertLeave", {
+				callback = function ()
+					buffer:notify_encrypted()
+				end,
+				buffer = buffer.handle})
+			vim.api.nvim_buf_create_user_command(buffer.handle, "GaloreAddAttachment", function (args)
+				if args.fargs then
+					for _, value in ipairs(args.fargs) do
+						buffer:add_attachment(value)
+					end
+					buffer:update_attachments()
+				end
+			end, {
+			nargs = "*",
+			complete = "file"
+			})
 		end,
 	}, Compose)
 end

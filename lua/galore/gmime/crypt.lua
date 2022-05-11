@@ -803,4 +803,14 @@ function M.sig_iterator(siglist)
 	end
 end
 
+function M.get_gpg_ctx()
+	return ffi.gc(gmime.get_gpg_ctx(), gmime.gpgme_release)
+
+end
+
+function M.gpg_key_exists(ctx, name, secret)
+	local err = ffi.new("GError*[1]")
+	return gmime.g_mime_gpgme_key_exists (ctx, name, secret, err) ~= 0
+end
+
 return M

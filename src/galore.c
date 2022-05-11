@@ -1,5 +1,6 @@
 // helper C functions for gmime
 #define _GNU_SOURCE
+#define ENABLE_CRYPTO
 #include <glib.h>
 #include <gmime/gmime.h>
 
@@ -15,7 +16,9 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <gpgme.h>
 
+#define _(x) x
 
 int gmime_is_message_part(GMimeObject *obj){
 	return GMIME_IS_MESSAGE_PART(obj);
@@ -94,8 +97,8 @@ char *make_maildir_id(void) {
 
 GMimeObject *
 g_mime_multipart_encrypted_decrypt_pass (GMimeMultipartEncrypted *encrypted, GMimeDecryptFlags flags,
-				    const char *session_key, GMimePasswordRequestFunc request_passwd, GMimeDecryptResult **result,
-				    GError **err)
+				    const char *session_key, GMimePasswordRequestFunc request_passwd, 
+					GMimeDecryptResult **result, GError **err)
 {
 	GMimeObject *decrypted, *version_part, *encrypted_part;
 	GMimeStream *filtered, *stream, *ciphertext;
@@ -221,4 +224,142 @@ g_mime_multipart_encrypted_decrypt_pass (GMimeMultipartEncrypted *encrypted, GMi
 	return decrypted;
 }
 
+// GMimeGpgContext *
+gpgme_ctx_t
+get_gpg_ctx() {
+	gpgme_ctx_t ctx;
+	
+	/* make sure GpgMe supports the OpenPGP protocols */
+	if (gpgme_engine_check_version (GPGME_PROTOCOL_OpenPGP) != GPG_ERR_NO_ERROR)
+		return NULL;
+	
+	/* create the GpgMe context */
+	if (gpgme_new (&ctx) != GPG_ERR_NO_ERROR)
+		return NULL;
+	
+	return ctx;
+}
 
+
+// /// maybe this is a bit over the top?
+static gboolean
+g_mime_gpgme_key_is_usable (gpgme_key_t key, gboolean secret, time_t now, gpgme_error_t *err)
+{
+	gpgme_subkey_t subkey;
+	
+	*err = GPG_ERR_NO_ERROR;
+	
+	/* first, check the state of the key itself... */
+	if (key->expired)
+		*err = GPG_ERR_KEY_EXPIRED;
+	else if (key->revoked)
+		*err = GPG_ERR_CERT_REVOKED;
+	else if (key->disabled)
+		*err = GPG_ERR_KEY_DISABLED;
+	else if (key->invalid)
+		*err = GPG_ERR_BAD_KEY;
+	
+	if (*err != GPG_ERR_NO_ERROR)
+		return FALSE;
+	
+	/* now check if there is a subkey that we can use */
+	subkey = key->subkeys;
+	
+	while (subkey) {
+		if ((secret && subkey->can_sign) || (!secret && subkey->can_encrypt)) {
+			if (subkey->expired || (subkey->expires != 0 && subkey->expires <= now))
+				*err = GPG_ERR_KEY_EXPIRED;
+			else if (subkey->revoked)
+				*err = GPG_ERR_CERT_REVOKED;
+			else if (subkey->disabled)
+				*err = GPG_ERR_KEY_DISABLED;
+			else if (subkey->invalid)
+				*err = GPG_ERR_BAD_KEY;
+			else
+				return TRUE;
+		}
+		
+		subkey = subkey->next;
+	}
+	
+	if (*err == GPG_ERR_NO_ERROR)
+		*err = GPG_ERR_BAD_KEY;
+	
+	return FALSE;
+}
+
+gboolean
+g_mime_gpgme_key_exists (gpgme_ctx_t ctx, const char *name, gboolean secret, GError **err)
+{
+	gpgme_error_t key_error = GPG_ERR_NO_ERROR;
+	time_t now = time (NULL);
+	gpgme_key_t key = NULL;
+	gboolean found = FALSE;
+	gpgme_error_t error;
+
+	if ((error = gpgme_op_keylist_start (ctx, name, secret)) != GPG_ERR_NO_ERROR) {
+		if (secret) {
+			g_set_error (err, GMIME_GPGME_ERROR, error,
+				     _("Could not list secret keys for \"%s\": %s"),
+				     name, gpgme_strerror (error));
+		} else {
+			g_set_error (err, GMIME_GPGME_ERROR, error,
+				     _("Could not list keys for \"%s\": %s"),
+				     name, gpgme_strerror (error));
+		}
+	
+		return FALSE;
+	}
+
+	while ((error = gpgme_op_keylist_next (ctx, &key)) == GPG_ERR_NO_ERROR) {
+		/* check if this key and the relevant subkey are usable */
+		if (g_mime_gpgme_key_is_usable (key, secret, now, &key_error))
+			break;
+	
+		gpgme_key_unref (key);
+		found = TRUE;
+		key = NULL;
+	}
+
+	gpgme_op_keylist_end (ctx);
+
+	if (error != GPG_ERR_NO_ERROR && error != GPG_ERR_EOF) {
+		if (secret) {
+			g_set_error (err, GMIME_GPGME_ERROR, error,
+				     _("Could not list secret keys for \"%s\": %s"),
+				     name, gpgme_strerror (error));
+		} else {
+			g_set_error (err, GMIME_GPGME_ERROR, error,
+				     _("Could not list keys for \"%s\": %s"),
+				     name, gpgme_strerror (error));
+		}
+	
+		return FALSE;
+	}
+
+	if (!key) {
+		if (strchr (name, '@')) {
+			if (found && key_error != GPG_ERR_NO_ERROR) {
+				g_set_error (err, GMIME_GPGME_ERROR, key_error,
+					     _("A key for %s is present, but it is expired, disabled, revoked or invalid"),
+					     name);
+			} else {
+				g_set_error (err, GMIME_GPGME_ERROR, GPG_ERR_NOT_FOUND,
+					     _("Could not find a suitable key for %s"), name);
+			}
+		} else {
+			if (found && key_error != GPG_ERR_NO_ERROR) {
+				g_set_error (err, GMIME_GPGME_ERROR, key_error,
+					     _("A key with id %s is present, but it is expired, disabled, revoked or invalid"),
+					     name);
+			} else {
+				g_set_error (err, GMIME_GPGME_ERROR, GPG_ERR_NOT_FOUND,
+					     _("Could not find a suitable key with id %s"), name);
+			}
+		}
+	
+		return FALSE;
+	}
+
+	return TRUE;
+}

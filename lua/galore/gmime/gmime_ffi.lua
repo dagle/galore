@@ -1408,6 +1408,13 @@ int internet_address_is_mailbox(InternetAddress *ia);
 int internet_address_is_group(InternetAddress *ia);
 char *make_maildir_id(void);
 
+typedef struct {}* gpgme_ctx_t;
+gpgme_ctx_t get_gpg_ctx();
+
+gboolean g_mime_gpgme_key_exists (gpgme_ctx_t ctx, const char *name, gboolean secret, GError **err);
+
+void gpgme_release (gpgme_ctx_t ctx);
+
 GDateTime *         g_date_time_new_from_unix_local     (gint64 t);
 GDateTime *         g_date_time_new_from_unix_utc       (gint64 t);
 gint64              g_date_time_to_unix                 (GDateTime *datetime);
