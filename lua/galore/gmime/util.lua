@@ -17,7 +17,7 @@ end
 
 function M.make_id(email)
 	local fqdn = email:gsub(".*@", "")
-	return "<" .. gc.utils_generate_message_id(fqdn) .. ">"
+	return gc.utils_generate_message_id(fqdn)
 end
 
 --- XXX move iters
@@ -50,14 +50,15 @@ function M.internet_address_list_iter(list)
 	return function()
 		if i < gc.internet_address_list_length(list) then
 			local addr = gc.internet_address_list_get_address(list, i)
-			local email = ""
-			if gc.internet_address_is_mailbox(addr) then
-				local mb = ffi.cast("InternetAddressMailbox *", addr)
-				email = gc.internet_address_mailbox_get_addr(mb)
-			end
-			local name = gc.internet_address_get_name(addr)
 			i = i + 1
-			return name, email
+			return addr
+			-- local email = ""
+			-- if gc.internet_address_is_mailbox(addr) then
+			-- 	local mb = ffi.cast("InternetAddressMailbox *", addr)
+			-- 	email = gc.internet_address_mailbox_get_addr(mb)
+			-- end
+			-- local name = gc.internet_address_get_name(addr)
+			-- return name, email
 		end
 	end
 end
@@ -245,13 +246,18 @@ end
 
 function M.preview_addr(addr, minlen)
 	local strbuf = {}
-	for name, mail in M.internet_address_list_iter_str(runtime.parser_opts, addr) do
-		-- if the addr doesn't follow the mbox standard, we we nop
-		if not (name and mail) then
+	for paddr in M.internet_address_list_iter_str(runtime.parser_opts, addr) do
+		local email = ""
+		if gc.internet_address_is_mailbox(paddr) then
+			local mb = ffi.cast("InternetAddressMailbox *", paddr)
+			email = gc.internet_address_mailbox_get_addr(mb)
+		end
+		local name = gc.internet_address_get_name(paddr)
+		if not (name and email) then
 			table.insert(strbuf, addr)
 		else
 			name = sanatize(name)
-			local item = sep(name) .. "<" .. mail .. ">"
+			local item = sep(name) .. "<" .. email .. ">"
 			table.insert(strbuf, item)
 		end
 	end
@@ -325,6 +331,7 @@ local function get_to(message, headers)
 	return nil
 end
 
+--- XXX we are comparing pointers etc
 local function append_no_dups(dst, src)
 	for _, semail in M.internet_address_list_iter(src) do
 		local matched = false
@@ -416,6 +423,14 @@ end
 
 --- generate a fortward message
 --- make to_str optional?
+-- Use the resent headers instead?
+-- resent-date     =       "Resent-Date:" date-time
+-- resent-from     =       "Resent-From:" mailbox-list
+-- resent-sender   =       "Resent-Sender:" mailbox
+-- resent-to       =       "Resent-To:" address-list
+-- resent-cc       =       "Resent-Cc:" address-list
+-- resent-bcc      =       "Resent-Bcc:" (address-list / [CFWS]) CRLF
+-- resent-msg-id   =       "Resent-Message-ID:" msg-id CRLF
 function M.forward(message, to_str)
 	local addr = M.get_from(message)
 	local new_subject = "FWD: " .. gp.message_get_subject(message)
@@ -424,7 +439,7 @@ function M.forward(message, to_str)
 	gp.message_add_mailbox(new, "from", config.values.name, addr)
 
 	local list = gc.internet_address_list_parse(runtime.parser_opts, to_str)
-	local address = gp.message_get_address(message, "to")
+	local address = gp.message_get_address(new, "to")
 	if not list then
 		vim.notify("Couldn't parse to address", vim.log.levels.ERROR)
 		return
@@ -449,6 +464,18 @@ function M.forward(message, to_str)
 	local new_plain = gp.text_part_new_with_subtype("plain")
 	gp.text_part_set_text(new_plain, fwd)
 	return new
+end
+
+function M.forward_resent(message, to_str)
+	local addr = M.get_from(message)
+	go.object_set_header(message, "Resent-From", addr, nil)
+	go.object_set_header(message, "Resent-To", to_str, nil)
+
+	local time = os.time()
+	local gdate = gmime.g_date_time_new_from_unix_local(time)
+	local date_str = gc.utils_header_format_date(gdate)
+	go.object_set_header(message, "Resent-Date", date_str, nil)
+	gmime.g_date_time_unref(gdate)
 end
 
 return M
