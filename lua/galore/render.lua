@@ -198,6 +198,9 @@ function M.show_part(object, buf, opts, state)
 
 			local before = vim.fn.line('$') - 1
 			local de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password)
+			if not de_part then
+				de_part, verified = au.decrypt(object)
+			end
 			M.show_part(de_part, buf, opts, state)
 			local after = vim.fn.line('$') - 1
 			local names

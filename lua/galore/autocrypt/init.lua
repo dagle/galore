@@ -7,7 +7,9 @@ end
 
 local gc = require("galore.gmime.crypt")
 local gs = require("galore.gmime.stream")
+local gcu = require("galore.crypt-utils")
 local runtime = require("galore.runtime")
+local Job = require("plenary.job")
 
 local tbl = require "sqlite.tbl"
 
@@ -63,12 +65,16 @@ local db = sqlite {
 }
 
 local function create_ctx()
-	return ffi.gc(gmime.create_ctx(keyring_path), gmime.gpgme_release)
+	return ffi.gc(gmime.au_contex_new(), gmime.gpgme_release)
 end
 
 function M.with_ctx(func)
 	local ctx = create_ctx()
 	func(ctx)
+end
+
+function M.au_contex_new()
+	return create_ctx()
 end
 
 --- add history?
@@ -107,8 +113,7 @@ function M.update(ah)
 			--- XXX inplement string_streamer
 			local stream = gs.string_streamer(key)
 			M.with_ctx(function (ctx)
-				--- XXX implement this
-				gc.gpg_import_keys(ctx, stream)
+				gc.crypto_context_import_keys(ctx, stream)
 			end)
 		end
 	end
@@ -165,18 +170,38 @@ function M.update_gossip(from, ahlist)
 				--- XXX inplement string_streamer
 				local stream = gs.string_streamer(key)
 				M.with_ctx(function (ctx)
-					--- XXX implement this
-					gc.gpg_import_keys(ctx, stream)
+					gc.crypto_context_import_keys(ctx, stream)
 				end)
 			end
 		end
 	end
 end
 
-local function make_keys(addr, import)
+local function createkey(path, email, expire)
+	local spec = table.concat({
+		"Key-Type: RSA",
+		"Key-Length: 3072",
+		"Key-Usage: sign",
+		"Subkey-Type: RSA",
+		"Subkey-Length: 3072",
+		"Subkey-Usage: encrypt",
+		"Name-Email: " + email,
+		"Expire-Date: " + expire,
+		"%commit"
+	}, "\n")
+	Job:new({
+		command = "gpg",
+		args = {"--batch", "--homedir", path, "--gen-key", spec},
+		on_exit = function (_, _)
+		end,
+	}):sync()
+end
+
+local function make_key(addr, import)
 	--- if import is set, we try to import a key from gpg
 	--- if not, we just generate a new pair of keys
 	local key
+	--- XXX
 	if import then
 		key = getkey(addr)
 		if not key then
@@ -185,10 +210,8 @@ local function make_keys(addr, import)
 		end
 		-- check that the key is "ed25519", if not, we won't allow it
 	else
-		local ctx = create_ctx()
-		local algo = "ed25519"
-		local expire
-		key = createkey(ctx, addr, algo, 0, expire, nil, 0)
+		local expire -- 3/6 months?
+		key = createkey(keyring_path, addr, expire)
 	end
 	account:insert({
 		addr = addr,
@@ -203,7 +226,7 @@ function M.make_account(import)
 	local addr
 	vim.ui.input({prompt="Email address: "}, function (input)
 		if input then
-			make_keys(addr, import)
+			make_key(addr, import)
 		end
 	end)
 end
@@ -235,30 +258,27 @@ function M.update_account(addr, fields)
 	}
 end
 
-function M.multipart_decrypt(ctx, part, flags, fun, session_key)
-	local err = ffi.new("GError*[1]")
-	local res = ffi.new("GMimeDecryptResult*[1]")
-	local eflags = convert.to_decrytion_flag(flags)
-	local obj = gmime.g_mime_autocrypt_decrypt(ctx, part, eflags, session_key, fun, res, err)
-	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
+function M.decrypt(object)
+	gc.crypto_context_register("application/pgp-signature", M.ctx)
+	gc.crypto_context_register ("application/pgp-encrypted", M.ctx)
+	local de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password)
+
+	--- maybe we shouldn't call the lua function but the ffi?
+	gc.crypto_context_register ("application/pgp-signature", gc.gpg_context_new)
+	gc.crypto_context_register ("application/pgp-encrypted", gc.gpg_context_new)
+	return de_part, verified
 end
 
-function M.multipart_encryt(ctx)
-	local err = ffi.new("GError*[1]")
-	local res = ffi.new("GMimeDecryptResult*[1]")
-	local eflags = convert.to_decrytion_flag(flags)
-	local obj = gmime.g_mime_autocrypt_crypt(part, eflags, session_key, fun, res, err)
-	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
-end
-
+--- Make a setup message, so we can export all keys to another mua
 --- Export all accounts
 --- Export all keys
 --- Export all gossip
 --- In an email
---- @return string, Gmime.message
+--- @return string, gmime.Message
 function M.setup_create()
 end
 
+--- Import keys from a message
 --- Import all accounts
 --- Import all keys
 --- Import all gossip
@@ -275,7 +295,7 @@ function M.update_key(addr, force)
 		return
 	end
 	if expired(row.public) or force then
-		local private, public = make_keys(addr)
+		local private, public = make_key(addr)
 		account:update{
 			where = {addr = addr},
 			set = {
@@ -301,8 +321,7 @@ end
 
 function M.init()
 	vim.fn.mkdir(uri, nil, 0700)
-	-- create the db and the keyring if the don't exist
-	-- init the ctx
+	make_key(config.values.primary_email, false)
 end
 
 return M

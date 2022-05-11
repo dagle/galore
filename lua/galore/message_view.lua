@@ -7,8 +7,8 @@ local Path = require("plenary.path")
 local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
 local pv = require("galore.part_view")
-local gc = require("galore.gmime.crypt")
-local gcu = require("galore.crypt-utils")
+local au = require("galore.autocrypt")
+-- local gc = require("galore.gmime.crypt")
 local gp = require("galore.gmime.parts")
 
 local Message = Buffer:new()
@@ -91,24 +91,23 @@ function Message:save_attach()
 	end)
 end
 
-local function with_key(message, func)
+local function process_au(message, line)
 	local ah = gp.message_get_autocrypt_header(message, nil)
-	--- we don't add spam emails or "unsafe" messages
-	if is_spam(message) then
-		return
+
+	--- if the email isn't safe, we bail
+	for _, value in ipairs(config.values.unsafe_tags) do
+		if vim.tbl_contains(line.tags, value) then
+			return
+		end
 	end
-	if ah then
-		update(ah)
-	else
-		update_seen(addr, date)
-	end
+	au.update(ah)
 end
 
 function Message:update(filenames)
 	self:unlock()
 	self:clear()
 	local message = gu.construct(filenames)
-	gcu.add_autocrypt_keys(message)
+	process_au(message)
 	if message then
 		if self.ns then
 			vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
