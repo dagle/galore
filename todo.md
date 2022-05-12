@@ -46,6 +46,7 @@ today:
 -- A way to see if all our to, cc, bcc are in the keyring
 -- Use nvim_buf_create_user_command 
 -- Finish autocrypt
+-- Make callbacks into categories? require("galore.callback").browser?
 
   - [x] Guard against untagged messages: No tags => +archive?
   - [-] Render multipart messages
@@ -121,6 +122,7 @@ Compose mode:
   - [ ] Hooks, where and why? (init, send, sent ...)
   - [ ] FIXME and XXX
   - [ ] Why does tab before enter in save make searches fail?
+   -- seems to be because of m being bound
   - [ ] Fix Subject names, can we convert these to unicode, we still need to sub newline.
 
   - [ ] Telescope

@@ -284,6 +284,7 @@ end
 
 -- change message to file
 function Compose:create(kind, message, opts)
+	opts = opts or {}
 	local template
 	if message then
 		template = make_template(message, opts.response_mode)

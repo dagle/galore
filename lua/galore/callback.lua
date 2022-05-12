@@ -47,8 +47,9 @@ function M.message_reply(mv, opts)
 	compose:create("replace", mv.message, opts)
 end
 
-function M.add_search(browser)
-	nu.add_search(browser.search)
+function M.set_search_emph(browser, emph)
+	browser.emph = emph
+	browser:redraw_all()
 end
 
 function M.change_tag(browser, tag)

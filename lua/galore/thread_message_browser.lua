@@ -5,6 +5,7 @@ local u = require("galore.util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
 local runtime = require("galore.runtime")
+local callback = require("galore.callback")
 
 local Tmb = Buffer:new()
 
@@ -290,6 +291,13 @@ function Tmb:refresh()
 	self:lock()
 end
 
+function Tmb:redraw_all()
+	self:unlock()
+	self:clear()
+	self:threads_to_buffer()
+	self:lock()
+end
+
 local function tail(list)
     return {unpack(list, 2)}
 end
@@ -383,6 +391,25 @@ function Tmb:select()
 	local virt_line = self.to_virtualline(self.Threads, line[1])
 	self.Line = virt_line
 	return virt_line, self.State[virt_line]
+end
+
+function Tmb:commands()
+	vim.api.nvim_buf_create_user_command(self.handle, "GaloreChangetag", function (args)
+		if args.args then
+			callback.change_tag(self, args)
+		end
+	end, {
+	nargs = "*",
+})
+	vim.api.nvim_buf_create_user_command(self.handle, "Galore_set_emph", function (args)
+		if args.args then
+			callback.change_tag(self, args)
+		end
+	end, {
+	nargs = "*",
+	complete = "file"
+})
+
 end
 
 function Tmb:create(search, kind, parent)
