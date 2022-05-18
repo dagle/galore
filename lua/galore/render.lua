@@ -197,7 +197,14 @@ function M.show_part(object, buf, opts, state)
 			end
 
 			local before = vim.fn.line('$') - 1
-			local de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password)
+			local de_part, verified 
+			if vim.tbl_isempty(opts.keys) then
+				de_part, verified= gcu.decrypt_and_verify(object, runtime.get_password)
+			else
+				for _, key in ipairs(opts.keys) do
+					de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password, key)
+				end
+			end
 			if not de_part then
 				de_part, verified = au.decrypt(object)
 			end

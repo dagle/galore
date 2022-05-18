@@ -11,15 +11,15 @@ local Tmb = Buffer:new()
 
 local function get_message(message, tid, level, prestring, i, total)
 	local id = nm.message_get_id(message)
-	-- local filename = nm.message_get_filename(message)
 	local filenames = u.collect(nm.message_get_filenames(message))
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = nm.message_get_date(message)
-	-- Use enums for these?
 	local matched = nm.message_get_flag(message, 0)
 	local excluded = nm.message_get_flag(message, 1)
+	--- maybe move this to later?
+	local keys = u.collect(nm.message_get_properties(message, "session-key", true))
 	return {
 		id = id,
 		tid = tid,
@@ -34,6 +34,7 @@ local function get_message(message, tid, level, prestring, i, total)
 		tags = tags,
 		matched = matched,
 		excluded = excluded,
+		keys = keys,
 	}
 end
 
@@ -101,18 +102,6 @@ function Tmb.to_realline(threads, linenr)
 		end
 	end
 	return math.max(i, 1)
-end
-
-local function binsearch(threads, between, low, max)
-	local mid = low + math.floor(max / 2)
-	local t = threads[mid]
-	if t.start <= between and between <= t.stop then
-		return t
-	elseif between > t.stop then
-		return binsearch(threads, between, low, mid)
-	elseif t.start > between then
-		return binsearch(threads, between, mid, max)
-	end
 end
 
 function Tmb:get_thread(vline)
@@ -188,7 +177,6 @@ local function match(cond, line)
 	end
 
 	if vim.tbl_islist(cond) and vim.tbl_islist(line) then
-		-- if both are lists, we don't care about the order
 		for _, value in ipairs(cond) do
 			if not vim.tbl_contains(line, value) then
 				return false
@@ -198,87 +186,65 @@ local function match(cond, line)
 
 	if type(cond) == 'table' then
 		for k, _ in pairs(cond) do
-				if not match(cond[k], line[k]) then
-					return false
-				end
+			if not match(cond[k], line[k]) then
+				return false
+			end
 		end
 	elseif cond == line then
-		return false
+		return true
 	end
 	return true
 end
 
+local diaopts = { virtual_text = false, signs = false }
 function Tmb:threads_to_buffer()
-	-- Tmb.threads_buffer:clear_sign_group("thread-expand")
-	local i = 1
+	local i = 0
+	local diagnostics = {}
 	for _, thread in ipairs(self.Threads) do
 		if thread.expand then
 			local lines = ppMessage(thread.messages)
 			self:set_lines(-1, -1, true, lines)
-			self:highlights(thread.messages, i, self.emph)
+			self:highlights(thread.messages, i, self.emph, diagnostics)
 			i = i + #thread.messages
-			-- self:set_lines(-1, -1, true, item.messages)
-			-- M.threads_buffer:place_sign(i, "uncollapsed", "thread-expand")
-			-- i = i + #thread.messages
 		else
-			-- local lines = ppMessage(thread.messages)
 			local line = config.values.show_message_description(thread.messages[1])
 			self:set_lines(-1, -1, true, {line})
-			self:highlights({thread.messages[1]}, i, self.emph)
+			self:highlights({thread.messages[1]}, i, self.emph, diagnostics)
 			i=i+1
-			-- self:set_lines(-1, -1, true, { item.messages[1] })
-			if #thread.messages ~= 1 then
+			-- if #thread.messages ~= 1 then
 				-- M.threads_buffer:place_sign(i, "collapsed", "thread-expand")
 				-- i = i + 1
-			end
+			-- end
 		end
 	end
 	self:set_lines(0, 1, true, {})
+	vim.diagnostic.set(self.ns, self.handle, diagnostics, diaopts)
 end
 
-function Tmb:highlights(messages, offset, cond)
+function Tmb:highlights(messages, offset, cond, box)
 	local i = offset
 	for _, message in ipairs(messages) do
 		if match(cond, message) then
-			self:add_highlight(i, 0, -1, "nmEmph")
+			local diagnostics = {
+				bufnr = self.bufnr,
+				lnum = i,
+				end_lnum = i,
+				col = 0,
+				end_col = -1,
+				severity = vim.diagnostic.severity.INFO,
+				message = "Match",
+				source = "galore",
+			}
+			table.insert(box, diagnostics)
 		end
 		i = i + 1
 	end
 end
 
 --- XXX this is really slow
-function Tmb:match(cond)
+function Tmb:set_emph(cond)
 	self.cond = cond
 	self:redraw()
-end
-
-function Tmb:match_next(cond)
-	local cur = vim.api.nvim_win_get_cursor(0)
-	local virt_line = self.to_virtualline(self.Threads, cur[1])
-	local next
-	for i = virt_line, #self.State do
-		if match(cond, self.State[i]) then
-			next = i
-			break
-		end
-	end
-	local real_line = self.to_realline(self.Threads, next)
-	vim.api.nvim_win_set_cursor(0, {real_line, cur[2]})
-end
-
-function Tmb:prev_matched(cond)
-	local cur = vim.api.nvim_win_get_cursor(0)
-	local virt_line = self.to_virtualline(self.Threads, cur[1])
-	local next
-	for i = 1, virt_line do
-		local index = virt_line - i
-		if match(cond, self.State[index]) then
-			next = index
-			break
-		end
-	end
-	local real_line = self.to_realline(self.Threads, next)
-	vim.api.nvim_win_set_cursor(0, {real_line, cur[2]})
 end
 
 function Tmb:refresh()
@@ -291,12 +257,12 @@ function Tmb:refresh()
 	self:lock()
 end
 
-function Tmb:redraw_all()
-	self:unlock()
-	self:clear()
-	self:threads_to_buffer()
-	self:lock()
-end
+-- function Tmb:redraw_all()
+-- 	self:unlock()
+-- 	self:clear()
+-- 	self:threads_to_buffer()
+-- 	self:lock()
+-- end
 
 local function tail(list)
     return {unpack(list, 2)}
@@ -399,17 +365,15 @@ function Tmb:commands()
 			callback.change_tag(self, args)
 		end
 	end, {
-	nargs = "*",
+	nargs = "1",
 })
 	vim.api.nvim_buf_create_user_command(self.handle, "Galore_set_emph", function (args)
 		if args.args then
 			callback.change_tag(self, args)
 		end
 	end, {
-	nargs = "*",
-	complete = "file"
+	nargs = "1",
 })
-
 end
 
 function Tmb:create(search, kind, parent)
@@ -423,7 +387,9 @@ function Tmb:create(search, kind, parent)
 		init = function(buffer)
 			buffer.search = search
 			buffer.line = 1
-			buffer.emph = nil
+			-- buffer.emph = nil
+			buffer.emph = config.values.default_emph
+			buffer.ns = vim.api.nvim_create_namespace("galore-emph")
 			vim.api.nvim_win_set_option(0, "number", true)
 			buffer:refresh(search)
 			buffer:set_ns("galore_tmb")

@@ -33,6 +33,7 @@ function M.get_message(message)
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = tonumber(nm.message_get_header(message, "Subject"))
+	local keys = u.collect(nm.message_get_properties(message, "session-key", true))
 	return {
 		id = id,
 		filenames = filenames,
@@ -43,7 +44,8 @@ function M.get_message(message)
 		date = date,
 		from = from,
 		sub = sub,
-		tags = tags
+		tags = tags,
+		keys = keys,
 	}
 end
 

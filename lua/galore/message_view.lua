@@ -8,6 +8,7 @@ local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
 local pv = require("galore.part_view")
 local au = require("galore.autocrypt")
+local gc = require("galore.gmime.crypt")
 -- local gc = require("galore.gmime.crypt")
 local gp = require("galore.gmime.parts")
 
@@ -47,7 +48,7 @@ function Message:_save_attachment(filename, save_path)
 end
 
 -- Maybe do something like this
--- The idea is we can 
+-- The idea is we can
 -- function Message:reindex()
 -- 	if #self.filenames ~= 1 then
 -- 		vim.notify("We can only reindex non-split messages", vim.log.levels.WARN)
@@ -93,6 +94,12 @@ end
 
 local function process_au(message, line)
 	local ah = gp.message_get_autocrypt_header(message, nil)
+	local from = gp.message_get_from(message) -- get the solo line
+	if not gc.autocrypt_header_is_complete(ah) then
+		local date = gp.message_get_date(message)
+		au.update_seen(from, date)
+		return
+	end
 
 	--- if the email isn't safe, we bail
 	for _, value in ipairs(config.values.unsafe_tags) do
@@ -101,13 +108,14 @@ local function process_au(message, line)
 		end
 	end
 	au.update(ah)
+	au.update_gossip(message)
 end
 
-function Message:update(filenames)
+function Message:update(line)
 	self:unlock()
 	self:clear()
-	local message = gu.construct(filenames)
-	process_au(message)
+	local message = gu.construct(line.filenames)
+	process_au(message, line)
 	if message then
 		if self.ns then
 			vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
@@ -115,7 +123,10 @@ function Message:update(filenames)
 		self.ns = vim.api.nvim_create_namespace("galore-message-view")
 		self.message = message
 		r.show_header(message, self.handle, { ns = self.ns }, self.line)
-		self.attachments = r.show_message(message, self.handle, {ns = self.ns})
+		self.attachments = r.show_message(message, self.handle, {
+			ns = self.ns,
+			keys = line.keys
+		})
 		if not vim.tbl_isempty(self.attachments) then
 			ui.render_attachments(self.attachments, self)
 		end
@@ -166,7 +177,7 @@ function Message:create(line, kind, parent, vline)
 			buffer.parent = parent
 			buffer.vline = vline
 			make_read(parent, line, vline)
-			buffer:update(line.filenames)
+			buffer:update(line)
 		end,
 	}, Message)
 end

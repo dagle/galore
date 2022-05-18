@@ -42,13 +42,13 @@ function M.encrypt(ctx, part, recipients)
 	return multi, err
 end
 
-function M.decrypt_and_verify(obj, passfun)
+function M.decrypt_and_verify(obj, passfun, key)
 	local encrypted = ffi.cast("GMimeMultipartEncrypted *", obj)
 	local decrypted, res, err = gp.multipart_encrypted_decrypt_pass(
 		encrypted,
 		config.values.decrypt_flags,
 		passfun,
-		runtime.gpg.session_key
+		key
 	)
 
 	if err ~= nil then

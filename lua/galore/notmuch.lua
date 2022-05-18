@@ -364,9 +364,6 @@ ffi.cdef([[
 	notmuch_message_remove_all_properties (notmuch_message_t *message, const char *key);
 
 	notmuch_status_t
-	notmuch_message_get_property (notmuch_message_t *message, const char *key, const char **value);
-
-	notmuch_status_t
 	notmuch_message_remove_all_properties (notmuch_message_t *message, const char *key);
 
 	notmuch_status_t
@@ -1197,10 +1194,11 @@ end
 
 --- @param message notmuch.Message
 --- @param key string
---- @return notmuch.Status
+--- @return string, notmuch.Status
 function M.message_get_property(message, key)
-	-- TODO value!
-	return nm.notmuch_message_get_property(message, key)
+	local value = ffi.new("char *[1]")
+	local status = nm.notmuch_message_get_property(message, key, value)
+	return ffi.string(value[0]), status
 end
 
 --- @param message notmuch.Message
@@ -1237,7 +1235,7 @@ end
 --- @param key string
 --- @param exact boolean
 function M.message_get_properties(message, key, exact)
-	-- TODO return iterator
+	return property_iterator(nm.notmuch_message_get_properties (message, key, exact))
 end
 
 --- @param properties object
