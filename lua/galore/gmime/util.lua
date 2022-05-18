@@ -135,13 +135,16 @@ function M.construct(filenames)
 	local messages = {} -- ugly hack
 	for _, filename in ipairs(filenames) do
 		local message = M.parse_message(filename)
+
 		if message == nil then
 			return nil
 		end
+
 		local part = gp.message_get_mime_part(message)
 		if not gp.is_partial(part) then
-			return nil
+			return message
 		end
+
 		local partial = ffi.cast("GMimeMessagePartial *", part)
 		table.insert(messages, message)
 		table.insert(parts, partial)
