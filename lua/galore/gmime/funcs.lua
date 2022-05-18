@@ -16,6 +16,12 @@ function M.gc_nil(var, func)
 	end
 end
 
+function M.gbytes_str(gbyte)
+	local size = ffi.new("gsize[1]")
+	local data = gmime.g_bytes_get_data(gbyte, size);
+	return ffi.string(data, size)
+end
+
 --- Do I need these if I do gc_nil?
 --- XXX
 function M.safe_unref(ptr)

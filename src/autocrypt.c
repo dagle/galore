@@ -67,9 +67,7 @@
 struct _GMimeGpgContext {
 	GMimeCryptoContext parent_object;
 	
-#ifdef ENABLE_CRYPTO
 	gpgme_ctx_t ctx;
-#endif
 };
 
 struct _GMimeGpgContextClass {
@@ -113,7 +111,7 @@ static char *path = NULL;
 
 
 GType
-g_mime_au_context_get_type (char *path)
+g_mime_au_context_get_type (char *mypath)
 {
 	static GType type = 0;
 	
@@ -132,7 +130,7 @@ g_mime_au_context_get_type (char *path)
 		
 		type = g_type_register_static (GMIME_TYPE_CRYPTO_CONTEXT, "GMimeAutoCryptContext", &info, 0);
 	}
-	path = strdup(path);
+	path = strdup(mypath);
 	
 	return type;
 }
@@ -146,7 +144,7 @@ g_mime_au_context_class_init (GMimeGpgContextClass *klass)
 	
 	parent_class = g_type_class_ref (G_TYPE_OBJECT);
 	
-	object_class->finalize = g_mime_gpg_context_finalize;
+	object_class->finalize = g_mime_au_context_finalize;
 	
 	crypto_class->digest_id = au_digest_id;
 	crypto_class->digest_name = au_digest_name;
@@ -164,20 +162,16 @@ g_mime_au_context_class_init (GMimeGpgContextClass *klass)
 static void
 g_mime_au_context_init (GMimeGpgContext *gpg, GMimeGpgContextClass *klass)
 {
-#ifdef ENABLE_CRYPTO
 	gpg->ctx = NULL;
-#endif
 }
 
 static void
 g_mime_au_context_finalize (GObject *object)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg = (GMimeGpgContext *) object;
 	
 	if (gpg->ctx)
 		gpgme_release (gpg->ctx);
-#endif
 	
 	G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -266,7 +260,6 @@ au_get_key_exchange_protocol (GMimeCryptoContext *ctx)
 	return "application/pgp-keys";
 }
 
-#ifdef ENABLE_CRYPTO
 static void
 set_passphrase_callback (GMimeCryptoContext *context)
 {
@@ -277,13 +270,11 @@ set_passphrase_callback (GMimeCryptoContext *context)
 	else
 		gpgme_set_passphrase_cb (gpg->ctx, NULL, NULL);
 }
-#endif
 
 static int
 au_sign (GMimeCryptoContext *context, gboolean detach, const char *userid,
 	  GMimeStream *istream, GMimeStream *ostream, GError **err)
 {
-#ifdef ENABLE_CRYPTO
 	gpgme_sig_mode_t mode = detach ? GPGME_SIG_MODE_DETACH : GPGME_SIG_MODE_CLEAR;
 	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
 	
@@ -292,99 +283,84 @@ au_sign (GMimeCryptoContext *context, gboolean detach, const char *userid,
 	gpgme_set_textmode (gpg->ctx, !detach);
 	
 	return g_mime_gpgme_sign (gpg->ctx, mode, userid, istream, ostream, err);
-#else
-	g_set_error_literal (err, GMIME_ERROR, GMIME_ERROR_NOT_SUPPORTED,
-			     _("PGP support is not enabled in this build"));
-	
-	return -1;
-#endif /* ENABLE_CRYPTO */
 }
 
 static GMimeSignatureList *
 au_verify (GMimeCryptoContext *context, GMimeVerifyFlags flags, GMimeStream *istream, GMimeStream *sigstream,
 	    GMimeStream *ostream, GError **err)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
 	
 	return g_mime_gpgme_verify (gpg->ctx, flags, istream, sigstream, ostream, err);
-#else
-	g_set_error_literal (err, GMIME_ERROR, GMIME_ERROR_NOT_SUPPORTED,
-			     _("PGP support is not enabled in this build"));
-	
-	return NULL;
-#endif /* ENABLE_CRYPTO */
 }
 
 static int
 au_encrypt (GMimeCryptoContext *context, gboolean sign, const char *userid, GMimeEncryptFlags flags,
 	     GPtrArray *recipients, GMimeStream *istream, GMimeStream *ostream, GError **err)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
 	
 	if (sign)
 		set_passphrase_callback (context);
 	
 	return g_mime_gpgme_encrypt (gpg->ctx, sign, userid, flags, recipients, istream, ostream, err);
-#else
-	g_set_error_literal (err, GMIME_ERROR, GMIME_ERROR_NOT_SUPPORTED,
-			     _("PGP support is not enabled in this build"));
-	
-	return -1;
-#endif /* ENABLE_CRYPTO */
 }
 
 static GMimeDecryptResult *
 au_decrypt (GMimeCryptoContext *context, GMimeDecryptFlags flags, const char *session_key,
 	     GMimeStream *istream, GMimeStream *ostream, GError **err)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
 	
 	set_passphrase_callback (context);
 	
 	return g_mime_gpgme_decrypt (gpg->ctx, flags, session_key, istream, ostream, err);
-#else
-	g_set_error_literal (err, GMIME_ERROR, GMIME_ERROR_NOT_SUPPORTED,
-			     _("PGP support is not enabled in this build"));
-	
-	return NULL;
-#endif /* ENABLE_CRYPTO */
 }
 
 static int
 au_import_keys (GMimeCryptoContext *context, GMimeStream *istream, GError **err)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
 	
 	set_passphrase_callback (context);
 	
 	return g_mime_gpgme_import (gpg->ctx, istream, err);
-#else
-	g_set_error_literal (err, GMIME_ERROR, GMIME_ERROR_NOT_SUPPORTED,
-			     _("PGP support is not enabled in this build"));
-	
-	return -1;
-#endif /* ENABLE_CRYPTO */
 }
+
+static int
+g_mime_au_export (gpgme_ctx_t ctx, const char *keys[], GMimeStream *ostream, GError **err)
+{
+	gpgme_data_t keydata;
+	gpgme_error_t error;
+	
+	if ((error = gpgme_data_new_from_cbs (&keydata, &gpg_stream_funcs, ostream)) != GPG_ERR_NO_ERROR) {
+		g_set_error (err, GMIME_GPGME_ERROR, error, _("Could not open output stream: %s"),
+			     gpgme_strerror (error));
+		return -1;
+	}
+	
+	/* export the key(s) */
+	error = gpgme_op_export_ext (ctx, keys, GPGME_EXPORT_MODE_MINIMAL, keydata);
+	gpgme_data_release (keydata);
+	
+	if (error != GPG_ERR_NO_ERROR) {
+		g_set_error (err, GMIME_GPGME_ERROR, error, _("Could not export key data: %s"),
+			     gpgme_strerror (error));
+		return -1;
+	}
+	
+	return 0;
+}
+
 
 static int
 au_export_keys (GMimeCryptoContext *context, const char *keys[], GMimeStream *ostream, GError **err)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
 	
 	set_passphrase_callback (context);
 	
-	return g_mime_gpgme_export (gpg->ctx, keys, ostream, err);
-#else
-	g_set_error_literal (err, GMIME_ERROR, GMIME_ERROR_NOT_SUPPORTED,
-			     _("PGP support is not enabled in this build"));
-	
-	return -1;
-#endif /* ENABLE_CRYPTO */
+	return g_mime_au_export (gpg->ctx, keys, ostream, err);
 }
 
 
@@ -398,7 +374,6 @@ au_export_keys (GMimeCryptoContext *context, const char *keys[], GMimeStream *os
 GMimeCryptoContext *
 g_mime_au_context_new (void)
 {
-#ifdef ENABLE_CRYPTO
 	GMimeGpgContext *gpg;
 	gpgme_ctx_t ctx;
 	
@@ -418,7 +393,4 @@ g_mime_au_context_new (void)
 	gpg->ctx = ctx;
 	
 	return (GMimeCryptoContext *) gpg;
-#else
-	return NULL;
-#endif /* ENABLE_CRYPTO */
 }

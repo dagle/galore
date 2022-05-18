@@ -8,8 +8,8 @@ COVERAGE ?=
 MKD = mkdir -p
 RM = rm -rf
 TARGET := libgalore.so
-SRC = src/galore.c src/filter-reply.c
-OBJ = build/galore.o build/filter-reply.o
+SRC = src/galore.c src/filter-reply.c src/autocrypt.c
+OBJ = build/galore.o build/filter-reply.o build/autocrypt.o
 
 all: mkbuild build/$(TARGET)
 
