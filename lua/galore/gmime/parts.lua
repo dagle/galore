@@ -263,6 +263,10 @@ end
 --- @param now number
 --- @return gmime.AutocryptHeader
 function M.message_get_autocrypt_header(message, now)
+	if now == nil then
+		local ret = gmime.g_mime_message_get_autocrypt_header(message, nil);
+		return ffi.gc(ret, gmime.g_object_unref)
+	end
 	local gdate = gmime.g_date_time_new_from_unix_local(now)
 	local ret = gmime.g_mime_message_get_autocrypt_header(message, gdate);
 	gmime.g_date_time_unref(gdate)
