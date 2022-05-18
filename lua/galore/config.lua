@@ -13,16 +13,16 @@ config.values = {
 	sort = "newest",
 	sent_folder = "Sent", -- String|function(from)
 	sent_tags = "+sent",
-	-- reverse_thread = false, -- Do we want the thread to start from top
-	empty_topyic = "no topic",
+	unsafe_tags = {"spam"}, -- tags we don't want to use for unsafe stuff
+	empty_topic = "no topic",
 	guess_email = false, -- if we can't determain your email for reply use primary
 	empty_tag = "+archive", -- nil or "tag", add a tag when there is no tag
+	default_emph = {tags = {"unread"}},
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
 	always_complete = false, -- always complete addresses, even if not in address header
 	alias = nil, -- a list of {alias, expand}. expand can be a value, list etc. It's then fed into luasnp (support for others later).
-	-- alias = {{"work", "apa@bepa.com"}, {"kalle", {"depa@repa", "andro@dromeda.com"}}}
 	alt_mode = 1, -- for now, 0 never, 1 only render when there isn't an alternative and 2 always
 	show_html = function(text, unsafe) --- how to render a html
 		-- unsafe means that the email
@@ -41,6 +41,7 @@ config.values = {
 	start = function (opts)
 		require("galore.cmp_nm")
 		require("galore.cmp_vcard")
+		require("galore.autocrypt").init()
 		local saved = require("galore.saved")
 		return saved:create(opts.open_mode)
 	end,
@@ -54,6 +55,7 @@ config.values = {
 	encrypt = false, -- Should we encrypt the email by default?
 	gpg_id = nil, --- what gpg id to use, string or {email = string}[]
 	autocrypt = true, -- insert the gpg_id in our emails
+	autocrypt_reply = true, -- use autocrypt in replys if their header includes one.
 	headers = { -- What headers to show, order is important
 		"From",
 		"To",
@@ -131,11 +133,11 @@ config.values = {
 					local tmb = require("galore.thread_message_browser")
 					cb.select_search(saved, tmb, "replace")
 				end,
-				["m"] = function (saved)
-					local cb = require("galore.callback")
-					local mb = require("galore.message_browser")
-					cb.select_search(saved, mb, "replace")
-				end,
+				-- ["m"] = function (saved)
+				-- 	local cb = require("galore.callback")
+				-- 	local mb = require("galore.message_browser")
+				-- 	cb.select_search(saved, mb, "replace")
+				-- end,
 				["q"] = function (saved)
 					saved:close(true)
 				end,
