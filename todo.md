@@ -44,13 +44,14 @@ Ideas:
 * 0.0.2
 today: 
 -- A way to see if all our to, cc, bcc are in the keyring
+--- works but not for autocrypt
 -- Use nvim_buf_create_user_command 
 -- Finish autocrypt
 -- Make callbacks into categories? require("galore.callback").browser?
+-- Look for the session key in the notmuch database
 
   - [x] Guard against untagged messages: No tags => +archive?
-  - [-] Render multipart messages
-  -- [ ] Not tested
+  - [x] Render multipart messages
 
   - [x] Commands / Finding the class from a bufnum?
   - [x] Remove everything in global
