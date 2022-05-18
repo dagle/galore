@@ -168,7 +168,7 @@ local function check_encrypted(self)
 						local mb = ffi.cast("InternetAddressMailbox *", addr)
 						local name = gc.internet_address_get_name(addr)
 						local email = gc.internet_address_mailbox_get_addr(mb)
-						if ge.gpg_key_exists(ctx, name, false) then
+						if ge.gpg_key_exists(ctx, name, false) or ge.gpg_key_exists(ctx, email, false) then
 							key_cache[value] = true
 						else
 							key_cache[value] = false
@@ -185,12 +185,13 @@ local function check_encrypted(self)
 	return true
 end
 
+--- Can we do this without autocrypt too?
 function Compose:notify_encrypted()
 	local enc = check_encrypted(self)
 	if enc then
 		vim.b.galore_encrypt = "🔑"
 	else
-		--- we clear it if not 
+		--- we clear it if not
 		vim.b.galore_encrypt = nil
 	end
 end
