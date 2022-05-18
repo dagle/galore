@@ -104,7 +104,9 @@ function runtime.get_password(ctx, uid, prompt, reprompt, response_stream)
 	if reprompt then
 		prompt = "Try again " .. prompt
 	end
+	vim.fn.inputsave()
 	local input = vim.fn.inputsecret(prompt)
+	vim.fn.inputrestore()
 	if input ~= nil or input ~= "" then
 		gs.stream_write_string(response_stream, input)
 		gs.stream_flush(response_stream)
@@ -119,7 +121,7 @@ end
 
 function runtime.init()
 	if vim.fn.isdirectory(runtime_dir) == 0 then
-		if vim.fn.empty(vim.fn.glob(runtime_dir)) == 1 then
+		if vim.fn.empty(vim.fn.glob(runtime_dir)) == 0 then
 			error "runtime_dir exist but isn't a directory"
 		end
 		vim.fn.mkdir(runtime_dir, "p", "0o700")
