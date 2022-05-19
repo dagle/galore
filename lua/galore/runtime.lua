@@ -8,6 +8,10 @@ local gs = require("galore.gmime.stream")
 local safe = require("galore.gmime.funcs")
 
 local runtime_dir = vim.fn.stdpath('data') .. '/galore'
+if os.getenv("GALOREPATH") then
+	runtime_dir = os.getenv("GALOREPATH")
+end
+
 local save_file = runtime_dir .. '/nm_saved.txt'
 
 local runtime = {}

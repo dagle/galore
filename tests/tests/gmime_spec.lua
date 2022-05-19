@@ -1,5 +1,5 @@
 local tu = require("galore.test_utils")
-local gu = require("galore.gmime-util")
+local gu = require("galore.gmime.util")
 local u = require("galore.util")
 
 describe("Gmime tests", function ()
