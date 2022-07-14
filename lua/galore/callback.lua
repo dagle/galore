@@ -4,6 +4,9 @@ local gu = require("galore.gmime.util")
 local nu = require("galore.notmuch-util")
 local runtime = require("galore.runtime")
 local nm = require("galore.notmuch")
+local config = require("galore.config")
+local go = require("galore.gmime.object")
+local br = require("galore.browser")
 
 local M = {}
 
@@ -13,7 +16,7 @@ function M.select_search(saved, browser, mode)
 end
 
 function M.select_message(browser, mode)
-	local vline, line_info = browser:select()
+	local vline, line_info = br.select(browser)
 	message_view:create(line_info, mode, browser, vline)
 end
 
@@ -27,7 +30,7 @@ function M.get_message(unique, mode)
 end
 
 function M.yank_browser(browser, select)
-	local _, line_info = browser:select()
+	local _, line_info = br.select(browser)
 	vim.fn.setreg('', line_info[select])
 end
 
@@ -42,60 +45,32 @@ function M.message_reply(mv, opts)
 		ref = gu.get_ref(mv.message)
 	else
 		ref = gu.make_ref(mv.message)
+		opts.reply = true
 	end
-	opts = vim.tbl_extend("keep", opts, ref)
-	compose:create("replace", mv.message, opts)
-end
-
-function M.set_search_emph(browser, emph)
-	browser.emph = emph
-	browser:redraw_all()
+	opts.keys = mv.state.keys
+	compose:create("replace", mv.message, {ref}, opts)
 end
 
 function M.change_tag(browser, tag)
 	local vline, line_info = browser:select()
 	if tag then
-		nu.change_tag(line_info.id, tag)
-		nu.tag_if_nil(line_info, config.value.empty_tag)
-		nu.update_line(browser, line_info, vline)
+		runtime.with_db_writer(function(db)
+			nu.change_tag(db, line_info.id, tag)
+			nu.tag_if_nil(db, line_info, config.value.empty_tag)
+			nu.update_line(db, browser, line_info, vline)
+		end)
 	else
 		vim.ui.input({ prompt = "Tags change: " }, function(itag)
 			if itag then
-				nu.change_tag(line_info.id, itag)
-				nu.tag_if_nil(line_info, config.value.empty_tag)
-				nu.update_line(browser, line_info, vline)
+				runtime.with_db_writer(function(db)
+					nu.change_tag(db, line_info.id, tag)
+					nu.tag_if_nil(db, line_info, config.value.empty_tag)
+					nu.update_line(db, browser, line_info, vline)
+				end)
 			else
 				error("No tag")
 			end
 		end)
-	end
-end
-
--- XXX what should a forward do?
---- https://datatracker.ietf.org/doc/html/rfc2076#section-3.14
-function M.forward()
-	local message = message_view:message_ref()
-	vim.ui.input({ prompt = "Forward to: " }, function(to)
-		if to == nil then
-			-- local new = gu.forward(message, to)
-			-- job.send_mail(to, our, message_str)
-			return
-		end
-	end)
-	runtime.with_db(function (db)
-		nu.tag_change(db, message, "+passed")
-	end)
-end
-
-function M.toggle(tmb)
-	local cursor = vim.api.nvim_win_get_cursor(0)
-	local expand, uline, stop, thread = tmb:toggle(cursor[1])
-	tmb:redraw(expand, uline, stop, thread)
-	-- tmb:threads_to_buffer()
-	if expand then
-		vim.api.nvim_win_set_cursor(0, cursor)
-	else
-		vim.api.nvim_win_set_cursor(0, { uline, cursor[2] })
 	end
 end
 
