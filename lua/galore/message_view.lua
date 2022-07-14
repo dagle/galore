@@ -1,172 +1,110 @@
 local r = require("galore.render")
-local u = require("galore.util")
 local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
 local config = require("galore.config")
 local Path = require("plenary.path")
 local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
-local pv = require("galore.part_view")
-local au = require("galore.autocrypt")
-local gc = require("galore.gmime.crypt")
--- local gc = require("galore.gmime.crypt")
-local gp = require("galore.gmime.parts")
+local runtime = require("galore.runtime")
+local browser = require("galore.browser")
 
 local Message = Buffer:new()
-Message.num = 0
 
-local function _view_attachment(self, filename, kind)
-	kind = kind or "floating"
-	if self.attachments[filename] then
-		pv.create(self.attachments[filename], filename, require("plenary.filetype").detect(filename))
-	end
-end
-
-function Message:raw_mode(kind)
-	Buffer.create({
-		name = self.line.filenames[1],
-		ft = "mail",
-		kind = kind or "floating",
-		cursor = "top",
-		init = function(buffer)
-			vim.cmd(":e " .. self.line.filenames[1])
-		end,
-	})
-end
-
-function Message:_save_attachment(filename, save_path)
-	if self.attachments[filename] then
+local function save_attachment(attachments, filename, save_path)
+	if attachments[filename] then
 		-- better way to do this?
 		local path = Path:new(Path:new(save_path):expand())
 		if path:is_dir() then
 			path = path:joinpath(filename)
 		end
-		gu.save_part(self.attachments[filename], path:expand())
+		gu.save_part(attachments[filename], path:expand())
 		return
 	end
 	error("No attachment with that name")
 end
 
--- Maybe do something like this
--- The idea is we can
--- function Message:reindex()
--- 	if #self.filenames ~= 1 then
--- 		vim.notify("We can only reindex non-split messages", vim.log.levels.WARN)
--- 	end
--- 	runtime.with_db(function (db)
--- 		local message = nm.db_find_message(db, mid)
--- 		--- Can we reindex without changing the file?
--- 		---
--- 	end)
--- end
-
-function Message:view_attach()
-	local files = u.collect_keys(self.attachments)
-	vim.ui.select(files, {
-		prompt = "View attachment:",
-	}, function(item, _)
-		if item then
-			_view_attachment(self, item, "floating")
-		else
-			error("No file selected")
-		end
-	end)
-end
-
-function Message:save_attach()
-	-- switch to telescope later?
-	local files = u.collect_keys(self.attachments)
+--- add opts
+function Message:select_attachment(cb)
+	local files = vim.tbl_keys(self.state.attachments)
 	vim.ui.select(files, {
 		prompt = "Attachment to save:",
 	}, function(item, _)
 		if item then
-			vim.ui.input({
-				-- we want to have hints
-				prompt = "Save as: ",
-			}, function(path)
-				self:_save_attachment(item, path)
-			end)
+			cb(item)
 		else
 			error("No file selected")
 		end
 	end)
-end
-
-local function process_au(message, line)
-	local ah = gp.message_get_autocrypt_header(message, nil)
-	local from = gp.message_get_from(message) -- get the solo line
-	if not gc.autocrypt_header_is_complete(ah) then
-		local date = gp.message_get_date(message)
-		au.update_seen(from, date)
-		return
-	end
-
-	--- if the email isn't safe, we bail
-	for _, value in ipairs(config.values.unsafe_tags) do
-		if vim.tbl_contains(line.tags, value) then
-			return
-		end
-	end
-	au.update(ah)
-	au.update_gossip(message)
 end
 
 function Message:update(line)
 	self:unlock()
 	self:clear()
 	local message = gu.construct(line.filenames)
-	process_au(message, line)
+	-- au.process_au(message, line)
 	if message then
-		if self.ns then
-			vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
-		end
-		self.ns = vim.api.nvim_create_namespace("galore-message-view")
+		vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
 		self.message = message
-		r.show_header(message, self.handle, { ns = self.ns }, self.line)
-		self.attachments = r.show_message(message, self.handle, {
+		r.show_headers(message, self.handle, { ns = self.ns }, self.line)
+		self.state = r.show_message(message, self.handle, {
 			ns = self.ns,
 			keys = line.keys
 		})
-		if not vim.tbl_isempty(self.attachments) then
-			ui.render_attachments(self.attachments, self)
+		if not vim.tbl_isempty(self.state.attachments) then
+			ui.render_attachments(self.state.attachments, self)
 		end
 	end
 	self:lock()
 end
 
-function Message:redraw(filename)
+function Message:redraw(line)
 	self:focus()
-	self:update(filename)
+	self:update(line)
 end
 
-local function make_read(browser, line_info, vline)
-	config.values.tag_unread(line_info.id)
-	nu.tag_if_nil(line_info, config.values.empty_tag)
-	nu.update_line(browser, line_info, vline)
+--- this crashes atm
+local function mark_read(pb, line_info, vline)
+	runtime.with_db_writer(function (db)
+		config.values.tag_unread(db, line_info.id)
+		nu.tag_if_nil(db, line_info, config.values.empty_tag)
+		nu.update_line(db, pb, line_info, vline)
+	end)
 end
-
 
 function Message:next()
-	if self.vline then
-		local vline, line_info = self.parent:next(self.vline)
+	if self.vline and self.parent then
+		local line_info, vline = browser.next(self.parent, self.vline)
 		Message:create(line_info, "replace", self.parent, vline)
 	end
 end
 --
 function Message:prev()
-	if self.vline then
-		local vline, line_info = self.parent:prev(self.vline)
+	if self.vline and self.parent then
+		local line_info, vline = browser.prev(self.parent, self.vline)
 		Message:create(line_info, "replace", self.parent, vline)
 	end
 end
 
---- Makes a movement in parent etc
-function Message:move()
+function Message:commands()
+	vim.api.nvim_buf_create_user_command(self.handle, "GaloreSaveAttachment", function (args)
+		if args.fargs then
+			local save_path = "."
+			if #args.fargs > 2 then
+				save_path = args.fargs[2]
+			end
+			save_attachment(self.state.attachments, args.fargs[1], save_path)
+		end
+	end, {
+	nargs = "*",
+	complete = function ()
+		return vim.tbl_keys(self.state.attachments)
+	end,
+	})
 end
 
 function Message:create(line, kind, parent, vline)
 	Buffer.create({
-		name = "galore-view: " .. line.filenames[1],
+		name = line.filenames[1],
 		ft = "mail",
 		kind = kind,
 		parent = parent,
@@ -176,8 +114,11 @@ function Message:create(line, kind, parent, vline)
 			buffer.line = line
 			buffer.parent = parent
 			buffer.vline = vline
-			make_read(parent, line, vline)
+			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
+			-- mark_read(parent, line, vline)
 			buffer:update(line)
+			buffer:commands()
+			config.values.bufinit.message_view(buffer)
 		end,
 	}, Message)
 end
