@@ -61,10 +61,9 @@ function M.decrypt_and_verify(obj, passfun, key)
 		sign = verify_list(gmime.g_mime_decrypt_result_get_signatures(res))
 	end
 
-	--- or should we just save the ctx, do we need to update the key? I don't know gpg
-	runtime.gpg_session_key = ge.decrypt_result_get_session_key(res)
+	local new_key = ge.decrypt_result_get_session_key(res)
 
-	return decrypted, sign
+	return decrypted, sign, new_key
 end
 
 return M
