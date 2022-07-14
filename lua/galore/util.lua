@@ -1,29 +1,14 @@
+--- this file shouldn't contain config?
+--- Clean up unused code etc
 local conf = require("galore.config")
-local ffi = require("ffi")
 local M = {}
 
-
--- change to tbl_keys
-local function collect_keys(t)
-	local box = {}
-	for k, _ in pairs(t) do
-		table.insert(box, k)
-	end
-	return box
-end
-
 function M.trim(s)
-	return (s:gsub("^%s*(.-)%s*$", "%1"))
+	return s:gsub("^%s*(.-)%s*$", "%1")
 end
 
--- change to tbl_keys
-M.collect_keys = collect_keys
-
-function M.safestring(ptr)
-	if ptr == nil then
-		return nil
-	end
-	return ffi.string(ptr)
+function M.id(arg)
+	return arg
 end
 
 function M.make_keys(iter)
@@ -39,7 +24,7 @@ end
 --- @param i? number
 --- @param j? number
 function M.keys_concat(t, sep, i ,j)
-	return table.concat(collect_keys(t), sep, i, j)
+	return table.concat(vim.tbl_keys(t), sep, i, j)
 end
 
 function M.contains(list, item)
@@ -165,10 +150,11 @@ function M.completion_header(line)
 	return false
 end
 
-M.default_template = function()
+M.default_template = function(mailto)
+	mailto = mailto or ""
 	return {
 		"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",
-		"To: ",
+		"To: " .. mailto,
 		"Subject: ",
 	}
 end
