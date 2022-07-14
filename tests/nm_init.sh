@@ -24,11 +24,14 @@ cp -r ${TEST_MAIL} "${TMP_DIRECTORY}/mail"
 MAIL_DIR=$(realpath "${TMP_DIRECTORY}/mail")
 
 # setup notmuch
-export NOTMUCH_CONFIG="${TMP_DIRECTORY}/notmuch-config"
+NOTMUCHDIR="${TMP_DIRECTORY}/notmuch/"
+mkdir ${NOTMUCHDIR}
+export NOTMUCH_CONFIG="${NOTMUCHDIR}/notmuch-config"
 
 cat <<EOF >"${NOTMUCH_CONFIG}"
 [database]
 path=${MAIL_DIR}
+hook_dir=${NOTMUCHDIR}
 
 [user]
 name=Testi McTest
@@ -68,5 +71,4 @@ cp -r tests/ "${TMP_DIRECTORY}"
 notmuch new
 export GALOREPATH="${TMP_DIRECTORY}/galore"
 
-nvim --headless -c "PlenaryBustedDirectory ${TMP_DIRECTORY}/tests {sequential = true}"
-
+# nvim --headless -c "PlenaryBustedDirectory ${TMP_DIRECTORY}/tests {sequential = true}"
