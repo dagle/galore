@@ -21,7 +21,6 @@ function M.make_id(email)
 end
 
 --- XXX move iters
-
 function M.reference_iterator(ref)
 	local i = 0
 	return function()
@@ -52,13 +51,6 @@ function M.internet_address_list_iter(list)
 			local addr = gc.internet_address_list_get_address(list, i)
 			i = i + 1
 			return addr
-			-- local email = ""
-			-- if gc.internet_address_is_mailbox(addr) then
-			-- 	local mb = ffi.cast("InternetAddressMailbox *", addr)
-			-- 	email = gc.internet_address_mailbox_get_addr(mb)
-			-- end
-			-- local name = gc.internet_address_get_name(addr)
-			-- return name, email
 		end
 	end
 end
@@ -106,7 +98,7 @@ end
 --- @return gmime.Message
 function M.parse_message(path)
 	if not path or path == "" then
-		return nil
+		return nil, nil
 	end
 	local stream, err = gs.stream_file_open(path, "r")
 	local parser = gs.parser_new_with_stream(stream)
@@ -247,27 +239,52 @@ local function sep(item, seperator)
 	return item
 end
 
+function M.get_addresses(list)
+	local strbuf = {}
+	for addr in M.internet_address_list_iter(list) do
+		local email
+		if gc.internet_address_is_mailbox(addr) then
+			local mb = ffi.cast("InternetAddressMailbox *", addr)
+			if config.values.idn then
+				email = gc.internet_address_mailbox_get_idn_addr(mb)
+			else
+				email = gc.internet_address_mailbox_get_addr(mb)
+			end
+		end
+		local name = gc.internet_address_get_name(addr)
+		if not email then
+			table.insert(strbuf, name)
+		else
+			local item = sep(name) .. "<" .. email .. ">"
+			table.insert(strbuf, item)
+		end
+	end
+	local str = table.concat(strbuf, ", ")
+	return str
+end
+
 function M.preview_addr(addr, minlen)
 	local strbuf = {}
 	for paddr in M.internet_address_list_iter_str(runtime.parser_opts, addr) do
-		local email = ""
+		local email
 		if gc.internet_address_is_mailbox(paddr) then
 			local mb = ffi.cast("InternetAddressMailbox *", paddr)
 			email = gc.internet_address_mailbox_get_addr(mb)
 		end
 		local name = gc.internet_address_get_name(paddr)
-		if not (name and email) then
-			table.insert(strbuf, addr)
+		if not email then
+			table.insert(strbuf, name)
 		else
 			name = sanatize(name)
 			local item = sep(name) .. "<" .. email .. ">"
 			table.insert(strbuf, item)
 		end
 	end
-	local str = table.concat(strbuf, " ")
+	local str = table.concat(strbuf, ", ")
 	local len = vim.fn.strchars(str)
 	str = str .. string.rep(" ", minlen - len)
 	return str
+
 end
 
 local function match_address(header, addresses)
