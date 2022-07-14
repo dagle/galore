@@ -24,12 +24,13 @@ local go = require("galore.gmime.object")
 local ffi = require("ffi")
 local runtime = require("galore.runtime")
 local nm = require("galore.notmuch")
+local nu = require("galore.notmuch-util")
+local fb_utils = require "telescope._extensions.file_browser.utils"
+local scan = require "plenary.scandir"
+local Path = require "plenary.path"
 
 local Telescope = {}
 
--- parses the tree and outputs the parts
--- this should use select
--- XXX todo, a bit over the top atm
 local function show_tree(object)
 	if gp.is_message_part(object) then
 		return "message-part"
@@ -38,9 +39,6 @@ local function show_tree(object)
 	elseif gp.is_part(object) then
 		local part = ffi.cast("GMimePart *", object)
 		if gp.part_is_attachment(part) then
-			-- if gu.part_mime_type(object) == "application/pgp-signature" then
-			-- 	return "signature"
-			-- end
 			return gu.part_mime_type(object)
 		end
 		return "part"
@@ -64,14 +62,12 @@ local function browser_fun(parent, part, level, state)
 	table.insert(state.part, part)
 end
 
--- should take a filter function?
 function Telescope.parts_browser(message, selected)
 	local state = {}
 	state.select = {}
 	state.part = {}
 	gp.message_foreach_dfs(message, browser_fun, state)
 	vim.ui.select(state.select, {}, function (_, idx)
-		-- apply filters to this?
 		if selected then
 			selected(state.part[idx])
 		end
@@ -79,7 +75,6 @@ function Telescope.parts_browser(message, selected)
 end
 
 local function type_to_kind(type)
-	-- local mode = "replace"
 	local mode
 	if type == "default" then
 		mode = "replace"
@@ -93,6 +88,7 @@ local function type_to_kind(type)
 	return mode
 end
 
+-- Doesn't support multifile?
 local function open_path(bufnr, type, path, fun)
 	local message = gu.parse_message(path)
 	actions.close(bufnr)
@@ -103,14 +99,15 @@ end
 
 local function load_draft(kind, message)
 	local ref = gu.get_ref(message)
-	compose:create(kind, message, ref)
+	compose:create(kind, message, {ref})
 end
 
 local function load_compose(kind, message)
 	local ref = gu.make_ref(message)
-	compose:create(kind, message, ref)
+	compose:create(kind, message, {ref}, {reply = true})
 end
 
+--- should use filenames
 local function open_draft(bufnr, type)
 	local entry = action_state.get_selected_entry()
 	local path = entry.value.filename
@@ -134,18 +131,6 @@ function Telescope.create_search(browser, bufnr, type, parent)
 	local search = action_state.get_current_line()
 	actions.close(bufnr)
 	browser:create(search, type, parent)
-end
-
--- XXX honor opts
-local function entry_maker(opts)
-	return function(entry)
-		local data = vim.fn.json_decode(entry)
-		return {
-			value = data,
-			display = data.subject,
-			ordinal = data.subject, -- this is bad
-		}
-	end
 end
 
 -- Something like like this.
@@ -189,10 +174,26 @@ local function encrypted(buf, winid, message)
   --
 end
 
+-- XXX honor opts
+local function entry_maker(opts)
+	return function(entry)
+		local data = vim.fn.json_decode(entry)
+		if data == nil then
+			return
+		end
+		return {
+			value = data,
+			display = data.subject,
+			ordinal = data.subject, -- this is bad
+		}
+	end
+end
+
+
 local function mime_preview(buf, winid, path)
 	if path and path ~= "" then
 		local message = gu.parse_message(path)
-		r.show_header(message, buf, nil, nil)
+		r.show_headers(message, buf, nil, nil)
 		r.show_message(message, buf, {preview = function (bufid, str)
 			encrypted(bufid, winid, str)
 		end})
@@ -285,6 +286,10 @@ end
 
 --- go to all emails before this one
 function Telescope.goto_reference(refs, opts)
+	if refs == nil then
+		vim.notify("No reference")
+		return
+	end
 	opts = opts or {}
 	local search = opts.search or ""
 	local buf = {}
@@ -308,27 +313,37 @@ function Telescope.goto_references(message_id, opts)
 	Telescope.notmuch_search(opts)
 end
 
---- Move this
---- XXX fix this
-function Telescope.goto_parent(mv)
-	local nu = require("galore.notmuch-util")
-	local ref = go.object_get_header(ffi.cast("GMimeObject *", mv.message), "In-Reply-To")
-	if ref == nil then
-		vim.notify("No reference")
-		return
-	end
-	local mid = gc.utils_decode_message_id(ref)
-
+local function goto_message(mv, id)
 	local line
 	runtime.with_db(function (db)
-		local message = nm.db_find_message(db, mid)
+		local message = nm.db_find_message(db, id)
 		line = nu.get_message(message)
 	end)
 
 	local items = make_tag(mv.message)
 	vim.fn.settagstack(vim.fn.win_getid(), {items=items}, 't')
-	--- We don't really know the vline
 	message_view:create(line, "replace", mv.parent, nil)
+end
+
+function Telescope.goto_message(mv)
+	if not mv.message then
+		return
+	end
+	local mid = gp.message_get_message_id(mv.message)
+	goto_message(mv, mid)
+end
+
+function Telescope.goto_parent(mv)
+	if not mv.message then
+		return
+	end
+	local ref = go.object_get_header(ffi.cast("GMimeObject *", mv.message), "In-Reply-To")
+	if ref == nil then
+		vim.notify("No parent")
+		return
+	end
+	local mid = gc.utils_decode_message_id(ref)
+	goto_message(mv, mid)
 end
 
 Telescope.attach_file = function(comp, opts)
@@ -344,6 +359,63 @@ Telescope.attach_file = function(comp, opts)
 			actions.close(prompt_bufnr)
 			local file = action_state.get_selected_entry().path
 			comp:add_attachment(file)
+		end)
+		return true
+	end
+	require("telescope").extensions.file_browser.file_browser(opts)
+end
+
+
+--- set file-ending/filename as a hint somehow?
+
+--- We need a binding:
+--- To get the current line, even if we have a match
+--- A binding to select the current directory
+Telescope.save_file = function (part, opts)
+	opts = opts or {}
+	opts.prompt_title = "Save file"
+	opts.attach_mappings = function(prompt_bufnr, _)
+		actions.select_default:replace(function()
+			local entry = action_state.get_selected_entry()
+			if entry and entry.Path:is_dir() then
+				local current_picker = action_state.get_current_picker(prompt_bufnr)
+				local finder = current_picker.finder
+				local entry = action_state.get_selected_entry()
+				local path = vim.loop.fs_realpath(entry.path)
+
+				if finder.files and finder.collapse_dirs then
+					local upwards = path == Path:new(finder.path):parent():absolute()
+					while true do
+						local dirs = scan.scan_dir(path, { add_dirs = true, depth = 1, hidden = true })
+						if #dirs == 1 and vim.fn.isdirectory(dirs[1]) then
+							path = upwards and Path:new(path):parent():absolute() or dirs[1]
+							-- make sure it's upper bound (#dirs == 1 implicitly reflects lower bound)
+							if path == Path:new(path):parent():absolute() then
+								break
+							end
+						else
+							break
+						end
+					end
+				end
+
+				finder.files = true
+				finder.path = path
+				fb_utils.redraw_border_title(current_picker)
+				current_picker:refresh(finder, { reset_prompt = true, multi = current_picker._multi })
+			else
+				actions.close(prompt_bufnr)
+				local selected = action_state.get_selected_entry()
+				local file
+				if selected then
+					file = selected.path
+				else
+					--- add path to it
+					file = action_state.get_current_line()
+				end
+				gu.save_part(part, file)
+				-- local search = action_state.get_current_line()
+			end
 		end)
 		return true
 	end
