@@ -95,6 +95,11 @@ char *make_maildir_id(void) {
     return filename;
 }
 
+char *get_domainname(InternetAddressMailbox *mailbox) {
+	char *domain = mailbox->addr + mailbox->at + 1;
+	return domain;
+}
+
 GMimeObject *
 g_mime_multipart_encrypted_decrypt_pass (GMimeMultipartEncrypted *encrypted, GMimeDecryptFlags flags,
 				    const char *session_key, GMimePasswordRequestFunc request_passwd, 
@@ -364,68 +369,3 @@ g_mime_gpgme_key_exists (gpgme_ctx_t ctx, const char *name, gboolean secret, GEr
 
 	return TRUE;
 }
-
-int autocrypt_createkey(const char *path, const char *addr)
-{
-  int rc = -1;
-  gpgme_ctx_t ctx = NULL;
-  gpgme_genkey_result_t keyresult = NULL;
-  gpgme_key_t primary_key = NULL;
-  char buf[1024] = { 0 };
-
-  /* GPGME says addresses should not be in idna form */
-  // struct Address *copy = mutt_addr_copy(addr);
-  // mutt_addr_to_local(copy);
-  // mutt_addr_write(buf, sizeof(buf), copy, false);
-  // mutt_addr_free(&copy);
-
-  if (gpgme_new (&ctx) != GPG_ERR_NO_ERROR)
-	// return NULL;
-    goto cleanup;
-  if (gpgme_ctx_set_engine_info(ctx, GPGME_PROTOCOL_OpenPGP, NULL, path) = GPG_ERR_NO_ERROR)
-	goto cleanup;
-
-  /* Primary key */
-  gpgme_error_t err = gpgme_op_createkey(ctx, addr, "ed25519", 0, 0, NULL,
-                                         GPGME_CREATE_NOPASSWD | GPGME_CREATE_FORCE |
-                                             GPGME_CREATE_NOEXPIRE);
-  if (err) {
-    /* L10N: GPGME was unable to generate a key for some reason.
-       %s is the error message returned by GPGME.  */
-    // mutt_error(_("Error creating autocrypt key: %s"), gpgme_strerror(err));
-    goto cleanup;
-  }
-
-  keyresult = gpgme_op_genkey_result(ctx);
-  if (!keyresult->fpr)
-    goto cleanup;
-  // mutt_buffer_strcpy(keyid, keyresult->fpr);
-  // mutt_debug(LL_DEBUG1, "Generated key with id %s\n", mutt_buffer_string(keyid));
-
-  /* Get gpgme_key_t to create the secondary key and export keydata */
-  err = gpgme_get_key(ctx, keyresult->fpr, &primary_key, 0);
-
-  if (err) {
-    goto cleanup;
-  }
-
-  /* Secondary key */
-  err = gpgme_op_createsubkey(ctx, primary_key, "cv25519", 0, 0,
-                              GPGME_CREATE_NOPASSWD | GPGME_CREATE_NOEXPIRE);
-  if (err) {
-    goto cleanup;
-  }
-
-  /* get keydata */
-  if (export_keydata(ctx, primary_key, keydata))
-    goto cleanup;
-  // mutt_debug(LL_DEBUG1, "key has keydata *%s*\n", mutt_buffer_string(keydata));
-
-  rc = 0;
-
-cleanup:
-  gpgme_key_unref(primary_key);
-  gpgme_release(ctx);
-  return rc;
-}
-
