@@ -1,17 +1,11 @@
 local Buffer = {}
 
-local buffer_ids = {}
-
 function Buffer:new(this)
 	this = this or {}
 	self.__index = self
 	setmetatable(this, self)
 
 	return this
-end
-
-function Buffer.get(bufid)
-	return buffer_ids[bufid]
 end
 
 function Buffer:focus()
@@ -69,10 +63,6 @@ function Buffer:close(delete)
 	end
 end
 
-local function buffer_delete(bufnr)
-	buffer_ids[bufnr] = nil
-end
-
 function Buffer:get_lines(first, last, strict)
 	return vim.api.nvim_buf_get_lines(self.handle, first, last, strict)
 end
@@ -113,7 +103,8 @@ function Buffer:put(lines, after, follow)
 end
 
 function Buffer:create_fold(first, last)
-	vim.cmd(string.format(self.handle .. "bufdo %d,%dfold", first, last))
+	vim.cmd(string.format("%d,%dfold", first, last))
+	vim.cmd(string.format("%d,%dfoldopen", first, last))
 end
 
 function Buffer:get_option(name)
@@ -319,10 +310,15 @@ function Buffer.create(config, class)
 	if config.mappings then
 		for mode, val in pairs(config.mappings) do
 			for key, cb in pairs(val) do
+				local opts = mapopts
+				if type(cb) == "table" then
+					opts = vim.tbl_extend("keep", cb[2], mapopts)
+					cb = cb[1]
+				end
 				local cbfunc = function()
 					cb(buffer)
 				end
-				vim.keymap.set(mode, key, cbfunc, mapopts)
+				vim.keymap.set(mode, key, cbfunc, opts)
 			end
 		end
 	else
@@ -356,7 +352,7 @@ function Buffer.create(config, class)
 	end
 	vim.api.nvim_create_autocmd("BufDelete", {
 		callback = function ()
-			buffer_delete(buffer.handle)
+			-- buffer_delete(buffer.handle)
 		end,
 		buffer = buffer.handle
 	})
@@ -368,8 +364,7 @@ function Buffer.create(config, class)
 	if config.readonly ~= nil and config.readonly then
 		buffer:set_option("readonly", true)
 	end
-
-	buffer_ids[buffer.handle] = buffer
+	vim.b.galorebuf = function() return buffer end
 
 	return buffer
 end
