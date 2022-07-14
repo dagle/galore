@@ -43,7 +43,7 @@ function galore.setup(opts)
 	galore.user_config = opts
 end
 
-function galore.compose(args)
+function galore.compose(args, kind)
 	local opts = {}
 	if type(args) == "string" then
 		args = args:gsub("mailto:", "")
@@ -58,7 +58,7 @@ function galore.compose(args)
 	if not galore.connected then
 		galore.connect()
 	end
-	require('galore.compose'):create("replace", nil, nil, opts)
+	require('galore.compose'):create(kind, nil, nil, opts)
 end
 
 --- setup things like
