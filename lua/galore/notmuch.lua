@@ -1,5 +1,5 @@
--- This is a raw ffi layer on top of notmuch, if you want to
--- want an OO-style lib, it's very easy to build it on top of this
+---@diagnostic disable: undefined-field
+-- This is a raw ffi layer on top of notmuch
 --
 -- A object type that ends with an s like threads is a
 -- collection of thread. You can then use the normal lua
@@ -9,10 +9,8 @@ local M = {}
 local ffi = require("ffi")
 local nm = ffi.load("notmuch")
 
--- TODO go over tag objects, should we do them or only do strings?
-
--- TODO compact_status
--- TODO make it possible to break an iterator cleanly
+-- TODO should we rework the error? Should functions return status, errors etc and not assert?
+-- TODO should we create a global callback function to show errors etc?
 
 --- @class notmuch.Db
 --- @class notmuch.Query
@@ -533,6 +531,12 @@ local function stat(status)
 	return ffi.string(nm.notmuch_status_to_string(status))
 end
 
+local function safestr(str)
+	if str then
+		return ffi.string(str)
+	end
+end
+
 --- @param status notmuch.Status
 --- @return string
 function M.status_to_string(status)
@@ -545,7 +549,7 @@ function M.db_create(path)
 	local db = ffi.new("notmuch_database_t*[1]")
 	local res = nm.notmuch_database_create(path, db)
 	assert(res == 0, "Error creating database with err=" .. stat(res))
-	return ffi.gc(db[0], M.db_close)
+	return ffi.gc(db[0], nm.notmuch_database_destroy)
 end
 
 --- @param path string path to the new database
@@ -558,7 +562,7 @@ function M.db_create_with_config(path, mode, conf_path, profile)
 	local err = ffi.new("char*[1]")
 	local res = nm.notmuch_database_create_with_config(path, mode, conf_path, profile, db, err)
 	assert(res == 0, "Error creating database with err=" .. stat(res))
-	return ffi.gc(db[0], M.db_close)
+	return ffi.gc(db[0], nm.notmuch_database_destroy)
 end
 
 --- @param path string directory where the Notmuch database is stored.
@@ -569,10 +573,10 @@ function M.db_open(path, mode)
 	local db = ffi.new("notmuch_database_t*[1]")
 	local res = nm.notmuch_database_open(path, mode, db)
 	assert(res == 0, "Error opening database with err=" .. stat(res))
-	return ffi.gc(db[0], M.db_close)
+	return ffi.gc(db[0], nm.notmuch_database_destroy)
 end
 
---- @param path string path to the new database
+--- @param path string path to the database
 --- @param mode number Read/write mode. 0 for r and 1 for rw.
 --- @param conf_path string path to the config
 --- @param profile string name of the profile in the config
@@ -581,8 +585,8 @@ function M.db_open_with_config(path, mode, conf_path, profile)
 	local db = ffi.new("notmuch_database_t*[1]")
 	local err = ffi.new("char*[1]")
 	local res = nm.notmuch_database_open_with_config(path, mode, conf_path, profile, db, err)
-	assert(res == 0, "Error creating database with err=" .. stat(res))
-	return ffi.gc(db[0], M.db_close)
+	assert(res == 0, "Error opening database with err=" .. stat(res))
+	return ffi.gc(db[0], nm.notmuch_database_destroy)
 end
 
 --- @param path string path to the new database
@@ -595,7 +599,7 @@ function M.db_load_config(path, conf_path, profile)
 	local res = nm.notmuch_database_load_config(path, conf_path, profile, db, err)
 	err = ffi.string(err[0])
 	assert(res == 0, "Error creating database with err=" .. stat(res))
-	return ffi.gc(db[0], M.db_close)
+	return ffi.gc(db[0], nm.notmuch_database_destroy)
 end
 
 --- @param db notmuch.Db
@@ -610,17 +614,17 @@ function M.db_close(db)
 	assert(res == 0, "Error closing database with err=" .. stat(res))
 end
 
---- @param db object to close and free
--- function M.db_destroy(db)
--- 	nm.notmuch_database_destroy(db)
--- end
-
 --- @param path string path to db
 --- @param backup string where to backup
---- @param fun fun(message: notmuch.Message, arg: any)
+--- @param fun fun(message: string, arg: any)
 --- @param arg any agrement passed to fun
 function M.db_compact(path, backup, fun, arg)
-	-- return nm.notmuch_database_compact(path, backup, cfun, carg)
+	assert(type(arg) == "table" or type(arg) == "nil", "Arg needs to be a table or nil")
+	local function cfun(cstr, closure)
+		local str = ffi.string(cstr)
+		fun(str, closure)
+	end
+	return nm.notmuch_database_compact(path, backup, cfun, arg)
 end
 
 --- @param db notmuch.Db
@@ -628,7 +632,12 @@ end
 --- @param fun fun(message: notmuch.Message, arg: any)
 --- @param arg any agrement passed to fun
 function M.db_compact_db(db, backup, fun, arg)
-	-- return nm.notmuch_database_compact_db(db, backup, cfun, carg)
+	assert(type(arg) == "table" or type(arg) == "nil", "Arg needs to be a table or nil")
+	local function cfun(cstr, closure)
+		local str = ffi.string(cstr)
+		fun(str, closure)
+	end
+	return nm.notmuch_database_compact_db(db, backup, cfun, arg)
 end
 
 --- @param db notmuch.Db
@@ -650,12 +659,15 @@ function M.db_needs_upgrade(db)
 end
 
 --- @param db notmuch.Db
---- @param progress_func fun(any: arg, number: progress)
+--- @param progress_func fun(closure: any, progress: any)
 --- @param arg any
 --- @return notmuch.Status
 function M.db_upgrade(db, progress_func, arg)
-	-- TODO
-	-- nm.notmuch_database_upgrade(db, cprogress_func, carg)
+	assert(type(arg) == "table" or type(arg) == "nil", "Arg needs to be a table or nil")
+	local function cfun(closure, num)
+		progress_func(closure, num)
+	end
+	nm.notmuch_database_upgrade(db, cfun, arg)
 end
 
 --- @param db notmuch.Db
@@ -673,8 +685,7 @@ end
 --- @param db notmuch.Db
 --- @return number
 function M.get_revision(db)
-	-- hardcode 100?
-	local uuid = ffi.new("const char*[?]", 100)
+	local uuid = ffi.new("const char*[1]")
 	local res = nm.notmuch_database_get_revision(db, uuid)
 	uuid = ffi.string(uuid[0])
 	return tonumber(res), uuid
@@ -816,13 +827,13 @@ end
 --- @param db notmuch.Db
 --- @return fun():string
 function M.db_get_all_tags(db)
-	local tags = nm.notmuch_database_get_all_tags(db)
+	local tags = ffi.gc(nm.notmuch_database_get_all_tags(db), nm.notmuch_tags_destroy)
 	return tag_iterator(tags)
 end
 
 --- @param db notmuch.Db
 --- @param mode number Read/write mode. 0 for r and 1 for rw.
---- @return notmuch.Db
+--- @return notmuch.Status
 function M.db_reopen(db, mode)
 	return nm.notmuch_database_reopen(db, mode)
 end
@@ -914,7 +925,8 @@ function M.query_get_threads(query)
 	local threads = ffi.new("notmuch_threads_t*[1]")
 	local res = nm.notmuch_query_search_threads(query, threads)
 	assert(res == 0, "Error retrieving threads, err=" .. res)
-	return thread_iterator(threads[0])
+	local tthreads = ffi.gc(threads[0], nm.notmuch_threads_destroy)
+	return thread_iterator(tthreads)
 end
 
 --- @param query notmuch.Query
@@ -923,13 +935,9 @@ function M.query_get_messages(query)
 	local messages = ffi.new("notmuch_messages_t*[1]")
 	local res = nm.notmuch_query_search_messages(query, messages)
 	assert(res == 0, "Error retriving messages, err= " .. res)
-	return message_iterator(messages[0])
+	local mmessages = ffi.gc(messages[0], nm.notmuch_messages_destroy)
+	return message_iterator(mmessages)
 end
-
---- @param query notmuch.Query
--- function M.query_destroy(query)
--- 	nm.notmuch_query_destroy(query)
--- end
 
 --- @param query notmuch.Query
 --- @return number
@@ -970,14 +978,14 @@ end
 --- @param thread notmuch.Thread
 --- @return Iterator
 function M.thread_get_toplevel_messages(thread)
-	local messages = nm.notmuch_thread_get_toplevel_messages(thread)
+	local messages = ffi.gc(nm.notmuch_thread_get_toplevel_messages(thread), nm.notmuch_messages_destroy)
 	return message_iterator(messages)
 end
 
 --- @param thread notmuch.Thread
 --- @return Iterator
 function M.thread_get_messages(thread)
-	local messages = nm.notmuch_thread_get_messages(thread)
+	local messages = ffi.gc(nm.notmuch_thread_get_messages(thread), nm.notmuch_messages_destroy)
 	return message_iterator(messages)
 end
 
@@ -1005,7 +1013,7 @@ function M.thread_get_oldest_date(thread)
 	return tonumber(nm.notmuch_thread_get_oldest_date(thread))
 end
 
---- @param thread notmuch.Thread 
+--- @param thread notmuch.Thread
 --- @return number
 function M.thread_get_newest_date(thread)
 	return tonumber(nm.notmuch_thread_get_newest_date(thread))
@@ -1014,19 +1022,9 @@ end
 --- @param thread notmuch.Thread
 --- @return Iterator
 function M.thread_get_tags(thread)
-	local tags = nm.notmuch_thread_get_tags(thread)
+	local tags = ffi.gc(nm.notmuch_thread_get_tags(thread), nm.notmuch_tags_destroy)
 	return tag_iterator(tags)
 end
-
---- @param thread notmuch.Thread
--- function M.thread_destroy(thread)
--- 	return nm.notmuch_thread_destroy(thread)
--- end
-
---- @param messages notmuch.Messages
--- function M.messages_destroy(messages)
--- 	nm.notmuch_messages_destroy(messages)
--- end
 
 --- @param query notmuch.Query
 --- @return Iterator
@@ -1034,7 +1032,11 @@ function M.messages_collect_tags(query)
 	local messages = ffi.new("notmuch_messages_t*[1]")
 	local res = nm.notmuch_query_search_messages(query, messages)
 	assert(res == 0, "Error retriving messages, err= " .. res)
-	local tags = nm.notmuch_messages_collect_tags(messages)
+	local function cleanup(tags)
+		nm.notmuch_messages_destroy(messages[0])
+		nm.notmuch_tags_destroy(tags)
+	end
+	local tags = ffi.gc(nm.notmuch_messages_collect_tags(messages), cleanup)
 	return tag_iterator(tags)
 end
 
@@ -1082,7 +1084,7 @@ end
 --- @param message gmime.Message
 --- @return Iterator
 function M.message_get_filenames(message)
-	local filenames = nm.notmuch_message_get_filenames(message)
+	local filenames = ffi.gc(nm.notmuch_message_get_filenames(message), nm.notmuch_filenames_destroy)
 	return filename_iterator(filenames)
 end
 
@@ -1099,10 +1101,9 @@ end
 --- @param flag number
 --- @return boolean flag
 function M.message_get_flag(message, flag)
-	-- TODO
 	local is_set = ffi.new("notmuch_bool_t[1]")
 	local res = nm.notmuch_message_get_flag_st(message, flag, is_set) ~= 0
-	assert(not res, string.format("Error error getting flag. err=%s", tostring(res)))
+	assert(not res, string.format("Error getting flag. err=%s", tostring(res)))
 	return is_set[0] ~= 0
 end
 
@@ -1129,7 +1130,7 @@ end
 --- @param message notmuch.Message
 --- @return Iterator
 function M.message_get_tags(message)
-	local tags = nm.notmuch_message_get_tags(message)
+	local tags = ffi.gc(nm.notmuch_message_get_tags(message), nm.notmuch_tags_destroy)
 	return tag_iterator(tags)
 end
 
@@ -1163,9 +1164,10 @@ end
 --- @param flag string
 --- @return notmuch.Status
 function M.message_has_maildir_flag(message, flag)
-	-- TODO
-	local is_set
-	return nm.notmuch_message_has_maildir_flag_st(message, flag, is_set)
+	local is_set = ffi.new("notmuch_bool_t[1]")
+	local res = nm.notmuch_message_has_maildir_flag_st(message, flag, is_set)
+	assert(not res, string.format("Error getting flag. err=%s", tostring(res)))
+	return is_set[0] ~= 0
 end
 
 --- @param message notmuch.Message
@@ -1185,12 +1187,6 @@ end
 function M.message_thaw(message)
 	return nm.notmuch_message_thaw(message)
 end
-
---- @param message notmuch.Message
---- @return notmuch.Status
--- function M.message_destroy(message)
--- 	return nm.notmuch_message_destroy(message)
--- end
 
 --- @param message notmuch.Message
 --- @param key string
@@ -1234,18 +1230,20 @@ end
 --- @param message notmuch.Message
 --- @param key string
 --- @param exact boolean
+--- @return Iterator
 function M.message_get_properties(message, key, exact)
-	return property_iterator(nm.notmuch_message_get_properties (message, key, exact))
+	local it = ffi.gc(nm.notmuch_message_get_properties (message, key, exact), nm.notmuch_message_properties_destroy)
+	return property_iterator(it)
 end
 
---- @param properties object
--- function M.message_properties_destroy(properties)
--- 	nm.notmuch_message_properties_destroy(properties)
--- end
-
--- function M.tags_destroy(tags)
--- 	nm.notmuch_tags_destroy(tags)
--- end
+--- @param message notmuch.Message
+--- @param key string
+--- @return number
+function M.message_count_properties(message, key)
+	local count  = ffi.new("unsigned int[1]")
+	local ret = nm.notmuch_message_count_properties(message, key, count[0])
+	return count[0]
+end
 
 --- @param directory notmuch.Directory
 --- @param time object
@@ -1262,14 +1260,14 @@ end
 --- @param directory notmuch.Directory
 --- @return notmuch.Filenames
 function M.directry_get_child_files(directory)
-	local filenames = nm.notmuch_directory_get_child_files(directory)
+	local filenames = ffi.gc(nm.notmuch_directory_get_child_files(directory), nm.notmuch_filenames_destroy)
 	return filename_iterator(filenames)
 end
 
 --- @param directory notmuch.Directory
 --- @return notmuch.Filenames
 function M.directory_get_child_directories(directory)
-	local filenames = nm.notmuch_directory_get_child_directories(directory)
+	local filenames = ffi.gc(nm.notmuch_directory_get_child_directories(directory), nm.notmuch_filenames_destroy)
 	return filename_iterator(filenames)
 end
 
@@ -1278,17 +1276,6 @@ end
 function M.directory_delete(directory)
 	return nm.notmuch_directory_delete(directory)
 end
-
---- @param directory notmuch.Directory
--- function M.directory_destroy(directory)
--- 	nm.notmuch_directory_destroy(directory)
--- end
-
---- @param filenames notmuch.Filenames
---- @return notmuch.Status
--- function M.filenames_destroy(filenames)
--- 	return nm.notmuch_filenames_destroy(filenames)
--- end
 
 --- @param db notmuch.Db
 --- @param key string
@@ -1302,7 +1289,10 @@ end
 --- @param key string
 --- @return string value
 function M.db_get_conf(db, key)
-	-- TODO
+	local value = ffi.new("char*[1]")
+	local res = nm.notmuch_database_get_config(db, key, value)
+	assert(res == 0, "Error getting config value err=" .. res)
+	return safestr(value)
 end
 
 --- @param db notmuch.Db
@@ -1310,14 +1300,10 @@ end
 function M.db_get_conf_list(db, prefix)
 	local list = ffi.new("notmuch_config_list_t*[1]")
 	local res = nm.notmuch_database_get_config_list(db, prefix, list)
-	assert(res == 0, "Error creating database with err=" .. res)
-	return config_list_iterator(list[0])
+	assert(res == 0, "Error getting config list err=" .. res)
+	local llist = ffi.gc(list[0], nm.notmuch_config_list_destroy)
+	return config_list_iterator(llist)
 end
-
---- @param config_list object
--- function M.config_list_destroy(config_list)
--- 	nm.notmuch_config_list_destroy(config_list)
--- end
 
 --- @param db notmuch.Db
 --- @param key object
@@ -1325,11 +1311,6 @@ end
 function M.config_get(db, key)
 	return ffi.string(nm.notmuch_config_get(db, key))
 end
-
--- function M.config_get_string(db, key)
--- 	local conf_key = get_key(key)
--- 	return ffi.string(nm.notmuch_config_get(db, conf_key))
--- end
 
 --- @param db notmuch.Db
 --- @param key object
@@ -1343,7 +1324,7 @@ end
 --- @param key string
 --- @return Iterator
 function M.config_get_values(db, key)
-	local values = nm.notmuch_config_get_values(db, key)
+	local values = ffi.gc(nm.notmuch_config_get_values(db, key), nm.notmuch_config_values_destroy)
 	return value_iterator(values)
 end
 
@@ -1351,14 +1332,14 @@ end
 --- @param key string
 --- @return Iterator
 function M.config_get_values_string(db, key)
-	local values = nm.notmuch_config_get_values_string(db, key)
+	local values = ffi.gc(nm.notmuch_config_get_values_string(db, key), nm.notmuch_config_values_destroy)
 	return value_iterator(values)
 end
 --- @param db notmuch.Db
 --- @param prefix string
 --- @return Iterator
 function M.config_get_pairs(db, prefix)
-	local pairs = nm.notmuch_config_get_pairs(db, prefix)
+	local pairs = ffi.gc(nm.notmuch_config_get_pairs(db, prefix), nm.notmuch_config_pairs_destroy)
 	return pair_iterator(pairs)
 end
 
@@ -1383,10 +1364,18 @@ function M.db_get_default_indexopts(db)
 end
 
 --- @param indexopts object
---- @param decrypt_pol number
+--- @param decrypt_pol string (true, no, nostash)
 --- @return object status
 function M.indexopts_set_decrypt_policy(indexopts, decrypt_pol)
-	return nm.notmuch_indexopts_set_decrypt_policy(indexopts, decrypt_pol)
+	local decrypt = 2
+	if decrypt_pol == "true" then
+		decrypt = 1
+	elseif decrypt_pol == "no" then
+		decrypt = 0
+	elseif decrypt_pol == "nostash" then
+		decrypt = 3
+	end
+	return nm.notmuch_indexopts_set_decrypt_policy(indexopts, decrypt)
 end
 
 --- @param indexopts object
@@ -1395,16 +1384,18 @@ function M.indexopts_get_decrypt_policy(indexopts)
 	return nm.notmuch_indexopts_get_decrypt_policy(indexopts)
 end
 
---- @param indexopts object
---- @return object status
--- function M.indexopts_destroy(indexopts)
--- 	return nm.notmuch_indexopts_destroy(indexopts)
--- end
-
 --- @param name string
 --- @return boolean
 function M.built_with(name)
 	return nm.notmuch_built_with(name)
+end
+
+--- @param decrypt_pol string (true, no, nostash)
+--- @return object
+function M.make_indexopts(decrypt_pol)
+	local ret = ffi.new("notmuch_indexopts_t[1]")
+	M.indexopts_set_decrypt_policy(ret, decrypt_pol)
+	return ret
 end
 
 return M
