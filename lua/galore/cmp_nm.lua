@@ -58,7 +58,10 @@ function source:complete(params, callback)
 		Job
 			:new({
 				command = "notmuch",
-				args = { "address", self.query },
+				args = {
+					"address",
+					"--deduplicate=address",
+					self.query },
 				on_exit = function(j, ret_val)
 					if ret_val ~= 0 then
 						callback(nil)
@@ -68,7 +71,7 @@ function source:complete(params, callback)
 					local tbl = {}
 					for _, mbox in ipairs(ret) do
 						table.insert(tbl, {
-							label = string.format("%s", mbox),
+							label =  mbox
 						})
 					end
 					self.cache[bufnr] = tbl
