@@ -8,7 +8,7 @@ function M.render_attachments(attachments, buf)
 	local marks = {}
 	for k, _ in pairs(attachments) do
 		local str = string.format("-[%s]", k)
-		table.insert(marks, {str, "Comment"})
+		table.insert(marks, {str, "GaloreAttachment"})
 	end
 	local line = vim.fn.line("$") - 1
 	local opts = {
