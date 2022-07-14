@@ -1,5 +1,4 @@
 local gp = require("galore.gmime.parts")
-local gi = require("galore.gmime.gmime_ffi")
 local gc = require("galore.gmime.content")
 local gu = require("galore.gmime.util")
 local go = require("galore.gmime.object")
@@ -7,7 +6,6 @@ local gcu = require("galore.crypt-utils")
 local gs = require("galore.gmime.stream")
 local gf = require("galore.gmime.filter")
 local runtime = require("galore.runtime")
-local u = require("galore.util")
 -- local nm = require("galore.notmuch")
 local ffi = require("ffi")
 local config = require("galore.config")
@@ -22,21 +20,12 @@ function M.draw(buffer, input)
 	vim.api.nvim_buf_set_lines(buffer, -1, -1, true, input)
 end
 
---- this shouldn't be called iter
-local function collect(iter)
-	local box = {}
-	for k, val in iter do
-		box[k] = val
-	end
-	return box
-end
-
 local function mark(buffer, ns, content, i)
 	local line_num = i
 	local col_num = 0
 
 	local opts = {
-		virt_text = { { content, "Comment" } },
+		virt_text = { { content, "GaloreHeader" } },
 	}
 	vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
 end
@@ -54,20 +43,30 @@ local marks = {
 	end
 }
 
-function M.show_header(message, buffer, opts, line)
-	opts = opts or {}
-	local headers = collect(gu.header_iter(message))
-	local i = 0
-	for _, k in ipairs(config.values.headers) do
-		if headers[k] then
-			local str = string.gsub(k .. ": " .. headers[k], "\n", "")
-			vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, { str })
-			if marks[k] and opts.ns then
-				marks[k](buffer, opts.ns, i, line)
-			end
-			i = i + 1
+local function show_header(buffer, key, value, ns, i, line)
+	if value and value ~= "" then
+		local str = key .. ": " .. value
+		vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, { str })
+		if marks[key] and ns then
+			marks[key](buffer, ns, i, line)
 		end
+		return i+1
 	end
+	return i
+end
+
+function M.show_headers(message, buffer, opts, line)
+	opts = opts or {}
+	local i = 0
+	local address_headers = {"From", "To", "Cc", "Bcc"}
+	for _, head in ipairs(address_headers) do
+		local addr = gu.get_addresses(gp.message_get_address(message, head))
+		i = show_header(buffer, head, addr, opts.ns, i, line)
+	end
+	local date = os.date("%c", gp.message_get_date(message))
+	i = show_header(buffer, "Date", date, opts.ns, i, line)
+	local Subject = gp.message_get_subject(message)
+	i = show_header(buffer, "Subject", Subject, opts.ns, i, line)
 end
 
 --- XXX add a way to configure what filters are used etc
@@ -118,7 +117,7 @@ local function show_message_helper(message, buf, opts, state)
 
 	if opts.reply then
 		local date = gp.message_get_date(message)
-		local author = gc.internet_address_list_to_string(gp.message_get_address(message, gi.GMIME_ADDRESS_TYPE_FROM), nil, false)
+		local author = gc.internet_address_list_to_string(gp.message_get_from(message), nil, false)
 		local qoute = config.values.qoute_header(date, author)
 		M.draw(buf, { qoute })
 	end
@@ -142,17 +141,18 @@ function M.show_message(message, buf, opts)
 	-- This is to handle https://efail.de/ problems
 	-- You can ignore this if you want
 	-- opts.unsafe = true
-	local function find_encrypted(_, part, state)
+	local function find_encrypted(_, part, _, state)
 		if gp.is_multipart_encrypted(part) then
 			state.unsafe = true
 		end
 	end
 
-	local box = {}
-	-- gp.message_foreach(message, find_encrypted, box)
-	box.attachments = {}
-	show_message_helper(message, buf, opts, box)
-	return box.attachments
+	local state = {}
+	gp.message_foreach(message, find_encrypted, state)
+	state.attachments = {}
+	state.keys = {}
+	show_message_helper(message, buf, opts, state)
+	return state
 end
 
 -- something like this
@@ -197,17 +197,18 @@ function M.show_part(object, buf, opts, state)
 			end
 
 			local before = vim.fn.line('$') - 1
-			local de_part, verified 
-			if vim.tbl_isempty(opts.keys) then
-				de_part, verified= gcu.decrypt_and_verify(object, runtime.get_password)
+			local de_part, verified, new_keys
+			if not opts.keys or vim.tbl_isempty(opts.keys) then
+				de_part, verified, new_keys = gcu.decrypt_and_verify(object, runtime.get_password)
 			else
 				for _, key in ipairs(opts.keys) do
-					de_part, verified = gcu.decrypt_and_verify(object, runtime.get_password, key)
+					de_part, verified, new_keys = gcu.decrypt_and_verify(object, runtime.get_password, key)
 				end
 			end
-			if not de_part then
-				de_part, verified = au.decrypt(object)
-			end
+			-- if not de_part then
+			-- 	de_part, verified = au.decrypt(object)
+			-- end
+			table.insert(state, new_keys)
 			M.show_part(de_part, buf, opts, state)
 			local after = vim.fn.line('$') - 1
 			local names
