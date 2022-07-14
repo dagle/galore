@@ -81,6 +81,25 @@ function M.au_contex_new()
 	return create_ctx()
 end
 
+function M.process_au(message, line)
+	local ah = gp.message_get_autocrypt_header(message, nil)
+	local from = gp.message_get_from(message) -- get the solo line
+	if not gc.autocrypt_header_is_complete(ah) then
+		local date = gp.message_get_date(message)
+		M.update_seen(from, date)
+		return
+	end
+
+	--- if the email isn't safe, we bail
+	for _, value in ipairs(config.values.unsafe_tags) do
+		if vim.tbl_contains(line.tags, value) then
+			return
+		end
+	end
+	M.update(ah)
+	M.update_gossip(message)
+end
+
 --- add history?
 function M.update(ah)
 	local addr = gc.autocrypt_header_get_address_as_string(ah)
@@ -126,6 +145,7 @@ end
 function M.update_gossip(message)
 	gc.crypto_context_register("application/pgp-signature", M.ctx)
 	gc.crypto_context_register ("application/pgp-encrypted", M.ctx)
+	-- XXX flags are wrong?
 	local ahlist = gp.message_get_autocrypt_gossip_headers(message, nil, config.values.decrypt_flags, nil)
 	gc.crypto_context_register ("application/pgp-signature", gc.gpg_context_new)
 	gc.crypto_context_register ("application/pgp-encrypted", gc.gpg_context_new)
