@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Galore Mail
+Comment=A neovim email client using notmuch
+Exec=nvim -c ":GaloreCompose %u"
+Icon=galore
+Terminal=true
+Type=Application
+Keywords=Email;E-mail;
+Categories=Network;Email;
+MimeType=x-scheme-handler/mailto;
