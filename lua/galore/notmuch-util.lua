@@ -1,9 +1,5 @@
 local nm = require("galore.notmuch")
-local gu = require("galore.gmime.util")
 local u = require("galore.util")
-local config = require("galore.config")
-local job = require("plenary.job")
-local runtime = require("galore.runtime")
 
 local M = {}
 
@@ -16,18 +12,13 @@ function M.message_with_thread(message, f)
 	local db = nm.message_get_db(message)
 	local query = nm.create_query(db, "thread:" .. id)
 	for thread in nm.query_get_threads(query) do
-		local ret = f(thread)
-		nm.query_destroy(query)
-		return ret
+		return f(thread)
 	end
-	-- this shouldn't really happen
-	-- nm.query_destroy(query)
 end
 
 --- Get a single message and convert it into a line
 function M.get_message(message)
 	local id = nm.message_get_id(message)
-	-- local filename = nm.message_get_filename(message)
 	local filenames = u.collect(nm.message_get_filenames(message))
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
@@ -49,190 +40,50 @@ function M.get_message(message)
 	}
 end
 
---- XXX removal
-local function _get_index(messages, m1, i)
-	for m2 in ipairs(messages) do
-		if nm.message_get_id(m1) == nm.message_get_id(m2) then
-			return true, i
-		end
-		local sorted = nm.message_get_replies(m2)
-		local match, i2 = _get_index(sorted, m1, i + 1)
-		if match then
-			return match, i2
-		end
-		i = i2
-	end
-	return false, i
-end
-
---- gets the index of message is in a thread
---- XXX removal
-function M.get_index(thread, m1)
-	local messages = nm.thread_get_toplevel_messages(thread)
-	-- for m2 in messages do
-	local match, i = _get_index(messages, m1, 1)
-	if match then
-		return i
-	end
-	return nil
-end
-
-local special_tags = {
-    draft = true,
-    flagged = true,
-    passed = true,
-    replied = true,
-    unread = true,
-}
-
---- @param message notmuch.Message
---- @param str string + adds tag, - removes tag
---- @param tags string current tags the message has
---- @return boolean if the change in tags can would trigger a maildir change
-local function _change_tag(message, str, tags, state)
-	local start, stop = string.find(str, "[+-]%a+")
-	local special = false
-	if start == nil then
-		return
-	end
-	local tag = string.sub(str, start + 1, stop)
-	local status = 0
-	if string.sub(str, start, start) == "+" then
-		if not tags[tag] then
+local function update_tags(message, changes)
+	nm.message_freeze(message)
+	for _, change in ipairs(changes) do
+		local status
+		local op = string.sub(change, 1, 1)
+		local tag = string.sub(change, 2)
+		if op == "-" then
+			status = nm.message_remove_tag(message, tag)
+		elseif op == "+" then
 			status = nm.message_add_tag(message, tag)
 		end
-	else
-		if tags[tag] then
-			status = nm.message_remove_tag(message, tag)
+		if status ~= nil then
+			-- print error
 		end
 	end
-	if status ~= 0 then
-		vim.notify("Change tag failed with: " .. status)
-		return false
-	end
-	special = special_tags[tag]
-	if stop == #str then
-		return
-	end
-	return special or _change_tag(message, string.sub(str, stop + 1, #str), tags, state)
-end
-
--- can I make a async version of these
-function M.with_db_writer(db, func)
-	local path = nm.db_get_path(db)
-	local write_db = nm.db_open(path, 1)
-	nm.db_atomic_begin(write_db)
-	func(write_db)
-	nm.db_atomic_end(write_db)
-end
-
-function M.with_message_writer(message, func)
-	local id = nm.message_get_id(message)
-	local db = nm.message_get_db(message)
-	M.with_db_writer(db, function(new_db)
-		local new_message = id_get_message(new_db, id)
-		func(new_message)
-	end)
-end
-
--- XXX this might be a bad idea since it makes it harder to re-render?
-local function _optimize_search(db, messages, str)
-	local querybuf = {}
-	for message in messages do
-		table.insert(querybuf, "id:" .. nm.message_get_id(message))
-	end
-	local query = table.concat(querybuf, " or ")
-	local q = nm.create_query(db, query)
-	return nm.query_get_messages(q), q
-end
-
---- do a deep copy now, test to do in place copy later
-local function update_message(message, str)
-	local keys = u.make_keys(nm.message_get_tags(message))
-	nm.message_freeze(message)
-	_change_tag(message, str, keys)
 	nm.message_thaw(message)
 	nm.message_tags_to_maildir_flags(message)
-	return M.line_info(message)
 end
 
-function M.change_tag(id, str)
-	-- if type(line_infos[1]) == "table" then
-	-- 	-- maybe do _optimized_query, so we fetch all the messages and only
-	-- 	-- messages that needs to be updated, that we we only need to do one query
-	-- 	-- local new_messages = _optimize_search(new_db, messages, str)
-	-- 	local rets = {}
-	-- 	for _, line_info in ipairs(line_infos) do
-	-- 		local new_message, q = id_get_message(db, line_info.id)
-	-- 		local ret = update_message(new_message, str)
-	-- 		table.insert(rets, ret)
-	-- 		nm.query_destroy(q)
-	-- 	end
-	-- 	return rets
-	-- else
-	-- local new_message, q = id_get_message(db, line_infos.id)
-	-- local ret = update_message(new_message, str)
-	-- nm.query_destroy(q)
-	-- return ret
-	local args = {"tag", str, "id:"..id}
-
-	job:new({
-		command = "notmuch",
-		args = args,
-		on_exit = function(j, ret_val)
-		end
-	}):sync()
-	-- end
-end
-
-function M.add_search(search)
-	-- check if the search
-end
-
-function M.tag_if_nil(line_info, tag)
-	local tags
-	runtime.with_db(function (db)
-		local message = nm.db_find_message(db, line_info.id)
-		tags = u.collect(nm.message_get_tags(message))
-	end)
-	if vim.tbl_isempty(tags) and tag then
-		M.change_tag(line_info.id, tag)
+function M.change_tag(db, id, str)
+	local changes = vim.split(str, " ")
+	local message = nm.db_find_message(db, id)
+	if message ~= nil then
+		update_tags(message, changes)
 	end
 end
 
-function M.update_line(browser, line_info, vline)
-	local new_info
-	runtime.with_db(function (db)
-		local message = nm.db_find_message(db, line_info.id)
-		new_info = M.get_message(message)
-	end)
+function M.tag_if_nil(db, line_info, tag)
+	local message = nm.db_find_message(db, line_info.id)
+	local tags = u.collect(nm.message_get_tags(message))
+	if vim.tbl_isempty(tags) and tag then
+		M.change_tag(db, line_info.id, tag)
+	end
+end
+
+function M.update_line(db, browser, line_info, vline)
+	local message = nm.db_find_message(db, line_info.id)
+	local new_info = M.get_message(message)
 	line_info.id = new_info.id
-	line_info.filename = new_info.filenames
+	line_info.filenames = new_info.filenames
 	line_info.tags = new_info.tags
 	if vline and browser then
 		browser:update(vline)
 	end
-end
-
-function M.message_description(l)
-	local t = table.concat(l.tags, " ")
-	local formated
-	local date = os.date("%Y-%m-%d", l.date)
-	local from = gu.preview_addr(l.from, 25)
-	if l.index > 1 then
-		formated = string.format("%s [%02d/%02d] %s│ %s▶ (%s)", date, l.index, l.total, from, l.pre, t)
-	else
-		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, l.index, l.total, from, l.sub, t)
-	end
-	formated = string.gsub(formated, "[\r\n]", "")
-	return formated
-end
-
---- Can we fix this?
---- Maybe have this copied to runtime?
-function M.gen_config()
-	local message_description = M.message_description
-	config.values.show_message_description = message_description
 end
 
 return M
