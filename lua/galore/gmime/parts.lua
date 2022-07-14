@@ -1,13 +1,14 @@
+---@diagnostic disable: undefined-field
+
 local gmime = require("galore.gmime.gmime_ffi")
 local convert = require("galore.gmime.convert")
+local safe = require("galore.gmime.funcs")
 local ffi = require("ffi")
 local M = {}
 
-M.multipart_signed_content = 0 --gmime.GMIME_MULTIPART_SIGNED_CONTENT
-M.multipart_signed_signature = 1 -- gmime.GMIME_MULTIPART_SIGNED_SIGNATURE
-
--- I might want to have the neighbours also in the the same group
--- a bfs for multiparts
+--- Enums
+M.multipart_signed_content = 0
+M.multipart_signed_signature = 1
 
 --- @param multipart gmime.Multipart
 --- @param fun fun(parent, part, level, state: table)
@@ -227,12 +228,11 @@ function M.message_set_date(message, date)
 end
 
 --- @param message any
---- @return number
+--- @return integer
 function M.message_get_date(message)
 	local gdate = gmime.g_mime_message_get_date(message)
-	local date = gmime.g_date_time_to_unix(gdate)
-	gmime.g_date_time_unref(gdate)
-	return tonumber(date)
+	local date = tonumber(gmime.g_date_time_to_unix(gdate))
+	return date
 end
 
 --- @param message gmime.Message
@@ -275,16 +275,16 @@ end
 
 --- @param message gmime.Message
 --- @param now number
---- @param flags gmime.DecryptFlags
+--- @param flags string
 --- @param session_key string
 --- @return gmime.AutocryptHeaderList, gmime.Error
 function M.message_get_autocrypt_gossip_headers(message, now, flags, session_key)
 	local err = ffi.new("GError*[1]")
 	local gdate = gmime.g_date_time_new_from_unix_local(now)
-	-- local eflags = convert.decrytion_flag(flags)
-	local list = gmime.g_mime_message_get_autocrypt_gossip_headers(message, gdate, flags, session_key, err)
+	local dflags = convert.to_decrytion_flag(flags)
+	local list = gmime.g_mime_message_get_autocrypt_gossip_headers(message, gdate, dflags, session_key, err)
 	gmime.g_date_time_unref(gdate)
-	return ffi.gc(list, gmime.g_object_unref), err[0]
+	return ffi.gc(list, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param message gmime.Message
@@ -373,26 +373,24 @@ end
 --- @param mime_part gmime.Part
 --- @param mode string ("default"|"7bit"|"8bit"|"binary"|"base64"|"quotedprintable"|"uuencode")
 function M.part_set_content_encoding(mime_part, mode)
-	-- local gmode = convert.string_to_encoding(mode)
-	gmime.g_mime_part_set_content_encoding(mime_part, mode)
+	local gmode = convert.to_encoding(mode)
+	gmime.g_mime_part_set_content_encoding(mime_part, gmode)
 end
 
 --- @param mime_part gmime.Part
---- @return gmime.ContentEncoding
+--- @return string ("default"|"7bit"|"8bit"|"binary"|"base64"|"quotedprintable"|"uuencode")
 function M.part_get_content_encoding(mime_part)
-	-- local gmode = gmime.g_mime_part_get_content_encoding(mime_part)
-	-- return convert.encoding_to_string(gmode)
-	return gmime.g_mime_part_get_content_encoding(mime_part)
+	local gmode = gmime.g_mime_part_get_content_encoding(mime_part)
+	return convert.show_encoding(gmode)
 end
 
 --- @param mime_part gmime.Part
---- @param constraint gmime.ContentEncoding
---- @return gmime.ContentEncoding
+--- @param constraint string ("7bit", "8bit", "binary")
+--- @return string ("default"|"7bit"|"8bit"|"binary"|"base64"|"quotedprintable"|"uuencode")
 function M.part_get_best_content_encoding(mime_part, constraint)
-	local cconstraint = convert.to_encoding(constraint)
-	-- local encoding = gmime.g_mime_part_get_best_content_encoding(mime_part, gmode)
-	-- return convert.encoding_to_string(encoding)
-	return gmime.g_mime_part_get_best_content_encoding(mime_part, cconstraint)
+	local cconstraint = convert.to_constraints(constraint)
+	local encoding = gmime.g_mime_part_get_best_content_encoding(mime_part, cconstraint)
+	return convert.encoding_to_string(encoding)
 end
 
 --- @param mime_part gmime.Part
@@ -404,7 +402,7 @@ end
 --- @param mime_part gmime.Part
 --- @param filename string
 function M.part_set_filename(mime_part, filename)
-	gmime.g_mime_part_set_filename(filename)
+	gmime.g_mime_part_set_filename(mime_part, filename)
 end
 
 --- @param mime_part gmime.Part
@@ -445,15 +443,15 @@ end
 --- @param recipients string[]
 --- @return boolean, gmime.Error
 function M.part_openpgp_encrypt(mime_part, sign, userid, flags, recipients)
-	-- local eflags = convert.encryption_flags(flags)
-	local array = gmime.g_ptr_array_sized_new(0)
+	local eflags = convert.to_encryption_flags(flags)
+	local array = gmime.g_ptr_array_sized_new(#recipients)
 	for _, rep in ipairs(recipients) do
 		gmime.g_ptr_array_add(array, ffi.cast("gpointer", rep))
 	end
 	local err = ffi.new("GError*[1]")
-	local ret = gmime.g_mime_part_openpgp_encrypt(mime_part, sign, userid, flags, array, err) ~= 0
-	gmime.g_ptr_array_unref(array)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	local ret = gmime.g_mime_part_openpgp_encrypt(mime_part, sign, userid, eflags, array, err) ~= 0
+	gmime.g_ptr_array_free(array, true)
+	return ret ~= 0 , safe.convert_error(err[0])
 end
 
 --- @param mime_part gmime.Part
@@ -461,9 +459,10 @@ end
 --- @param session_key string
 --- @return gmime.DecryptResult, gmime.Error
 function M.part_openpgp_decrypt(mime_part, flags, session_key)
+	local dflags = convert.to_decrytion_flag(flags)
 	local err = ffi.new("GError*[1]")
-	local res = gmime.g_mime_part_openpgp_decrypt(mime_part, flags, session_key, err)
-	return ffi.gc(res, gmime.g_object_unref), err[0]
+	local res = gmime.g_mime_part_openpgp_decrypt(mime_part, dflags, session_key, err)
+	return ffi.gc(res, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param mime_part gmime.Part
@@ -472,7 +471,7 @@ end
 function M.part_openpgp_sign(mime_part, userid)
 	local err = ffi.new("GError*[1]")
 	local res = gmime.g_mime_part_openpgp_sign(mime_part, userid, err) ~= 0
-	return res ~= 0, err[0]
+	return res ~= 0, safe.convert_error(err[0])
 end
 
 --- @param mime_part gmime.Part
@@ -481,7 +480,7 @@ end
 function M.g_mime_part_openpgp_verify(mime_part, flags)
 	local err = ffi.new("GError*[1]")
 	local res = gmime.g_mime_part_openpgp_verify(mime_part, flags, err)
-	return ffi.gc(res, gmime.g_object_unref), err[0]
+	return ffi.gc(res, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param subtype string
@@ -539,7 +538,7 @@ end
 --- @param num number
 --- @return gmime.Message
 function M.message_partial_reconstruct_message(partials, num)
-	local array = ffi.new("GMimeMessagePartial[?]", num)
+	local array = ffi.new("GMimeMessagePartial*[?]", num)
 	for i = 0, num do
 		array[i] = partials[i+1]
 	end
@@ -549,18 +548,22 @@ end
 --- @param message gmime.Message
 --- @param max_size number
 --- @return gmime.Message[]
---- XXX
 function M.message_partial_split_message(message, max_size)
 	local nparts = ffi.new("size_t[1]")
-	local array =  gmime.g_mime_message_partial_split_message(message, max_size, nparts)
-	--- Can we free array without copying all the massages?
-	-- local num = tonumber(nparts[0])
-	-- local ret = {}
-	-- for i = 0, num do
-	-- 	table.insert(ret, array[i])
-	-- end
-	-- return ret
-	return array
+	local messages =  gmime.g_mime_message_partial_split_message(message, max_size, nparts)
+	local num = nparts[0]
+	local free = function ()
+		for i = 0, num do
+			gmime.g_object_unref(messages[i])
+		end
+		gmime.free(messages)
+	end
+	local ret = {}
+	for i = 0, num do
+		table.insert(ret, messages[i])
+	end
+	ffi.gc(ret, free)
+	return ret
 end
 
 --- @return gmime.Multipart
@@ -696,7 +699,7 @@ end
 function M.multipart_signed_sign(ctx, entity, userid)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_multipart_signed_sign(ctx, entity, userid, err)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ffi.gc(ret, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param mps gmime.MultipartSigned
@@ -704,9 +707,9 @@ end
 --- @return gmime.SignatureList, gmime.Error
 function M.multipart_signed_verify(mps, flags)
 	local err = ffi.new("GError*[1]")
-	local eflags = convert.to_verify_flags(flags)
-	local ret = gmime.g_mime_multipart_signed_verify(mps, eflags, err)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	local vflags = convert.to_verify_flags(flags)
+	local ret = gmime.g_mime_multipart_signed_verify(mps, vflags, err)
+	return ffi.gc(ret, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @return gmime.MultipartEncrypted
@@ -724,13 +727,13 @@ end
 function M.multipart_encrypted_encrypt(ctx, entity, sign, userid, flags, recipients)
 	local err = ffi.new("GError*[1]")
 	local eflags = convert.to_encryption_flags(flags)
-	local array = gmime.g_ptr_array_sized_new(0)
+	local array = gmime.g_ptr_array_sized_new(#recipients)
 	for _, rep in pairs(recipients) do
 		gmime.g_ptr_array_add(array, ffi.cast("gpointer", rep))
 	end
 	local multi = gmime.g_mime_multipart_encrypted_encrypt(ctx, entity, sign, userid, eflags, array, err)
 	gmime.g_ptr_array_unref(array, false)
-	return ffi.gc(multi, gmime.g_object_unref), err[0]
+	return ffi.gc(multi, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- Should take a table or a string of values and then do bit ops
@@ -743,7 +746,7 @@ function M.multipart_encrypted_decrypt(part, flags, session_key)
 	local res = ffi.new("GMimeDecryptResult*[1]")
 	local eflags = convert.to_decrytion_flag(flags)
 	local obj = gmime.g_mime_multipart_encrypted_decrypt(part, eflags, session_key, res, err)
-	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
+	return ffi.gc(obj, gmime.g_object_unref), res[0], safe.convert_error(err[0])
 end
 
 function M.multipart_encrypted_decrypt_pass(part, flags, fun, session_key)
@@ -751,7 +754,7 @@ function M.multipart_encrypted_decrypt_pass(part, flags, fun, session_key)
 	local res = ffi.new("GMimeDecryptResult*[1]")
 	local eflags = convert.to_decrytion_flag(flags)
 	local obj = gmime.g_mime_multipart_encrypted_decrypt_pass(part, eflags, session_key, fun, res, err)
-	return ffi.gc(obj, gmime.g_object_unref), res[0], err[0]
+	return ffi.gc(obj, gmime.g_object_unref), res[0], safe.convert_error(err[0])
 end
 
 --- @return gmime.TextPart
@@ -825,26 +828,5 @@ end
 function M.is_multipart_signed(object)
 	return gmime.gmime_is_multipart_signed(object) ~= 0
 end
-
--- function M.set_text(part, texts)
--- 	local text = table.concat(texts, "\n")
--- 	local charset = "utf-8"
-	-- g_mime_charset_init (&mask);
-	-- g_mime_charset_step (&mask, text, len);
-	-- gmime.g_mime_text_part_set_charset(part, charset)
-	-- local stream = gmime.g_mime_stream_mem_new_with_buffer(text, #text)
-	-- local content = gmime.g_mime_data_wrapper_new_with_stream(stream, gmime.GMIME_CONTENT_ENCODING_DEFAULT)
-	-- gmime.g_mime_part_set_content(ffi.cast("GMimePart *", part), content)
-	-- -- local encoding = galore.g_mime_part_get_content_encoding(ffi.cast("GMimePart *", part))
-	-- gmime.g_mime_part_set_content_encoding(
-	-- 	ffi.cast("GMimePart *", part),
-	-- 	gmime.GMIME_CONTENT_ENCODING_QUOTEDPRINTABLE
-	-- )
-	-- 	if (mask.level > 0)
-	-- 		g_mime_part_set_content_encoding ((GMimePart *) mime_part, GMIME_CONTENT_ENCODING_8BIT);
-	-- 	else
-	-- 		g_mime_part_set_content_encoding ((GMimePart *) mime_part, GMIME_CONTENT_ENCODING_7BIT);
-	-- maybe change charset later
--- end
 
 return M

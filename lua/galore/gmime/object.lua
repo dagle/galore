@@ -1,3 +1,5 @@
+--- @diagnostic disable: undefined-field
+
 local gmime = require("galore.gmime.gmime_ffi")
 local convert = require("galore.gmime.convert")
 local safe = require("galore.gmime.funcs")

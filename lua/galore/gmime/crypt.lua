@@ -1,5 +1,8 @@
+--- @diagnostic disable: undefined-field
+
 local gmime = require("galore.gmime.gmime_ffi")
 local convert = require("galore.gmime.convert")
+local safe = require("galore.gmime.funcs")
 local ffi = require("ffi")
 
 local M = {}
@@ -63,7 +66,7 @@ end
 function M.crypto_context_sign(ctx, detach, userid, instream, outstream)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_crypto_context_sign(ctx, detach, userid, instream, outstream, err)
-	return ret, err[0]
+	return ret, safe.convert_error(err[0])
 end
 
 --- @param ctx gmime.CryptoContext
@@ -75,7 +78,7 @@ end
 function M.crypto_context_verify(ctx, flags, instream, sigstream, outstream)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_crypto_context_verify(ctx, flags, instream, sigstream, outstream, err)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ffi.gc(ret, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param ctx gmime.CryptoContext
@@ -85,14 +88,14 @@ end
 --- @param outstream gmime.Stream
 --- @return number, gmime.Error
 function M.crypto_context_encrypt(ctx, sign, userid, flags, recipients, instream, outstream)
-	local array = gmime.g_ptr_array_sized_new(0)
+	local array = gmime.g_ptr_array_sized_new(#recipients)
 	for _, rep in ipairs(recipients) do
 		gmime.g_ptr_array_add(array, ffi.cast("gpointer", rep))
 	end
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_crypto_context_encrypt(ctx, sign, userid, flags, array, instream, outstream, err)
 	gmime.g_ptr_array_free(array, false)
-	return ret, err[0]
+	return ret, safe.convert_error(err[0])
 end
 
 --- @param ctx gmime.CryptoContext
@@ -104,7 +107,7 @@ end
 function M.crypto_context_decrypt(ctx, flags, session_key, istream, ostream)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_crypto_context_decrypt(ctx, flags, session_key, istream, ostream, err)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ffi.gc(ret, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param ctx gmime.CryptoContext
@@ -113,7 +116,7 @@ end
 function M.crypto_context_import_keys(ctx, istream)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_crypto_context_import_keys(ctx, istream, err)
-	return ret, err[0]
+	return ret, safe.convert_error(err[0])
 end
 
 --- @param ctx gmime.CryptoContext
@@ -127,7 +130,7 @@ function M.crypto_context_export_keys(ctx, keys, ostream)
 	end
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_crypto_context_export_keys(ctx, array, ostream, err)
-	return ret, err[0]
+	return ret, safe.convert_error(err[0])
 end
 
 --- @return gmime.DecryptResult
@@ -268,7 +271,7 @@ function M.autocrypt_header_get_effective_date(ah)
 	local gdate = gmime.g_mime_autocrypt_header_get_effective_date(ah)
 	local date = gmime.g_date_time_to_unix(gdate)
 	gmime.g_date_time_unref(gdate)
-	return tonumber(date)
+	return date
 end
 
 --- @param ah gmime.AutocryptHeader
@@ -500,14 +503,14 @@ end
 --- @param recipients string[]
 --- @return gmime.ApplicationPkcs7Mime, gmime.Error
 function M.application_pkcs7_mime_encrypt(entity, flags, recipients)
-	local array = gmime.g_ptr_array_sized_new(0)
+	local array = gmime.g_ptr_array_sized_new(#recipients)
 	for _, rep in ipairs(recipients) do
 		gmime.g_ptr_array_add(array, ffi.cast("gpointer", rep))
 	end
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_application_pkcs7_mime_encrypt(entity, flags, array, err)
 	gmime.g_ptr_array_free(array, false)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ffi.gc(ret, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param pkcs7_mime gmime.ApplicationPkcs7Mime
@@ -518,7 +521,7 @@ function M.application_pkcs7_mime_decrypt(pkcs7_mime, flags, session_key)
 	local err = ffi.new("GError*[1]")
 	local result = ffi.new("GMimeDecryptResult*[1]")
 	local ret = gmime.g_mime_application_pkcs7_mime_decrypt(pkcs7_mime, flags, session_key, result, err)
-	return ret ~= 0, result[0], err[0]
+	return ret ~= 0, result[0], safe.convert_error(err[0])
 end
 
 --- @param entity gmime.MimeObject
@@ -527,7 +530,7 @@ end
 function M.application_pkcs7_mime_sign(entity, userid)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_application_pkcs7_mime_sign(entity, userid, err)
-	return ffi.gc(ret, gmime.g_object_unref), err[0]
+	return ffi.gc(ret, gmime.g_object_unref), safe.convert_error(err[0])
 end
 
 --- @param pkcs7_mime gmime.ApplicationPkcs7Mime
@@ -537,7 +540,7 @@ function M.application_pkcs7_mime_verify(pkcs7_mime, flags)
 	local err = ffi.new("GError*[1]")
 	local objects = ffi.new("GMimeObject*[1]")
 	local ret = gmime.g_mime_application_pkcs7_mime_verify(pkcs7_mime, flags, objects, err)
-	return ffi.gc(ret, gmime.g_object_unref), objects[0], err[0]
+	return ffi.gc(ret, gmime.g_object_unref), objects[0], safe.convert_error(err[0])
 end
 
 --- @return gmime.CryptoContext

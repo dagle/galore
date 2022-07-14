@@ -1,22 +1,26 @@
+---@diagnostic disable: undefined-field
+
 local gmime = require("galore.gmime.gmime_ffi")
-local convert = require("galore.gmime.convert")
 local safe = require("galore.gmime.funcs")
 local ffi = require("ffi")
 
 local M = {}
 
--- GMimeContentEncoding g_mime_content_encoding_from_string (const char *str);
 --- @param str string
 --- @return gmime.ContentEncoding
 function M.content_encoding_from_string(str)
 	return gmime.g_mime_content_encoding_from_string(str)
 end
 
--- const char *g_mime_content_encoding_to_string (GMimeContentEncoding encoding);
 --- @param encoding gmime.ContentEncoding
 --- @return string
 function M.content_encoding_to_string(encoding)
 	return ffi.string(gmime.g_mime_content_encoding_to_string(encoding))
+end
+
+--- @return gmime.EncodingState
+function M.encoding_new()
+	return ffi.new("GMimeEncoding[1]")
 end
 
 --- @param state gmime.EncodingState
@@ -25,89 +29,141 @@ function M.encoding_init_encode(state, encoding)
 	gmime.g_mime_encoding_init_encode(state, encoding)
 end
 
--- void g_mime_encoding_init_decode (GMimeEncoding *state, GMimeContentEncoding encoding);
 --- @param state gmime.EncodingState
 --- @param encoding gmime.ContentEncoding
 function M.encoding_init_decode(state, encoding)
 	gmime.g_mime_encoding_init_decode(state, encoding)
 end
 
--- void g_mime_encoding_reset (GMimeEncoding *state);
 --- @param state gmime.EncodingState
 function M.encoding_reset(state)
 	gmime.g_mime_encoding_reset(state)
 end
---
--- size_t g_mime_encoding_outlen (GMimeEncoding *state, size_t inlen);
+
 --- @param state gmime.EncodingState
+--- @param len integer
+--- @return integer
 function M.encoding_outlen(state, len)
 	return gmime.g_mime_encoding_outlen(state, len)
 end
---
--- size_t g_mime_encoding_step (GMimeEncoding *state, const char *inbuf, size_t inlen, char *outbuf);
---- XXX
-function M.encoding_step()
-	return gmime.g_mime_encoding_step()
+
+--- @param state gmime.EncodingState
+function M.encoding_step(state, inbuf, inlen)
+	local len = gmime.g_mime_encoding_outlen(state, inlen)
+	local outbuf = ffi.new("char[?]", len)
+	local ret = gmime.g_mime_encoding_step(state, inbuf, inlen, outbuf)
+	return ffi.string(outbuf, ret), ret
 end
 
--- size_t g_mime_encoding_flush (GMimeEncoding *state, const char *inbuf, size_t inlen, char *outbuf);
---- XXX
-function M.encoding_flush()
-	return gmime.g_mime_encoding_flush()
-end
---
---
--- size_t g_mime_encoding_base64_decode_step (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_base64_decode_step()
-	return gmime.g_mime_encoding_base64_decode_step()
-end
--- size_t g_mime_encoding_base64_encode_step (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_base64_encode_step()
-	return gmime.g_mime_encoding_base64_encode_step()
-end
--- size_t g_mime_encoding_base64_encode_close (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_base64_encode_close()
-	return gmime.g_mime_encoding_base64_encode_close()
-end
---
--- size_t g_mime_encoding_uudecode_step (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_uudecode_step()
-	return gmime.g_mime_encoding_uudecode_step()
-end
--- size_t g_mime_encoding_uuencode_step (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, unsigned char *uubuf, int *state, guint32 *save);
---- XXX
-function M.encoding_uuencode_step()
-	return gmime.g_mime_encoding_uuencode_step()
-end
--- size_t g_mime_encoding_uuencode_close (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, unsigned char *uubuf, int *state, guint32 *save);
---- XXX
-function M.encoding_uuencode_close()
-	return gmime.g_mime_encoding_uuencode_close()
+--- @param state gmime.EncodingState
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_flush(state, inbuf, inlen, outbuf)
+	return gmime.g_mime_encoding_flush(state, inbuf, inlen, outbuf)
 end
 
--- size_t g_mime_encoding_quoted_decode_step (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_quoted_decode_step()
-	return gmime.g_mime_encoding_quoted_decode_step()
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_base64_decode_step(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_base64_decode_step(inbuf, inlen, outbuf, state, save)
 end
 
--- size_t g_mime_encoding_quoted_encode_step (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_quoted_encode_step()
-	return gmime.g_mime_encoding_quoted_encode_step()
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_base64_encode_step(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_base64_encode_step(inbuf, inlen, outbuf, state, save)
 end
 
--- size_t g_mime_encoding_quoted_encode_close (const unsigned char *inbuf, size_t inlen, unsigned char *outbuf, int *state, guint32 *save);
---- XXX
-function M.encoding_quoted_encode_close()
-	return gmime.g_mime_encoding_quoted_encode_close()
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_base64_encode_close(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_base64_encode_close(inbuf, inlen, outbuf, state, save)
 end
 
--- iconv_t g_mime_iconv_open (const char *to, const char *from);
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_uudecode_step(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_uudecode_step(inbuf, inlen, outbuf, state, save)
+end
+
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_uuencode_step(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_uuencode_step(inbuf, inlen, outbuf, state, save)
+end
+
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_uuencode_close(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_uuencode_close(inbuf, inlen, outbuf, state, save)
+end
+
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_quoted_decode_step(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_quoted_decode_step(inbuf, inlen, outbuf, state, save)
+end
+
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_quoted_encode_step(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_quoted_encode_step(inbuf, inlen, outbuf, state, save)
+end
+
+--- @param inbuf string
+--- @param inlen number
+--- @param outbuf any
+--- @param state any
+--- @param save any
+--- outbuf is a char*, state is a int* and save is int *
+--- create them using ffi.new(), outbuf needs to be able to hold inbuf
+function M.encoding_quoted_encode_close(inbuf, inlen, outbuf, state, save)
+	return gmime.g_mime_encoding_quoted_encode_close(inbuf, inlen, outbuf, state, save)
+end
+
 --- @param to string
 --- @param from string
 --- @return iconv
@@ -115,108 +171,96 @@ function M.iconv_open(to, from)
 	return gmime.g_mime_iconv_open(to, from)
 end
 
--- int g_mime_iconv_close (iconv_t cd);
 --- @param cd iconv
 --- @return number
 function M.iconv_close(cd)
 	return gmime.g_mime_iconv_close(cd)
 end
 
--- void        g_mime_charset_map_init (void);
 function M.charset_map_init()
 	gmime.g_mime_charset_map_init()
 end
 
--- void        g_mime_charset_map_shutdown (void);
 function M.charset_map_shutdown()
 	gmime.g_mime_charset_map_shutdown()
 end
 
--- const char *g_mime_locale_charset (void);
 --- @return string
 function M.locale_charset()
 	return ffi.string(gmime.g_mime_locale_charset())
 end
 
--- const char *g_mime_locale_language (void);
 --- @return string
 function M.locale_language()
 	return ffi.string(gmime.g_mime_locale_language())
 end
 
--- const char *g_mime_charset_language (const char *charset);
 --- @param charset string
 --- @return string
 function M.charset_language(charset)
 	return ffi.string(gmime.g_mime_charset_language(charset))
 end
 
--- const char *g_mime_charset_canon_name (const char *charset);
 --- @param charset string
 --- @return string
 function M.charset_canon_name(charset)
 	return ffi.string(gmime.g_mime_charset_canon_name(charset))
 end
 
--- const char *g_mime_charset_iconv_name (const char *charset);
 --- @param charset string
 --- @return string
 function M.charset_iconv_name(charset)
 	return ffi.string(gmime.g_mime_charset_iconv_name(charset))
 end
 
--- const char *g_mime_charset_iso_to_windows (const char *isocharset);
 --- @param isocharset string
 --- @return string
 function M.charset_iso_to_windows(isocharset)
 	return ffi.string(gmime.g_mime_charset_iso_to_windows(isocharset))
 end
 
--- void g_mime_charset_init (GMimeCharset *charset);
-function M.charset_init(charset)
+--- @return gmime.Charset
+function M.charset_init()
+	local charset = ffi.new("GMimeCharset[1]")
 	gmime.g_mime_charset_init(charset)
+	return charset
 end
 
--- void g_mime_charset_step (GMimeCharset *charset, const char *inbuf, size_t inlen);
---- XXX
-function M.charset_step()
-	gmime.g_mime_charset_step()
+function M.charset_step(charset, str)
+	gmime.g_mime_charset_step(charset, str, #str)
 end
 
--- const char *g_mime_charset_best_name (GMimeCharset *charset);
---- XXX
-function M.charset_best_name()
-	gmime.g_mime_charset_best_name()
+function M.charset_best_name(charset)
+	return ffi.string(gmime.g_mime_charset_best_name(charset))
 end
 
--- const char *g_mime_charset_best (const char *inbuf, size_t inlen);
---- XXX
-function M.charset_best()
-	gmime.g_mime_charset_best()
+function M.charset_best(str)
+	return ffi.string(gmime.g_mime_charset_best(str, #str))
 end
---
--- gboolean g_mime_charset_can_encode (GMimeCharset *mask, const char *charset,
--- 				    const char *text, size_t len);
---- XXX
-function M.charset_can_encode()
-	return gmime.g_mime_charset_can_encode()
+
+--- @param mask gmime.Charset
+--- @param charset string
+--- @param text string
+--- @return boolean
+function M.charset_can_encode(mask, charset, text)
+	return gmime.g_mime_charset_can_encode(mask, charset, text, #text)
 end
---
--- // util functions
--- char *g_mime_iconv_strdup (iconv_t cd, const char *str);
---- XXX
-function M.iconv_strdup()
-	local mem = gmime.g_mime_iconv_strdup()
+
+--- @param cd gmime.iconv
+--- @param str string
+function M.iconv_strdup(cd, str)
+	local mem = gmime.g_mime_iconv_strdup(cd, str)
 	return safe.strdup(mem)
 end
 
---- XXX do we need this?
--- char *g_mime_iconv_strndup (iconv_t cd, const char *str, size_t n);
--- function M.iconv_strndup()
--- 	g_mime_iconv_strndup()
--- end
+--- @param cd gmime.iconv
+--- @param str string
+--- @param size number
+function M.iconv_strndup(cd, str, size)
+	local mem = gmime.g_mime_iconv_strndup(cd, str, size)
+	return safe.strdup(mem)
+end
 
--- char *g_mime_iconv_locale_to_utf8 (const char *str);
 --- @param str string
 --- @return string
 function M.iconv_locale_to_utf8(str)
@@ -224,7 +268,6 @@ function M.iconv_locale_to_utf8(str)
 	return safe.strdup(mem)
 end
 
--- char *g_mime_iconv_locale_to_utf8_length (const char *str, size_t n);
 --- @param str string
 --- @param length number
 --- @return string
@@ -233,7 +276,6 @@ function M.iconv_locale_to_utf8_length(str, length)
 	return safe.strdup(mem)
 end
 
--- char *g_mime_iconv_utf8_to_locale (const char *str);
 --- @param str string
 --- @return string
 function M.iconv_utf8_to_locale(str)
@@ -241,12 +283,11 @@ function M.iconv_utf8_to_locale(str)
 	return safe.strdup(mem)
 end
 
--- char *g_mime_iconv_utf8_to_locale_length (const char *str, size_t n);
 --- @param str string
---- @param length number
+--- @param len number
 --- @return string
-function M.iconv_utf8_to_locale_length(str, length)
-	local mem = gmime.g_mime_iconv_utf8_to_locale_length(str, length)
+function M.iconv_utf8_to_locale_length(str, len)
+	local mem = gmime.g_mime_iconv_utf8_to_locale_length(str, len)
 	return safe.strdup(mem)
 end
 
@@ -255,9 +296,5 @@ function M.make_maildir_id()
 	local mem = gmime.make_maildir_id();
 	return safe.strdup(mem)
 end
---
--- // void g_mime_object_register_type (const char *type, const char *subtype, GType object_type);
-
--- GMimeObject *g_mime_object_new (GMimeParserOptions *options, GMimeContentType *content_type);
 
 return M

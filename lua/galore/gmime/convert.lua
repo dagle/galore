@@ -1,8 +1,11 @@
+--- @diagnostic disable: undefined-field
+
 local gmime = require("galore.gmime.gmime_ffi")
 local ffi = require("ffi")
 local bit = require("bit")
 
---- XXX go over bitmasks 
+--- XXX go over bitmasks, not every function should be able to take table
+--- TODO missing some functions
 
 local M = {}
 
@@ -10,6 +13,8 @@ local function bit_mask(list, func)
 	return bit.bor(unpack(vim.tbl_map(func, list)))
 end
 
+--- @param atype string
+--- @return integer
 function M.to_address_type(atype)
 	if type(atype) == "string" then
 		atype = atype:lower()
@@ -33,6 +38,8 @@ function M.to_address_type(atype)
 	end
 end
 
+--- @param ctype string
+--- @return integer
 function M.to_checksum_type(ctype)
 	if type(ctype) == "string" then
 		ctype = ctype:lower()
@@ -54,6 +61,8 @@ function M.to_checksum_type(ctype)
 	end
 end
 
+--- @param trust string
+--- @return integer
 function M.to_trust(trust)
 	if type(trust) == "string" then
 		trust = trust:lower()
@@ -77,6 +86,8 @@ function M.to_trust(trust)
 	end
 end
 
+--- @param val string
+--- @return integer
 function M.to_validaty(val)
 	if type(val) == "string" then
 		val = val:lower()
@@ -100,6 +111,8 @@ function M.to_validaty(val)
 	end
 end
 
+--- @param mode string
+--- @return integer
 function M.to_encoding(mode)
 	if type(mode) == "string" then
 	mode = mode:lower()
@@ -125,6 +138,8 @@ function M.to_encoding(mode)
 	end
 end
 
+--- @param constraint string
+--- @return integer
 function M.to_constraints(constraint)
 	if type(constraint) == "string" then
 		constraint = constraint:lower()
@@ -142,6 +157,8 @@ function M.to_constraints(constraint)
 	end
 end
 
+--- @param algo string
+--- @return integer
 function M.to_pub_algo(algo)
 	if type(algo) == "string" then
 	algo = algo:lower()
@@ -175,6 +192,8 @@ function M.to_pub_algo(algo)
 	end
 end
 
+--- @param param string
+--- @return integer
 function M.to_param_encoding(param)
 	if type(param) == "string" then
 		param = param:lower()
@@ -192,6 +211,8 @@ function M.to_param_encoding(param)
 	end
 end
 
+--- @param flags string
+--- @return integer
 function M.to_encryption_flags(flags)
 	if type(flags) == "string" then
 		flags = flags:lower()
@@ -368,6 +389,8 @@ function M.parser_warning_level(warning)
 	end
 end
 
+--- @param choice string
+--- @return integer
 local function to_validate(choice)
 	choice = choice:lower()
 	if choice == "valid" then
@@ -405,27 +428,79 @@ function M.validate(sig, choices)
 	end
 end
 
+--- @param name string
+--- @return integer
+function M.gpg_digest_id(name)
+	if name == "md2" then
+		return gmime.GMIME_DIGEST_ALGO_MD2
+	elseif name == "md4" then
+		return gmime.GMIME_DIGEST_ALGO_MD4
+	elseif name == "md5" then
+		return gmime.GMIME_DIGEST_ALGO_MD5
+	elseif name == "sha1" then
+		return gmime.GMIME_DIGEST_ALGO_SHA1
+	elseif name == "sha224" then
+		return gmime.GMIME_DIGEST_ALGO_SHA224
+	elseif name == "sha256" then
+		return gmime.GMIME_DIGEST_ALGO_SHA256
+	elseif name == "sha384" then
+		return gmime.GMIME_DIGEST_ALGO_SHA384
+	elseif name == "sha512" then
+		return gmime.GMIME_DIGEST_ALGO_SHA512
+	elseif name == "ripemd160" then
+		return gmime.GMIME_DIGEST_ALGO_RIPEMD160
+	elseif name == "tiger192" then
+		return gmime.GMIME_DIGEST_ALGO_TIGER192
+	elseif name == "haval-5-160" then
+		return gmime.GMIME_DIGEST_ALGO_HAVAL5160
+	end
 
--- } GMimeParserWarning;
---
--- typedef enum {
--- 	GMIME_DIGEST_ALGO_DEFAULT       = 0,
--- 	GMIME_DIGEST_ALGO_MD5           = 1,
--- 	GMIME_DIGEST_ALGO_SHA1          = 2,
--- 	GMIME_DIGEST_ALGO_RIPEMD160     = 3,
--- 	GMIME_DIGEST_ALGO_MD2           = 5,
--- 	GMIME_DIGEST_ALGO_TIGER192      = 6,
--- 	GMIME_DIGEST_ALGO_HAVAL5160     = 7,
--- 	GMIME_DIGEST_ALGO_SHA256        = 8,
--- 	GMIME_DIGEST_ALGO_SHA384        = 9,
--- 	GMIME_DIGEST_ALGO_SHA512        = 10,
--- 	GMIME_DIGEST_ALGO_SHA224        = 11,
--- 	GMIME_DIGEST_ALGO_MD4           = 301,
--- 	GMIME_DIGEST_ALGO_CRC32         = 302,
--- 	GMIME_DIGEST_ALGO_CRC32_RFC1510 = 303,
--- 	GMIME_DIGEST_ALGO_CRC32_RFC2440 = 304
--- } GMimeDigestAlgo;
+	return gmime.GMIME_DIGEST_ALGO_DEFAULT
+end
 
---
+--- @param int integer
+--- @return string
+function M.gpg_digest_name(int)
+	if int == gmime.GMIME_DIGEST_ALGO_MD2 then
+		return "md2"
+	elseif int == gmime.GMIME_DIGEST_ALGO_MD4 then
+		return "md4"
+	elseif int == gmime.GMIME_DIGEST_ALGO_MD5 then
+		return "md5"
+	elseif int == gmime.GMIME_DIGEST_ALGO_SHA1 then
+		return "sha1"
+	elseif int == gmime.GMIME_DIGEST_ALGO_SHA224 then
+		return "sha224"
+	elseif int == gmime.GMIME_DIGEST_ALGO_SHA256 then
+		return "sha256"
+	elseif int == gmime.GMIME_DIGEST_ALGO_SHA384 then
+		return "sha384"
+	elseif int == gmime.GMIME_DIGEST_ALGO_SHA512 then
+		return "sha512"
+	elseif int == gmime.GMIME_DIGEST_ALGO_RIPEMD160 then
+		return "ripemd160"
+	elseif int == gmime.GMIME_DIGEST_ALGO_TIGER192 then
+		return "tiger192"
+	elseif int == gmime.GMIME_DIGEST_ALGO_HAVAL5160 then
+		return "haval-5-160"
+	end
+
+	return "pgp-sha1"
+end
+
+function M.best_flag(str)
+-- 	typedef enum {
+-- 	GMIME_FILTER_BEST_CHARSET  = (1 << 0),
+-- 	GMIME_FILTER_BEST_ENCODING = (1 << 1)
+-- } GMimeFilterBestFlags;
+end
+
+function M.to_gzip_mode(mode)
+-- 	typedef enum {
+-- 	GMIME_FILTER_GZIP_MODE_ZIP,
+-- 	GMIME_FILTER_GZIP_MODE_UNZIP
+-- } GMimeFilterGZipMode;
+end
+
 
 return M

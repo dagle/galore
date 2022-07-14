@@ -1,6 +1,3 @@
--- XXX (Not needed!) Missing: Part-iter, stream-gio
--- TODO sort enums!
-
 local library_path = (function()
 	local dirname = string.sub(debug.getinfo(1).source, 2, #"/gmime_ffi.lua" * -1)
 	if package.config:sub(1, 1) == "\\" then
@@ -9,8 +6,6 @@ local library_path = (function()
 		return dirname .. "../../../build/libgalore.so"
 	end
 end)()
-
-
 
 local ffi = require("ffi")
 local galore = ffi.load(library_path)
@@ -185,7 +180,10 @@ typedef struct {} GMimeReferences;
 
 /* Extra */
 typedef struct {} GMimeObject;
-typedef struct {} GMimeCharset;
+typedef struct {
+	unsigned int mask;
+	unsigned int level;
+} GMimeCharset;
 typedef struct {} GMimeEncoding;
 
 /* Options */
@@ -194,8 +192,12 @@ typedef struct {} GMimeParamList;
 typedef struct {} GMimeFormatOptions;
 typedef struct {} GMimeParserOptions;
 
-/* To use these, we need to write C code */
-typedef struct {} GError;
+typedef unsigned int GQuark;
+typedef struct {
+  GQuark       domain;
+  int          code;
+  char        *message;
+} GError;
 typedef struct {} GPtrArray;
 typedef struct {} GDateTime;
 typedef struct {} GBytes;
@@ -1397,6 +1399,8 @@ char *g_mime_object_to_string (GMimeObject *object, GMimeFormatOptions *options)
 
 void g_mime_object_encode (GMimeObject *object, GMimeEncodingConstraint constraint);
 
+void g_error_free(GError *err);
+
 /* Helper functions, these are in parts atm */
 int gmime_is_message_part(GMimeObject *obj);
 int gmime_is_message_partial(GMimeObject *obj);
@@ -1436,9 +1440,6 @@ void                g_ptr_array_unref                   (GPtrArray *array);
 void g_object_unref (gpointer object);
 gpointer            g_object_ref                        (gpointer object);
 
-
-// guint multipart_len(GMimeMultipart *mp);
-// GMimeObject *multipart_child(GMimeMultipart *mp, int i);
 ]])
 
 return galore
