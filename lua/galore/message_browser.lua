@@ -3,6 +3,8 @@ local nu = require("galore.notmuch-util")
 local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
 local runtime = require("galore.runtime")
+local dia = require("galore.diagnostics")
+
 local Mb = Buffer:new()
 
 function Mb:get_messages(db, search)
@@ -27,36 +29,6 @@ function Mb:ppMessage(messages)
 	self:set_lines(-2, -1, true, {})
 end
 
-function Mb:update(start)
-	local message = self.State[start]
-	local formated = config.values.show_message_description(message)
-	self:unlock()
-	self:set_lines(start-1, start, true, {formated})
-	self:lock()
-end
-
-function Mb:next(line)
-	line = math.min(line + 1, #self.State)
-	local line_info = self.State[line]
-	return line_info, line
-end
-
---
-function Mb:prev(line)
-	line = math.max(line - 1, 1)
-	local line_info = self.State[line]
-	return line_info, line
-end
-
-function Mb:select()
-	local line = vim.fn.line(".")
-	return line, self.State[line]
-end
-
-function Mb:set_line(line)
-	self.Line = line
-end
-
 function Mb:refresh()
 	self:unlock()
 	self:clear()
@@ -67,6 +39,27 @@ function Mb:refresh()
 	self:lock()
 end
 
+--- move these
+function Mb:update(start)
+	local message = self.State[start]
+	local formated = config.values.show_message_description(message)
+	self:unlock()
+	self:set_lines(start-1, start, true, {formated})
+	self:lock()
+end
+
+function Mb:commands()
+	vim.api.nvim_buf_create_user_command(self.handle, "GaloreChangetag", function (args)
+		if args.args then
+			local callback = require("galore.callback")
+			callback.change_tag(self, args)
+		end
+	end, {
+	nargs = "*",
+	})
+end
+
+-- create a browser class
 function Mb:create(search, kind, parent)
 	Buffer.create({
 		name = "galore-messages: " .. search,
@@ -77,7 +70,12 @@ function Mb:create(search, kind, parent)
 		mappings = config.values.key_bindings.message_browser,
 		init = function(buffer)
 			buffer.search = search
+			buffer.emph = config.values.default_emph
+			buffer.dians = vim.api.nvim_create_namespace("galore-emph")
 			buffer:refresh()
+			dia.set_emph(buffer, buffer.emph)
+			buffer:commands()
+			config.values.bufinit.message_browser(buffer)
 		end,
 	}, Mb)
 end
