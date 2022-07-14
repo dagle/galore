@@ -589,6 +589,24 @@ function M.db_open_with_config(path, mode, conf_path, profile)
 	return ffi.gc(db[0], nm.notmuch_database_destroy)
 end
 
+function M.notmuch_database_destroy(db)
+	nm.notmuch_database_destroy(db)
+end
+
+--- @param path string path to the database
+--- @param mode number Read/write mode. 0 for r and 1 for rw.
+--- @param conf_path string path to the config
+--- @param profile string name of the profile in the config
+--- Does not automatically close the connection when
+--- @return notmuch.Db
+function M.db_open_with_config_raw(path, mode, conf_path, profile)
+	local db = ffi.new("notmuch_database_t*[1]")
+	local err = ffi.new("char*[1]")
+	local res = nm.notmuch_database_open_with_config(path, mode, conf_path, profile, db, err)
+	assert(res == 0, "Error opening database with err=" .. stat(res))
+	return db[0]
+end
+
 --- @param path string path to the new database
 --- @param conf_path string path to the config
 --- @param profile string name of the profile in the config
