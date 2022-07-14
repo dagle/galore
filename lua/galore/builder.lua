@@ -36,9 +36,9 @@ end
 
 -- encrypt a part and return the multipart
 -- XXX can we get more graceful crashes?
-function M.secure(part, recipients)
+function M.secure(part, opts, recipients)
 	local ctx = ge.gpg_context_new()
-	if config.values.encrypt then
+	if opts.encrypt then
 		-- It should be more than just too To, should be all recipients
 		local encrypt, err = gcu.encrypt(ctx, part, recipients)
 		if encrypt ~= nil then
@@ -53,7 +53,7 @@ function M.secure(part, recipients)
 		end
 		print("Error: " .. err)
 	end
-	if config.values.sign then
+	if opts.sign then
 		-- check if we should do (RFC 4880 and 3156)
 		local signed, err = gcu.sign(ctx, part)
 		if signed ~= nil then
@@ -73,14 +73,15 @@ function M.textbuilder(text)
 	gp.text_part_set_text(body, table.concat(text, "\n"))
 	return body
 end
+
 -- create a message from strings
 -- @param buf parsed data from the screen, only visual data
 -- @param reply, message or nil we use to set reference to
 -- @param attachments a list of MimePart objects
 -- @return a gmime message
 -- XXX We want to set the reply_to (and other mailinglist things)
--- XXX We need error handling, this should could return nil
-function M.create_message(buf, attachments, opts, builder)
+function M.create_message(buf, opts, attachments, header_opts, builder)
+	header_opts = header_opts or {}
 	opts = opts or {}
 	local current
 	local message = gp.new_message(true)
@@ -108,23 +109,25 @@ function M.create_message(buf, attachments, opts, builder)
 		end
 	end
 
-	for _, email in gu.internet_address_list_iter_str(runtime.parser_opts, buf.from) do
-		local id = gu.make_id(email)
-		gp.message_set_message_id(message, id)
-	end
+	--- XXX is this right?
+	-- for ia in gu.internet_address_list_iter_str(runtime.parser_opts, buf.from) do
+	local id = gu.make_id(buf.from)
+	gp.message_set_message_id(message, id)
+	-- break
+	-- end
 
 	gu.insert_current_date(message)
 
 	--- this shouldn't be optional, set it to no-topic
 	gp.message_set_subject(message, buf.subject, nil)
 
-	for k, v in pairs(opts) do
+	for k, v in pairs(header_opts) do
 		go.object_set_header(mobj, k, v, nil)
 	end
 
 	current = builder(buf.body)
 
-	if attachments ~= nil and not vim.tbl_isempty(attachments) then
+	if attachments and not vim.tbl_isempty(attachments) then
 		local multipart = gp.multipart_new_with_subtype("mixed")
 		gp.multipart_add(multipart, current)
 		current = multipart
@@ -134,8 +137,9 @@ function M.create_message(buf, attachments, opts, builder)
 		end
 	end
 
-	if config.values.encrypt or config.values.sign then
-		local secure = M.secure(current, { buf.To })
+	if opts.encrypt or opts.sign then
+		local recipients = header_opts.recipients or {buf.To}
+		local secure = M.secure(current, header_opts, recipients)
 		--- if we fail here,
 		if secure then
 			current = secure
