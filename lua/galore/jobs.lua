@@ -27,6 +27,7 @@ function M.new()
 		:start()
 end
 
+--- XXX this should be done in glib
 function M.get_type(file)
 	local ret
 	Job
@@ -126,6 +127,7 @@ function M.insert_mail_str(message, folder, tags)
 end
 
 --- Add a callback to this?
+--- TODO set env for testing etc
 local function raw_pipe(object, cmd, args)
 	local stdout = uv.new_pipe()
 	local stderr = uv.new_pipe()
@@ -172,7 +174,6 @@ local function raw_pipe(object, cmd, args)
 	gs.stream_flush(stream)
 	gs.stream_close(stream)
 
-
 	uv.read_start(stdout, function(err, data)
 		assert(not err, err)
 		if data then
@@ -197,7 +198,8 @@ end
 
 function M.insert_mail(message, folder, tags)
 	local object = ffi.cast("GMimeObject *", message)
-	local folderflag = string.format("--folder=%s", folder)
+	local parent_dir = config.values.select_dir(message)
+	local folderflag = string.format("--folder=%s%s", parent_dir, folder)
 	local args = vim.tbl_flatten({"insert", "--create-folder", folderflag, tags})
 	raw_pipe(object, "notmuch", args)
 end
