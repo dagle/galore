@@ -27,6 +27,9 @@ end
 
 function runtime.add_saved(str)
 	local fp = io.open(save_file, "a")
+	if not fp then
+		return
+	end
 	fp:write(str .. "\n")
 	fp:close()
 end
@@ -48,31 +51,34 @@ end
 --- By default, these variables should be null and use the notmuch default
 local function notmuch_init(path, conf, profile)
 	local mode = 0
-	local db = nm.db_open_with_config(path, mode, conf, profile)
+	local db = nm.db_open_with_config_raw(path, mode, conf, profile)
 	local name = get(db, "user.name")
 	local primary_email = get(db, "user.primary_email")
 	local other_email = gets(db, "user.other_email")
 	local exclude_tags = gets(db, "search.exclude_tags")
-	-- runtime.db = db
+	-- local sync
+	-- local exclude
 	config.values.name = config.values.name or name
-	config.values.draftdir = config.values.draftdir or "draft"
+	-- get exclude_tags
+	-- config.values.exclude_tags = vim.list_extend(config.values.exclude_tags, , start: number, finish: number)
+	-- config.values.synchronize_flags = not_nil(config.values.synchronize_flags, sync)
+	-- config.values.draftdir = config.values.draftdir or "draft"
 	config.values.primary_email = config.values.primary_email or primary_email
 	config.values.other_email = config.values.other_email or other_email
 	config.values.exclude_tags = config.values.exclude_tags or exclude_tags
-	-- nm.db_close(db)
+	nm.notmuch_database_destroy(db)
 end
 
 function runtime.with_db(func)
-	local db = nm.db_open_with_config(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
+	local db = nm.db_open_with_config_raw(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
 	func(db)
+	nm.notmuch_database_destroy(db)
 end
 
 function runtime.with_db_writer(func)
-	local db = nm.db_open_with_config(config.values.db_path, 1, config.values.nm_config, config.values.nm_profile)
-	-- nm.db_atomic_begin(db)
+	local db = nm.db_open_with_config_raw(config.values.db_path, 1, config.values.nm_config, config.values.nm_profile)
 	func(db)
-	-- nm.db_atomic_end(db)
-	-- nm.db_close(db)
+	nm.notmuch_database_destroy(db)
 end
 
 --- @param offset number
