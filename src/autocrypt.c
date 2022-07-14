@@ -27,16 +27,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-// #include "gmime-gpg-context.h"
 #include "autocrypt.h"
-// #ifdef ENABLE_CRYPTO
+#include <gpgme.h>
 #include <gmime/gmime-filter-charset.h>
 #include <gmime/gmime-stream-filter.h>
-// #include <gmime/gmime-gpgme-utils.h>
 #include <gmime/gmime-stream-mem.h>
 #include <gmime/gmime-stream-fs.h>
 #include <gmime/gmime-charset.h>
-// #endif /* ENABLE_CRYPTO */
 #include <gmime/gmime-error.h>
 
 #ifdef ENABLE_DEBUG
