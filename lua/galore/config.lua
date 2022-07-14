@@ -1,15 +1,22 @@
 local config = {}
 
---- nil values are generated from the notmuch config
---- they can be overriden and documented here
 config.values = {
+	--- These 3 values are generate from notmuch if set to nil
 	primary_email = nil, -- String
 	other_email = nil, -- {String}
 	name = nil, -- String
+	-- select_dir is a function that select the sub folder for a messag
+	select_dir = function(from) -- maybe message?
+		return ""
+	end,
 	draftdir = "draft", -- directory is relative to the nm root
-	exclude_tags = nil, -- {String}
+	draftencrypt = false, -- TODO
+
+	exclude_tags = nil, -- A list of tags that you want to filter out from searches
+	synchronize_flags = nil,
 	thread_expand = true,
 	thread_reverse = false,
+	idn = true,
 	sort = "newest",
 	sent_folder = "Sent", -- String|function(from)
 	sent_tags = "+sent",
@@ -34,16 +41,13 @@ config.values = {
 		end
 		return text
 	end,
-	tag_unread = function(message_id)
+	tag_unread = function(db, id)
 		local nu = require("galore.notmuch-util")
-		return nu.change_tag(message_id, "-unread")
+		return nu.change_tag(db, id, "-unread")
 	end,
-	start = function (opts)
-		require("galore.cmp_nm")
-		require("galore.cmp_vcard")
-		require("galore.autocrypt").init()
-		local saved = require("galore.saved")
-		return saved:create(opts.open_mode)
+	init = function (opts)
+		local def = require("galore.default")
+		def.init()
 	end,
 	validate_key = function (status) --- what level of security we should accept?
 		local convert = require("galore.gmime.convert")
@@ -68,45 +72,16 @@ config.values = {
 	end,
 	--- how to notify the user that a part has been verified
 	annotate_signature = function (buf, ns, status, before, after, names)
-		-- local ui = require("galore.ui")
-		-- vim.notify(msg: any, log_level: any, opts: any)
 		if status then
 			vim.notify("Signature succeeded")
 		else
 			vim.notify("Signature failed", vim.log.levels.WARN)
 		end
-		-- if status then
-		-- 	ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature Passed ---------", before)
-		-- else
-		-- 	ui.exmark(buf, ns, "nmVerifyRed", "--------- Signature Failed ---------", before)
-		-- end
-		-- if status then
-		-- 	ui.exmark(buf, ns, "nmVerifyGreen", "--------- Signature End ---------", after)
-		-- else
-		-- 	ui.exmark(buf, ns, "nmVerifyRed","--------- Signature End ---------", after)
-		-- end
 	end,
 	from_length = 25, --- The from length the default show_message_descripiton
 	show_message_descripiton = function(line)
 	end,
 	key_bindings = {
-		-- global = {
-		-- 	["<leader>mc"] = function ()
-		-- 		require("galore.compose"):create("tab")
-		-- 	end,
-		-- 	["<leader>mf"] = function ()
-		-- 		require("galore.telescope").load_draft()
-		-- 	end,
-		-- 	["<leader>ms"] = function ()
-		-- 		require("galore.telescope").notmuch_search()
-		-- 	end,
-		-- 	["<leader>mn"] = function ()
-		-- 		require("galore.jobs").new()
-		-- 	end,
-		-- 	["<leader>me"] = function ()
-		-- 		require("galore.runtime").edit_saved()
-		-- 	end,
-		-- },
 		telescope = {
 			i = {
 				--- Dunno if this is the correct way to solve this
@@ -201,9 +176,10 @@ config.values = {
 					local cb = require("galore.callback")
 					cb.yank_browser(tmb, "id")
 				end,
-				["<tab>"] = function (tmb)
-					local cb = require("galore.callback")
-					cb.toggle(tmb)
+				["<tab>"] = function ()
+					vim.fn.feedkeys("za", 'm')
+					-- local cb = require("galore.callback")
+					-- cb.toggle(tmb)
 				end,
 				["A"] = function (tmb)
 					require("galore.runtime").add_saved(tmb.search)
@@ -212,7 +188,7 @@ config.values = {
 					tmb:refresh()
 				end,
 				-- something like this, but less complicated
-				["<leader>/"] = function (browser)
+				["<leader>m/"] = {function (browser)
 					local action_set = require("telescope.actions.set")
 					local tmb = require("galore.thread_message_browser")
 					local tele = require("galore.telescope")
@@ -227,7 +203,7 @@ config.values = {
 						end
 					}
 					require("galore.telescope").notmuch_search(opts)
-				end,
+				end, {desc="notmuch sub search"}},
 			},
 		},
 		message_browser = {
@@ -261,7 +237,7 @@ config.values = {
 				["="] = function (mb)
 					mb:refresh()
 				end,
-				["<leader>/"] = function (browser)
+				["<leader>m/"] = function (browser)
 					local action_set = require("telescope.actions.set")
 					local mb = require("galore.message_browser")
 					local tele = require("galore.telescope")
@@ -290,7 +266,8 @@ config.values = {
 					cb.message_reply_all(message_view)
 				end,
 				["s"] = function (message_view)
-					message_view:save_attach()
+					local telescope = require("galore.telescope")
+					message_view:select_attachment(telescope.save_file)
 				end,
 				["S"] = function (message_view)
 					message_view:view_attach()
@@ -356,35 +333,47 @@ config.values = {
 		},
 		compose = {
 			n = {
-				["<leader>ms"] = function (compose)
+				["<leader>ms"] = {function (compose)
 					compose:send()
-				end,
-				["<leader>ma"] = function (compose)
+				end, {desc="Send email"}},
+				["<leader>ma"] = {function (compose)
 					local tele = require("galore.telescope")
 					tele.attach_file(compose)
-				end,
-				["<leader>md"] = function (compose)
+				end, {desc="Add attachment"}},
+				["<leader>md"] = {function (compose)
 					compose:remove_attachment()
-				end,
-				["<leader>mq"] = function (compose)
+				end, {desc="Delete attachment"}},
+				["<leader>mq"] = {function (compose)
 					compose:save_draft()
-				end,
-				["<leader>mo"] = function (compose)
+				end, {desc="Save draft"}},
+				["<leader>mo"] = {function (compose)
 					compose:set_option_menu()
-				end,
-				["<leader>mO"] = function (compose)
+				end, {desc="Set header option"}},
+				["<leader>mO"] = {function (compose)
 					compose:unset_option()
-				end,
-				["<leader>mh"] = function (compose)
+				end, {desc="Unset header option"}},
+				["<leader>mh"] = {function (compose)
 					compose:preview()
-				end,
+				end, {desc="preview email"}},
 				["gd"] = function (compose)
-					-- local telescope = require("galore.telescope")
-					-- telescope.goto_parent(message_view)
+					local telescope = require("galore.telescope")
+					telescope.goto_message(compose)
+				end,
+				["gD"] = function (compose)
+					local telescope = require("galore.telescope")
+					local gp = require("galore.gmime.parts")
+					local message_id = gp.message_get_message_id(compose.message)
+					telescope.goto_tree(message_id)
+				end,
+				["gR"] = function (compose)
+					local telescope = require("galore.telescope")
+					local gp = require("galore.gmime.parts")
+					local message_id = gp.message_get_message_id(compose.message)
+					telescope.goto_references(message_id)
 				end,
 				["gr"] = function (compose)
 					local telescope = require("galore.telescope")
-					local refs = compose.opts.References
+					local refs = compose.opts.headers.References
 					if refs then
 						telescope.goto_reference(refs)
 					end
@@ -397,7 +386,33 @@ config.values = {
 					buf:close(true)
 				end,
 			}
-		}
+		},
+	},
+	bufinit = {
+		thread_browser = function (buffer)
+		end,
+		message_browser = function (buffer)
+		end,
+		message_view = function (buffer)
+		end,
+		compose = function (buffer)
+			-- BufWipout?
+			vim.api.nvim_create_autocmd("BufDelete", {
+				callback = function ()
+					buffer:delete_tmp()
+				end,
+				buffer = buffer.handle})
+			vim.api.nvim_create_autocmd("BufWritePost", {
+				callback = function ()
+					buffer:save_draft()
+				end,
+				buffer = buffer.handle})
+			vim.api.nvim_create_autocmd("InsertLeave", {
+				callback = function ()
+					buffer:notify_encrypted()
+				end,
+				buffer = buffer.handle})
+		end
 	},
 }
 
