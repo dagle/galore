@@ -158,13 +158,13 @@ function Tmb:commands()
 end
 
 -- create a browser class
-function Tmb:create(search, kind, parent)
+function Tmb:create(search, opts)
 	return Buffer.create({
 		name = "galore-threads: " .. search,
 		ft = "galore-threads",
-		kind = kind,
+		kind = opts.kind,
 		cursor = "top",
-		parent = parent,
+		parent = opts.parent,
 		mappings = config.values.key_bindings.thread_browser,
 		init = function(buffer)
 			buffer.search = search

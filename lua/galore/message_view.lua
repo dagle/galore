@@ -74,14 +74,14 @@ end
 function Message:next()
 	if self.vline and self.parent then
 		local line_info, vline = browser.next(self.parent, self.vline)
-		Message:create(line_info, "replace", self.parent, vline)
+		Message:create(line_info, {kind="replace", parent=self.parent, vline=vline})
 	end
 end
 --
 function Message:prev()
 	if self.vline and self.parent then
 		local line_info, vline = browser.prev(self.parent, self.vline)
-		Message:create(line_info, "replace", self.parent, vline)
+		Message:create(line_info, {kind="replace", parent=self.parent, vline=vline})
 	end
 end
 
@@ -102,20 +102,19 @@ function Message:commands()
 	})
 end
 
-function Message:create(line, kind, parent, vline)
+function Message:create(line, opts)
 	Buffer.create({
 		name = line.filenames[1],
 		ft = "mail",
-		kind = kind,
-		parent = parent,
+		kind = opts.kind,
+		parent = opts.parent,
 		cursor = "top",
 		mappings = config.values.key_bindings.message_view,
 		init = function(buffer)
 			buffer.line = line
-			buffer.parent = parent
-			buffer.vline = vline
+			buffer.vline = opts.vline
 			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
-			-- mark_read(parent, line, vline)
+			-- mark_read(opts.parent, line, opts.vline)
 			buffer:update(line)
 			buffer:commands()
 			config.values.bufinit.message_view(buffer)

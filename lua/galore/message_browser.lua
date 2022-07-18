@@ -60,13 +60,13 @@ function Mb:commands()
 end
 
 -- create a browser class
-function Mb:create(search, kind, parent)
+function Mb:create(search, opts)
 	Buffer.create({
 		name = "galore-messages: " .. search,
 		ft = "galore-threads",
-		kind = kind,
+		kind = opts.kind,
 		cursor = "top",
-		parent = parent,
+		parent = opts.parent,
 		mappings = config.values.key_bindings.message_browser,
 		init = function(buffer)
 			buffer.search = search

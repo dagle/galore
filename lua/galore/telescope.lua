@@ -123,7 +123,7 @@ local function open_search(bufnr, type)
 	local entry = action_state.get_selected_entry()
 	actions.close(bufnr)
 	local mode = type_to_kind(type)
-	message_view:create(entry.value, mode, nil, nil)
+	message_view:create(entry.value, {kind=mode})
 end
 
 function Telescope.create_search(browser, bufnr, type, parent)
@@ -322,7 +322,7 @@ local function goto_message(mv, id)
 
 	local items = make_tag(mv.message)
 	vim.fn.settagstack(vim.fn.win_getid(), {items=items}, 't')
-	message_view:create(line, "replace", mv.parent, nil)
+	message_view:create(line, {kind="replace", parent=mv.parent})
 end
 
 function Telescope.goto_message(mv)

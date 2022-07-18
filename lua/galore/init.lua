@@ -4,7 +4,7 @@ local started = false
 local galore = {}
 function galore.open(opts)
 	opts = opts or {}
-	opts.open_mode = opts.open_mode or "replace"
+	opts.kind = opts.kind or "replace"
 	galore.connect()
 	config.values.init(opts)
 end
@@ -43,6 +43,13 @@ function galore.setup(opts)
 	galore.user_config = opts
 end
 
+function galore.withconnect(func, ...)
+	if not galore.connected then
+		galore.connect()
+	end
+	func(...)
+end
+
 function galore.compose(args, kind)
 	local opts = {}
 	if type(args) == "string" then
@@ -58,7 +65,10 @@ function galore.compose(args, kind)
 	if not galore.connected then
 		galore.connect()
 	end
-	require('galore.compose'):create(kind, nil, nil, opts)
+	galore.withconnect(function (...)
+	local comp = require('galore.compose')
+	comp:create(kind, ...)
+	end, nil, nil, opts)
 end
 
 --- setup things like

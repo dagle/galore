@@ -5,19 +5,18 @@ local nu = require("galore.notmuch-util")
 local runtime = require("galore.runtime")
 local nm = require("galore.notmuch")
 local config = require("galore.config")
-local go = require("galore.gmime.object")
 local br = require("galore.browser")
 
 local M = {}
 
 function M.select_search(saved, browser, mode)
 	local search = saved:select()[4]
-	browser:create(search, mode, saved)
+	browser:create(search, {kind=mode, parent=saved})
 end
 
 function M.select_message(browser, mode)
 	local vline, line_info = br.select(browser)
-	message_view:create(line_info, mode, browser, vline)
+	message_view:create(line_info, {kind=mode, parent=browser, vline=vline})
 end
 
 function M.get_message(unique, mode)
@@ -26,7 +25,7 @@ function M.get_message(unique, mode)
 		local message = nm.db_find_message(db, unique)
 		line_info = nu.get_message(message)
 	end)
-	message_view:create(line_info, mode, nil, nil)
+	message_view:create(line_info, {kind=mode})
 end
 
 function M.yank_browser(browser, select)

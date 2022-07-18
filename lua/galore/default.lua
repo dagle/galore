@@ -19,7 +19,6 @@ end
 function M.init(opts)
 		require("galore.cmp_nm")
 		require("galore.cmp_vcard")
-		-- require("galore.autocrypt").init()
 		vim.api.nvim_create_autocmd({"BufEnter", "Filetype"},{
 			pattern = {"galore-threads*", "galore-messages"},
 			callback = function ()
@@ -35,7 +34,7 @@ function M.init(opts)
 				vim.api.nvim_win_set_option(0, "foldcolumn", '1')
 			end})
 		local saved = require("galore.saved")
-		return saved:create(opts.open_mode)
+		return saved:create(opts)
 end
 
 function M.gen_config()

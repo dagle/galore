@@ -47,7 +47,7 @@ config.values = {
 	end,
 	init = function (opts)
 		local def = require("galore.default")
-		def.init()
+		def.init(opts)
 	end,
 	validate_key = function (status) --- what level of security we should accept?
 		local convert = require("galore.gmime.convert")

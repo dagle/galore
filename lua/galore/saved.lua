@@ -76,7 +76,6 @@ function Saved:refresh()
 	self:set_lines(0, 0, true, formated)
 	self:set_lines(-2, -1, true, {})
 	self.State = box
-	--- Maybe not do this
 	vim.api.nvim_win_set_cursor(0, {1,0})
 	self:lock()
 end
@@ -86,12 +85,12 @@ function Saved:select()
 	return self.State[line]
 end
 
-function Saved:create(kind)
+function Saved:create(opts)
 	self.num = self.num + 1
 	return Buffer.create({
 		name = u.gen_name("galore-saved", self.num),
 		ft = "galore-saved",
-		kind = kind,
+		kind = opts.kind,
 		cursor = "top",
 		mappings = config.values.key_bindings.saved,
 		init = function(buffer)
