@@ -63,7 +63,9 @@ function M.change_tag(db, id, str)
 	local changes = vim.split(str, " ")
 	local message = nm.db_find_message(db, id)
 	if message ~= nil then
+		nm.db_atomic_begin(db)
 		update_tags(message, changes)
+		nm.db_atomic_end(db)
 	end
 end
 
@@ -82,6 +84,7 @@ function M.update_line(db, browser, line_info, vline)
 	line_info.filenames = new_info.filenames
 	line_info.tags = new_info.tags
 	if vline and browser then
+		P(true)
 		browser:update(vline)
 	end
 end

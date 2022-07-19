@@ -114,7 +114,7 @@ function Message:create(line, opts)
 			buffer.line = line
 			buffer.vline = opts.vline
 			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
-			-- mark_read(opts.parent, line, opts.vline)
+			mark_read(opts.parent, line, opts.vline)
 			buffer:update(line)
 			buffer:commands()
 			config.values.bufinit.message_view(buffer)
