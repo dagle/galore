@@ -104,7 +104,7 @@ end
 
 local function load_compose(kind, message)
 	local ref = gu.make_ref(message)
-	compose:create(kind, message, {ref}, {reply = true})
+	compose:create(kind, message, {ref}, {response_mode = true})
 end
 
 --- should use filenames
@@ -174,8 +174,7 @@ local function encrypted(buf, winid, message)
   --
 end
 
--- XXX honor opts
-local function entry_maker(opts)
+local function entry_maker()
 	return function(entry)
 		local data = vim.fn.json_decode(entry)
 		if data == nil then
@@ -217,7 +216,7 @@ Telescope.notmuch_search = function(opts)
 		local group = opts.search_group or "message"
 		local ret =  vim.tbl_flatten({ "nm-livesearch", group, prompt})
 		return ret
-	end, entry_maker(opts), opts.max_results, opts.cwd)
+	end, entry_maker(), opts.max_results, opts.cwd)
 
 	pickers.new(opts, {
 		prompt_title = "Notmuch search",
