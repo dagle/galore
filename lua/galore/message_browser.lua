@@ -25,8 +25,8 @@ function Mb:ppMessage(messages)
 		local formated = config.values.show_message_description(message)
 		table.insert(box, formated)
 	end
-	self:set_lines(0, 0, true, box)
-	self:set_lines(-2, -1, true, {})
+	self:set_lines(-1, -1, true, box)
+	self:set_lines(0, 1, true, {})
 end
 
 function Mb:refresh()
@@ -70,10 +70,9 @@ function Mb:create(search, opts)
 		mappings = config.values.key_bindings.message_browser,
 		init = function(buffer)
 			buffer.search = search
-			buffer.emph = config.values.default_emph
-			buffer.dians = vim.api.nvim_create_namespace("galore-emph")
+			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
 			buffer:refresh()
-			dia.set_emph(buffer, buffer.emph)
+			dia.set_emph(buffer, config.values.default_emph)
 			buffer:commands()
 			config.values.bufinit.message_browser(buffer)
 		end,

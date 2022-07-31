@@ -37,6 +37,7 @@ local function get_message(message, tid, level, prestring, i, total)
 	}
 end
 
+--- Draw the thread structure
 local function show_messages(messages, level, prestring, num, total, tid, box, state)
 	for j, message in ipairs(messages) do
 		local newstring
@@ -129,6 +130,7 @@ function Tmb:threads_to_buffer()
 	end
 end
 
+--- Redraw the whole window
 function Tmb:refresh()
 	self:unlock()
 	self:clear()
@@ -157,7 +159,11 @@ function Tmb:commands()
 	})
 end
 
--- create a browser class
+
+--- Create a browser grouped by threads
+--- @param search string a notmuch search string
+--- @param opts table
+--- @return any
 function Tmb:create(search, opts)
 	return Buffer.create({
 		name = "galore-threads: " .. search,
@@ -170,10 +176,9 @@ function Tmb:create(search, opts)
 			buffer.search = search
 			buffer.line = 1
 			buffer.diagnostics = {}
-			buffer.emph = config.values.default_emph
-			buffer.dians = vim.api.nvim_create_namespace("galore-emph")
+			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
 			buffer:refresh(search)
-			dia.set_emph(buffer, buffer.emph)
+			dia.set_emph(buffer, config.values.default_emph)
 			buffer:commands()
 			config.values.bufinit.thread_browser(buffer)
 		end,
