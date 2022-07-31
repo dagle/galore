@@ -11,6 +11,7 @@ config.values = {
 	end,
 	draftdir = "draft", -- directory is relative to the nm root
 	draftencrypt = false, -- TODO
+	sentencrypt = false, -- TODO
 
 	exclude_tags = nil, -- A list of tags that you want to filter out from searches
 	synchronize_flags = nil,
@@ -24,7 +25,7 @@ config.values = {
 	empty_topic = "no topic",
 	guess_email = false, -- if we can't determain your email for reply use primary
 	empty_tag = "+archive", -- nil or "tag", add a tag when there is no tag
-	default_emph = {tags = {"unread"}},
+	default_emph = {tags = {"unread"}}, --- maybe change this to a function in the future?
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
@@ -60,13 +61,7 @@ config.values = {
 	gpg_id = nil, --- what gpg id to use, string or {email = string}[]
 	autocrypt = true, -- insert the gpg_id in our emails
 	autocrypt_reply = true, -- use autocrypt in replys if their header includes one.
-	headers = { -- What headers to show, order is important
-		"From",
-		"To",
-		"Cc",
-		"Date",
-		"Subject",
-	},
+	custom_headers = {}, -- a list of headers/producers to be inserted into the header
 	send_cmd = function(message) --- sendmail command to pipe the email into
 		return "msmtp", {"--read-envelope-from", "-t"}
 	end,
@@ -108,11 +103,11 @@ config.values = {
 					local tmb = require("galore.thread_message_browser")
 					cb.select_search(saved, tmb, "replace")
 				end,
-				-- ["m"] = function (saved)
-				-- 	local cb = require("galore.callback")
-				-- 	local mb = require("galore.message_browser")
-				-- 	cb.select_search(saved, mb, "replace")
-				-- end,
+				["b"] = function (saved)
+					local cb = require("galore.callback")
+					local mb = require("galore.message_browser")
+					cb.select_search(saved, mb, "replace")
+				end,
 				["q"] = function (saved)
 					saved:close(true)
 				end,
@@ -389,6 +384,8 @@ config.values = {
 		},
 	},
 	bufinit = {
+		-- Should we not do this and use after/ftplugin?
+		-- Or do both?
 		thread_browser = function (buffer)
 		end,
 		message_browser = function (buffer)
@@ -407,11 +404,11 @@ config.values = {
 					buffer:save_draft()
 				end,
 				buffer = buffer.handle})
-			vim.api.nvim_create_autocmd("InsertLeave", {
-				callback = function ()
-					buffer:notify_encrypted()
-				end,
-				buffer = buffer.handle})
+			-- vim.api.nvim_create_autocmd("InsertLeave", {
+			-- 	callback = function ()
+			-- 		buffer:notify_encrypted()
+			-- 	end,
+			-- 	buffer = buffer.handle})
 		end
 	},
 }
