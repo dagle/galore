@@ -96,10 +96,10 @@ local function parser_warning(offset, error, item, data)
 end
 
 local function make_gmime_parser_options()
-	local parser = gopt.parser_options_new()
+	local parser_opt = gopt.parser_options_new()
 	--- set more stuff
-	gopt.parser_options_set_warning_callback(parser, parser_warning, nil)
-	runtime.parser_opts = parser
+	gopt.parser_options_set_warning_callback(parser_opt, parser_warning, nil)
+	runtime.parser_opts = parser_opt
 end
 
 local function make_gmime_format_options()

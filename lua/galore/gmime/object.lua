@@ -115,7 +115,7 @@ end
 --- @param object gmime.MimeObject
 --- @param header string
 --- @param value string
---- @param charset string
+--- @param charset string|nil
 function M.object_set_header(object, header, value, charset)
 	gmime.g_mime_object_set_header(object, header, value, charset)
 end

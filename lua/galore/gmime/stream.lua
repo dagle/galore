@@ -315,7 +315,6 @@ end
 --- @param path string
 --- @param mode string
 --- @return gmime.Stream, gmime.Error
---- XXX free error
 function M.stream_file_open(path, mode)
 	local err = ffi.new("GError*[1]")
 	local ret = gmime.g_mime_stream_file_open(path, mode, err)

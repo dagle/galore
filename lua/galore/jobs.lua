@@ -27,7 +27,6 @@ function M.new()
 		:start()
 end
 
---- XXX this should be done in glib
 function M.get_type(file)
 	local ret
 	Job
@@ -74,56 +73,6 @@ function M.w3m(text)
 		})
 		:sync()
 	return ret
-end
-
-local function to_string(any)
-	local object = ffi.cast("GMimeObject *", any)
-	local mem = gs.stream_mem_new()
-	go.object_write_to_stream(object, runtime.format_opts, mem)
-	gs.stream_flush(mem)
-	return gu.mem_to_string(mem)
-end
-
---- XXX remove these string functions, in the future when the raw functions work
-function M.send_mail_str(message)
-	local message_str = to_string(message)
-	local cmd, args = config.values.send_cmd()
-	Job
-		:new({
-			command = cmd,
-			args = args,
-			writer = message_str,
-			on_exit = function(j, return_val)
-				  if return_val == 0 then
-					vim.notify("Mail sent")
-				  else
-					local err = string.format("%s failed with error: %d", cmd, return_val)
-					vim.notify(err, vim.log.levels.ERROR)
-				  end
-			end,
-		})
-		:start()
-end
-
-
-function M.insert_mail_str(message, folder, tags)
-	local message_str = to_string(message)
-	local folderflag = string.format("--folder=%s", folder)
-	local args = vim.tbl_flatten({"insert", "--create-folder", folderflag, tags})
-	Job:new({
-			command = "notmuch",
-			args = args,
-			writer = message_str,
-			on_exit = function(j, return_val)
-				  if return_val == 0 then
-					vim.notify("Mail addedd to draft")
-				  else
-					local err = string.format("%s failed with error: %d", "notmuch insert", return_val)
-					vim.notify(err, vim.log.levels.ERROR)
-				  end
-			end,
-		})
-		:start()
 end
 
 --- Add a callback to this?

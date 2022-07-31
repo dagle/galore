@@ -55,7 +55,6 @@ function M.internet_address_list_iter(list)
 	end
 end
 
---- XXX what to do when value is nil?
 function M.header_iter(message)
 	local ls = go.object_get_header_list(ffi.cast("GMimeObject *", message))
 	if ls == nil then
@@ -159,8 +158,6 @@ function M.write_message(path, object)
 	return err
 end
 
-
---- XXX this should be async
 function M.save_part(part, filename)
 	local stream = assert(gs.stream_file_open(filename, "w"), "can't open file: " .. filename)
 	local content = gp.part_get_content(part)
@@ -201,8 +198,8 @@ function M.get_ref(message)
 		reply = gc.references_parse(runtime.parser_opts, ref_str)
 	end
 	return {
-		References = ref,
-		["In-Reply-To"] = reply,
+		References = gc.references_format(ref),
+		["In-Reply-To"] = gc.references_format(reply),
 	}
 end
 
@@ -222,8 +219,8 @@ function M.make_ref(message)
 		gc.references_append(ref, reply_str)
 	end
 	return {
-		References = ref,
-		["In-Reply-To"] = reply,
+		References = gc.references_format(ref),
+		["In-Reply-To"] = gc.references_format(reply),
 	}
 end
 
@@ -365,6 +362,51 @@ local function append_no_dups(dst, src)
 			gc.internet_address_list_add(dst, semail)
 		end
 	end
+end
+
+function M.test_gpgkey(ctx, addr)
+	if gc.internet_address_is_mailbox(addr) then
+		local name = gc.internet_address_get_name(addr)
+		local mb = ffi.cast("InternetAddressMailbox *", addr)
+		local email = gc.internet_address_mailbox_get_addr(mb)
+		if ge.gpg_key_exists(ctx, name, false)
+			or ge.gpg_key_exists(ctx, email, false) then
+			return true
+		end
+	end
+	return false
+end
+
+local function check_send_keys(ctx, message)
+	for addr in M.internet_address_list_iter(gp.message_get_all_recipients(message)) do
+		if not M.test_gpgkey(ctx, addr) then
+			return false
+		end
+	end
+	return true
+end
+
+local function check_encrypted(_, part, _, state)
+	if gp.is_multipart_encrypted(part) then
+		state.encrypted = true
+	end
+end
+
+--- returns if it's safe to qoute a message
+--- it's safe to qoute a message if:
+--- the email ain't encrypted
+--- the email is encrypted but you have keys to
+--- all recipients
+--- otherwise return false
+function M.safe_qoute(message)
+	local state = {}
+	gp.message_foreach_dfs(message, check_encrypted, state)
+	if state.encrypted == true then
+		if not check_send_keys(ctx, message) then
+			return false
+		end
+	end
+	return true
 end
 
 -- XXX maybe this shouldn't return strings but rather a message

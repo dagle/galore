@@ -25,5 +25,3 @@ highlight link GaloreDate		String
 highlight link GaloreThreadCount	Comment
 highlight link GaloreSubject	Statement
 highlight link GaloreTags		Comment
-highlight GaloreEmph gui=underline cterm=underline
-" highlight GaloreEmph gui=bold cterm=bold

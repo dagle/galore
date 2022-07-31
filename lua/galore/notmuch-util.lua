@@ -84,7 +84,6 @@ function M.update_line(db, browser, line_info, vline)
 	line_info.filenames = new_info.filenames
 	line_info.tags = new_info.tags
 	if vline and browser then
-		P(true)
 		browser:update(vline)
 	end
 end

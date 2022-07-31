@@ -7,7 +7,10 @@ local runtime = require("galore.runtime")
 local ordered = require("galore.lib.ordered")
 
 local Saved = Buffer:new()
+
+--- Don't do num
 Saved.num = 0
+local generators = {}
 
 local function make_entry(db, box, search, name, exclude)
 	local q = nm.create_query(db, search)
@@ -44,7 +47,6 @@ local function gen_excluded(searches)
 	end
 end
 
-local generators = {}
 
 function Saved.get_searches()
 	local searches = ordered.new()
@@ -54,6 +56,7 @@ function Saved.get_searches()
 	return searches
 end
 
+--- Add a new generator for the next refresh
 function Saved.Register(generator)
 	table.insert(generators, generator)
 end
@@ -62,6 +65,7 @@ local function ppsearch(tag)
 	return string.format("%d(%d) %-30s (%s)", unpack(tag))
 end
 
+--- Redraw all the saved searches and update the count
 function Saved:refresh()
 	self:unlock()
 	self:clear()
@@ -80,11 +84,15 @@ function Saved:refresh()
 	self:lock()
 end
 
+--- Return the currently selected line
 function Saved:select()
 	local line = vim.fn.line(".")
 	return self.State[line]
 end
 
+--- Create a new window for saved searches
+--- @param opts table {kind}
+--- @return any
 function Saved:create(opts)
 	self.num = self.num + 1
 	return Buffer.create({

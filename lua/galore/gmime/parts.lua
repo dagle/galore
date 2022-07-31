@@ -94,37 +94,26 @@ end
 
 --- @param message gmime.Message
 --- @return fun() current gmime.MimeObject, parent gmime.MimeObject
---- XXX untested, add level to it?
 function M.part_iter(message)
 	if message == nil then
-		return
+		return function ()
+			return nil
+		end
 	end
 	local tmp = gmime.g_mime_message_get_mime_part(message)
 	local queue = {}
-	table.insert(queue, { nil, tmp})
+	table.insert(queue, { nil, tmp, 1})
 	return function()
 		if #queue <= 0 then
 			return nil
 		end
-		local parent, current = unpack(table.remove(queue, 1))
+		local parent, current, level  = unpack(table.remove(queue, 1))
 		if M.is_message_part(current) then
 			local message_part = ffi.cast("GMimeMessagePart *", current)
 			local new_message = gmime.g_mime_message_part_get_message(message_part)
 			if new_message then
 				local mime_part = gmime.g_mime_message_get_mime_part(new_message)
-				-- XXX do we need to do this? Maybe because of ordering? Maybe just return part
-				-- table.insert(queue, { current, child })
-				-- if M.is_multipart(mime_part) then
-				-- 	local multi = ffi.cast("GMimeMultipart *", mime_part)
-				-- 	local i = 0
-				-- 	local j = gmime.g_mime_multipart_get_count(multi)
-				-- 	while i < j do
-				-- 		local child = gmime.g_mime_multipart_get_part(multi, i)
-				-- 		table.insert(queue, { mime_part, child })
-				-- 		i = i + 1
-				-- 	end
-				-- end
-				table.insert(queue, { current, mime_part})
+				table.insert(queue, { current, mime_part, level})
 			end
 		elseif M.is_multipart(current) then
 			local multi = ffi.cast("GMimeMultipart *", current)
@@ -132,11 +121,11 @@ function M.part_iter(message)
 			local j = gmime.g_mime_multipart_get_count(multi)
 			while i < j do
 				local child = gmime.g_mime_multipart_get_part(multi, i)
-				table.insert(queue, { current, child })
+				table.insert(queue, { current, child, level+1})
 				i = i + 1
 			end
 		end
-		return current, parent
+		return current, parent, level
 	end
 end
 
@@ -208,7 +197,7 @@ end
 
 --- @param message gmime.Message
 --- @param str string
---- @param charset string
+--- @param charset string|nil
 function M.message_set_subject(message, str, charset)
 	gmime.g_mime_message_set_subject(message, str, charset)
 end

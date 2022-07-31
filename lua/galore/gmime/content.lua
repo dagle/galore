@@ -737,6 +737,9 @@ function M.references_set_message_id(refs, index, msgid)
 end
 
 function M.references_format(refs)
+	if not refs then
+		return nil
+	end
 	local box = {}
 	for ref in M.reference_iter(refs) do
 		table.insert(box, "<" .. ref .. ">")

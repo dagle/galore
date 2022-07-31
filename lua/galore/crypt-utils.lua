@@ -2,7 +2,6 @@ local ge = require("galore.gmime.crypt")
 local gp = require("galore.gmime.parts")
 local gmime = require("galore.gmime.gmime_ffi")
 local config = require("galore.config")
-local runtime = require("galore.runtime")
 local ffi = require("ffi")
 
 local M = {}
@@ -15,6 +14,9 @@ local function verify_list(siglist)
 	local sigs = ge.signature_list_length(siglist) > 0
 	for sig in ge.sig_iterator(siglist) do
 		local test = config.values.validate_key(ge.signature_get_status(sig))
+		-- local cert = ge.signature_get_certificate(sig)
+		-- local name = ge.certificate_get_fingerprint(cert)
+		-- local name = ge.certificate_get_email(cert)
 		sigs = sigs and test
 	end
 	return sigs
@@ -33,7 +35,7 @@ function M.verify_signed(obj)
 end
 
 function M.sign(ctx, obj)
-	local ret, err = gmime.g_mime_multipart_signed_sign(ctx, obj, config.gpg_id, error)
+	local ret, err = gp.multipart_signed_sign(ctx, obj, config.gpg_id)
 	return ret, err
 end
 

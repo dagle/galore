@@ -596,9 +596,9 @@ function M.certificate_set_issuer_serial(cert, issuer)
 end
 
 --- @param cert gmime.Certificate
---- @return string
+--- @return string|nil
 function M.certificate_get_issuer_serial(cert)
-	return ffi.string(gmime.g_mime_certificate_get_issuer_serial(cert))
+	return safe.safestring(gmime.g_mime_certificate_get_issuer_serial(cert))
 end
 
 --- @param cert gmime.Certificate
@@ -608,9 +608,9 @@ function M.certificate_set_issuer_name(cert, issuer)
 end
 
 --- @param cert gmime.Certificate
---- @return string
+--- @return string|nil
 function M.certificate_get_issuer_name(cert)
-	gmime.g_mime_certificate_get_issuer_name(cert)
+	return safe.safestring(gmime.g_mime_certificate_get_issuer_name(cert))
 end
 
 --- @param cert gmime.Certificate
@@ -620,9 +620,9 @@ function M.certificate_set_fingerprint(cert, fingerprint)
 end
 
 --- @param cert gmime.Certificate
---- @return string
+--- @return string|nil
 function M.certificate_get_fingerprint(cert)
-	return ffi.string(gmime.g_mime_certificate_get_fingerprint(cert))
+	return safe.safestring(gmime.g_mime_certificate_get_fingerprint(cert))
 end
 
 --- @param cert gmime.Certificate
@@ -632,9 +632,9 @@ function M.certificate_set_key_id(cert, keyid)
 end
 
 --- @param cert gmime.Certificate
---- @return string
+--- @return string|nil
 function M.certificate_get_key_id(cert)
-	return ffi.string(gmime.g_mime_certificate_get_key_id(cert))
+	return safe.safestring(gmime.g_mime_certificate_get_key_id(cert))
 end
 
 --- @param cert gmime.Certificate
@@ -644,9 +644,9 @@ function M.certificate_set_email(cert, email)
 end
 
 --- @param cert gmime.Certificate
---- @return string
+--- @return string|nil
 function M.certificate_get_email(cert)
-	return ffi.string(gmime.g_mime_certificate_get_email(cert))
+	return safe.safestring(gmime.g_mime_certificate_get_email(cert))
 end
 
 --- @param cert gmime.Certificate
@@ -656,9 +656,9 @@ function M.certificate_set_name(cert, name)
 end
 
 --- @param cert gmime.Certificate
---- @return string
+--- @return string|nil
 function M.certificate_get_name(cert)
-	return ffi.string(gmime.g_mime_certificate_get_name(cert))
+	return safe.safestring(gmime.g_mime_certificate_get_name(cert))
 end
 
 --- @param cert gmime.Certificate

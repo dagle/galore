@@ -82,14 +82,14 @@ function M.part_to_stream(part, opts, outstream)
 		local basic = gf.filter_basic_new(enc, false)
 		gs.stream_filter_add(streamfilter, basic)
 	end
-	--
+
 	local object = ffi.cast("GMimeObject *", part)
 	local charset = go.object_get_content_type_parameter(object, "charset")
 	if charset then
 		local utf = gf.filter_charset_new(charset, "UTF-8")
 		gs.stream_filter_add(streamfilter, utf)
 	end
-	--
+
 	local unix = gf.filter_dos2unix_new(false)
 	gs.stream_filter_add(streamfilter, unix)
 
@@ -117,7 +117,8 @@ local function show_message_helper(message, buf, opts, state)
 
 	if opts.reply then
 		local date = gp.message_get_date(message)
-		local author = gc.internet_address_list_to_string(gp.message_get_from(message), nil, false)
+		local author = gc.internet_address_list_to_string(
+				gp.message_get_from(message), runtime.format_opts, false)
 		local qoute = config.values.qoute_header(date, author)
 		M.draw(buf, { qoute })
 	end
@@ -135,7 +136,6 @@ end
 -- @param reply bool if this should be qouted
 -- @param opts
 -- @return a {body, attachments}, where body is a string and attachments is GmimePart
---- XXX something here converts nil to string
 function M.show_message(message, buf, opts)
 	-- We set this to "unsafe", this is to battle
 	-- This is to handle https://efail.de/ problems
@@ -217,7 +217,7 @@ function M.show_part(object, buf, opts, state)
 				config.values.annotate_signature(buf, opts.ns, verified, before, after, names)
 			end)
 		elseif gp.is_multipart_signed(object) then
-			if opts.preview or opts.reply then
+			if opts.preview then
 				local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
 				M.show_part(se_part, buf, opts, state)
 				return
