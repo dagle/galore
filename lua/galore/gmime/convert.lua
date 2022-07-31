@@ -1,11 +1,7 @@
 --- @diagnostic disable: undefined-field
 
 local gmime = require("galore.gmime.gmime_ffi")
-local ffi = require("ffi")
 local bit = require("bit")
-
---- XXX go over bitmasks, not every function should be able to take table
---- TODO missing some functions
 
 local M = {}
 
@@ -31,10 +27,6 @@ function M.to_address_type(atype)
 		elseif atype == "bcc" then
 			return gmime.GMIME_ADDRESS_TYPE_BCC
 		end
-	elseif type(atype) == "table" then
-		return bit_mask(atype, M.to_address_type)
-	else
-		return atype
 	end
 end
 
@@ -54,8 +46,8 @@ function M.to_checksum_type(ctype)
 		elseif ctype == "sha384" then
 			return gmime.G_CHECKSUM_SHA384
 		end
-	elseif type(ctype) == "table" then
-		return bit_mask(ctype, M.to_checksum_type)
+	-- elseif type(ctype) == "table" then
+	-- 	return bit_mask(ctype, M.to_checksum_type)
 	else
 		return ctype
 	end
@@ -79,8 +71,8 @@ function M.to_trust(trust)
 		elseif trust == "ultimate" then
 			return gmime.GMIME_TRUST_ULTIMATE
 		end
-	elseif type(trust) == "table" then
-		return bit_mask(trust, M.to_trust)
+	-- elseif type(trust) == "table" then
+	-- 	return bit_mask(trust, M.to_trust)
 	else
 		return trust
 	end
@@ -104,8 +96,8 @@ function M.to_validaty(val)
 		elseif val == "ultimate" then
 			return gmime.GMIME_VALIDITY_ULTIMATE
 		end
-	elseif type(val) == "table" then
-		return bit_mask(val, M.to_validaty)
+	-- elseif type(val) == "table" then
+	-- 	return bit_mask(val, M.to_validaty)
 	else
 		return val
 	end
@@ -131,8 +123,8 @@ function M.to_encoding(mode)
 	elseif mode == "uuencode" then
 		return gmime.GMIME_CONTENT_ENCODING_UUENCODE
 	end
-	elseif type(mode) == "table" then
-		return bit_mask(mode, M.to_encoding)
+	-- elseif type(mode) == "table" then
+	-- 	return bit_mask(mode, M.to_encoding)
 	else
 		return mode
 	end
@@ -150,8 +142,8 @@ function M.to_constraints(constraint)
 		elseif constraint == "binary" then
 			return gmime.GMIME_ENCODING_CONSTRAINT_BINARY
 		end
-	elseif type(constraint) == "table" then
-		return bit_mask(constraint, M.to_constraints)
+	-- elseif type(constraint) == "table" then
+	-- 	return bit_mask(constraint, M.to_constraints)
 	else
 		return constraint
 	end
@@ -185,8 +177,8 @@ function M.to_pub_algo(algo)
 	elseif algo == "eddsa" then
 		return gmime.GMIME_PUBKEY_ALGO_EDDSA
 	end
-	elseif type(algo) == "table" then
-		return bit_mask(algo, M.to_encoding)
+	-- elseif type(algo) == "table" then
+	-- 	return bit_mask(algo, M.to_encoding)
 	else
 		return algo
 	end
@@ -204,8 +196,8 @@ function M.to_param_encoding(param)
 		elseif param == "rfc2047" then
 			return gmime.GMIME_PARAM_ENCODING_METHOD_RFC2047
 		end
-	elseif type(param) == "table" then
-		return bit_mask(param, M.to_param_encoding)
+	-- elseif type(param) == "table" then
+	-- 	return bit_mask(param, M.to_param_encoding)
 	else
 		return param
 	end
@@ -227,8 +219,8 @@ function M.to_encryption_flags(flags)
 		elseif flags == "throw_keyids" then
 			return gmime.GMIME_ENCRYPT_THROW_KEYIDS
 		end
-	elseif type(flags) == "table" then
-		return bit_mask(flags, M.to_encryption_flags)
+	-- elseif type(flags) == "table" then
+	-- 	return bit_mask(flags, M.to_encryption_flags)
 	else
 		return flags
 	end
@@ -248,8 +240,8 @@ function M.to_decrytion_flag(flags)
 		elseif flags == "online" then
 			return gmime.GMIME_DECRYPT_ENABLE_ONLINE_CERTIFICATE_CHECKS
 		end
-	elseif type(flags) == "table" then
-		return bit_mask(flags, M.to_decrytion_flag)
+	-- elseif type(flags) == "table" then
+	-- 	return bit_mask(flags, M.to_decrytion_flag)
 	else
 		return flags
 	end
@@ -265,8 +257,8 @@ function M.to_verify_flags(flags)
 		elseif flags == "online" then
 			return gmime.GMIME_VERIFY_ENABLE_ONLINE_CERTIFICATE_CHECKS
 		end
-	elseif type(flags) == "table" then
-		return bit_mask(flags, M.to_verify_flags)
+	-- elseif type(flags) == "table" then
+	-- 	return bit_mask(flags, M.to_verify_flags)
 	else
 		return flags
 	end
@@ -283,8 +275,8 @@ function M.to_filter_from(mode)
 		elseif mode == "armor" then
 			return gmime.GMIME_FILTER_FROM_MODE_ARMOR
 		end
-	elseif type(mode) == "table" then
-		return bit_mask(mode, M.to_filter_from)
+	-- elseif type(mode) == "table" then
+	-- 	return bit_mask(mode, M.to_filter_from)
 	else
 		return mode
 	end
@@ -431,6 +423,7 @@ end
 --- @param name string
 --- @return integer
 function M.gpg_digest_id(name)
+	name = name:lower()
 	if name == "md2" then
 		return gmime.GMIME_DIGEST_ALGO_MD2
 	elseif name == "md4" then
@@ -454,7 +447,6 @@ function M.gpg_digest_id(name)
 	elseif name == "haval-5-160" then
 		return gmime.GMIME_DIGEST_ALGO_HAVAL5160
 	end
-
 	return gmime.GMIME_DIGEST_ALGO_DEFAULT
 end
 
@@ -484,23 +476,25 @@ function M.gpg_digest_name(int)
 	elseif int == gmime.GMIME_DIGEST_ALGO_HAVAL5160 then
 		return "haval-5-160"
 	end
-
 	return "pgp-sha1"
 end
 
 function M.best_flag(str)
--- 	typedef enum {
--- 	GMIME_FILTER_BEST_CHARSET  = (1 << 0),
--- 	GMIME_FILTER_BEST_ENCODING = (1 << 1)
--- } GMimeFilterBestFlags;
+	str = str:lower()
+	if str == "charset" then
+		return gmime.GMIME_FILTER_BEST_CHARSET
+	elseif str == "encoding" then
+		return gmime.GMIME_FILTER_BEST_ENCODING
+	end
 end
 
 function M.to_gzip_mode(mode)
--- 	typedef enum {
--- 	GMIME_FILTER_GZIP_MODE_ZIP,
--- 	GMIME_FILTER_GZIP_MODE_UNZIP
--- } GMimeFilterGZipMode;
+	mode = mode:lower()
+	if mode == "zip" then
+		return gmime.GMIME_FILTER_GZIP_MODE_ZIP
+	elseif mode == "unzip" then
+		return gmime.GMIME_FILTER_GZIP_MODE_UNZIP
+	end
 end
-
 
 return M
