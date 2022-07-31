@@ -64,8 +64,8 @@ function M.secure(part, opts, recipients)
 	end
 end
 
-local function required_headers(buf)
-	return buf.from and buf.to and buf.subject
+local function required_headers(headers)
+	return headers.from and headers.to and headers.subject
 end
 
 function M.textbuilder(text)
@@ -85,22 +85,21 @@ function M.create_message(buf, opts, attachments, header_opts, builder)
 	opts = opts or {}
 	local current
 	local message = gp.new_message(true)
-	local mobj = ffi.cast("GMimeObject *", message)
 	local address_headers = {"from", "to", "cc", "bcc"} -- etc
 	--- From and too should be required
 
-	if not required_headers(buf) then
+	if not required_headers(buf.headers) then
 		vim.notify("Missing non-optional headers", vim.log.levels.ERROR)
 		return
 	end
 
 	for _, v in ipairs(address_headers) do
-		if buf[v] then
-			local list = gc.internet_address_list_parse(runtime.parser_opts, buf[v])
+		if buf.headers[v] then
+			local list = gc.internet_address_list_parse(runtime.parser_opts, buf.headers[v])
 			local address = gp.message_get_address(message, v)
 			if not list then
 				local err = string.format(
-					"Failed to parse %s-address:\n%s", v, buf[v]
+					"Failed to parse %s-address:\n%s", v, buf.headers[v]
 				)
 				vim.notify(err, vim.log.levels.ERROR)
 				return
@@ -111,7 +110,7 @@ function M.create_message(buf, opts, attachments, header_opts, builder)
 
 	--- XXX is this right?
 	-- for ia in gu.internet_address_list_iter_str(runtime.parser_opts, buf.from) do
-	local id = gu.make_id(buf.from)
+	local id = gu.make_id(buf.headers.from)
 	gp.message_set_message_id(message, id)
 	-- break
 	-- end
@@ -119,8 +118,10 @@ function M.create_message(buf, opts, attachments, header_opts, builder)
 	gu.insert_current_date(message)
 
 	--- this shouldn't be optional, set it to no-topic
-	gp.message_set_subject(message, buf.subject, nil)
+	gp.message_set_subject(message, buf.headers.subject, nil)
 
+	-- move this upwards
+	local mobj = ffi.cast("GMimeObject *", message)
 	for k, v in pairs(header_opts) do
 		go.object_set_header(mobj, k, v, nil)
 	end
@@ -138,7 +139,7 @@ function M.create_message(buf, opts, attachments, header_opts, builder)
 	end
 
 	if opts.encrypt or opts.sign then
-		local recipients = header_opts.recipients or {buf.To}
+		local recipients = header_opts.recipients or {buf.headers.to}
 		local secure = M.secure(current, header_opts, recipients)
 		--- if we fail here,
 		if secure then
