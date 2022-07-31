@@ -19,8 +19,10 @@ end
 function M.init(opts)
 		require("galore.cmp_nm")
 		require("galore.cmp_vcard")
+		local group = vim.api.nvim_create_augroup("galore-windowstyle", {clear = true})
 		vim.api.nvim_create_autocmd({"BufEnter", "Filetype"},{
 			pattern = {"galore-threads*", "galore-messages"},
+			group = group,
 			callback = function ()
 				vim.api.nvim_win_set_option(0, "foldlevel", 1)
 				vim.api.nvim_win_set_option(0, "foldmethod", "manual")
@@ -28,6 +30,7 @@ function M.init(opts)
 			end})
 		vim.api.nvim_create_autocmd({"BufEnter", "Filetype"},{
 			pattern = {"mail"},
+			group = group,
 			callback = function ()
 				vim.api.nvim_win_set_option(0, "foldlevel", 99)
 				vim.api.nvim_win_set_option(0, "foldmethod", "syntax")
@@ -42,5 +45,10 @@ function M.gen_config()
 	config.values.show_message_description = message_description
 	config.values.init = M.init
 end
+
+-- function M.header_functions()
+-- 	local runtime = require("galore.runtime")
+-- 	runtime.register_headerfunc("re")
+-- end
 
 return M
