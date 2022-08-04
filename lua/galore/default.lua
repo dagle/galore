@@ -1,14 +1,17 @@
 local config = require("galore.config")
+local grouped = config.values.browser_grouped
 local M = {}
 
-function M.message_description(l)
+function M.message_description(l, group)
 	local gu = require("galore.gmime.util")
 	local t = table.concat(l.tags, " ")
 	local formated
 	local date = os.date("%Y-%m-%d", l.date)
 	local from = gu.preview_addr(l.from, 25)
-	if l.index > 1 then
+	if l.index > 1 and l.level > 0 then
 		formated = string.format("%s [%02d/%02d] %s│ %s▶ (%s)", date, l.index, l.total, from, l.pre, t)
+	elseif group and grouped then
+		formated = string.format("%s [%02d/%02d] %s│ └─▶ (%s)", date, l.index, l.total, from, t)
 	else
 		formated = string.format("%s [%02d/%02d] %s│ %s (%s)", date, l.index, l.total, from, l.sub, t)
 	end
