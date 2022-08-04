@@ -12,6 +12,7 @@ M.multipart_signed_signature = 1
 
 --- @param multipart gmime.Multipart
 --- @param fun fun(parent, part, level, state: table)
+--- @param level number level of the message
 --- @param state table
 function M.multipart_foreach(multipart, fun, level, state)
 	local queue = {}
@@ -37,7 +38,9 @@ function M.multipart_foreach(multipart, fun, level, state)
 end
 
 --- @param multipart gmime.Multipart
+--- @param parent gmime.Message
 --- @param fun fun(parent, part, level, state: table)
+--- @param level number level of the message
 --- @param state table
 function M.multipart_foreach_dfs(multipart, parent, fun, level, state)
 	if parent ~= multipart then
@@ -74,6 +77,7 @@ function M.message_foreach_dfs(message, fun, state)
 	end
 end
 
+
 --- @param message gmime.Message
 --- @param fun fun(parent, part, level, state: table)
 --- @param state table
@@ -89,6 +93,132 @@ function M.message_foreach(message, fun, state)
 
 	if M.is_multipart(part) then
 		M.multipart_foreach(ffi.cast("GMimeMultipart*", part), fun, level, state)
+	end
+end
+
+--- @param multipart gmime.Multipart
+--- @param fun fun(parent, part, level, state: table)
+--- @param rate fun(part) number
+--- @param level number level of the message
+--- @param state table
+function M.multipart_foreach_alt(multipart, fun, rate, level, state)
+	local queue = {}
+	local tmp = ffi.cast("GMimeObject *", multipart)
+	table.insert(queue, { tmp, tmp, level })
+	while #queue > 0 do
+		local parent, part, new_level = unpack(table.remove(queue, 1))
+		if parent ~= part then
+			fun(parent, part, new_level, state)
+		end
+		if M.is_multipart(part) then
+			if M.is_multipart_alt(part) then
+				local multi = ffi.cast("GMimeMultipart *", part)
+				local saved
+				local rating = 0
+				local i = 0
+				local j = M.multipart_get_count(multi)
+				new_level = new_level + 1
+				while i < j do
+					local child = gmime.g_mime_multipart_get_part(multi, i)
+					local r = rate(child)
+					if r > rating then
+						rating = r
+						saved = child
+					end
+					i = i + 1
+				end
+				table.insert(queue, { part, saved, new_level})
+			else
+				local multi = ffi.cast("GMimeMultipart *", part)
+				local i = 0
+				local j = gmime.g_mime_multipart_get_count(multi)
+				new_level = new_level + 1
+				while i < j do
+					local child = gmime.g_mime_multipart_get_part(multi, i)
+					table.insert(queue, { part, child, new_level})
+					i = i + 1
+				end
+			end
+		end
+	end
+end
+
+--- @param multipart gmime.Multipart
+--- @param parent gmime.Message
+--- @param fun fun(parent, part, level, state: table)
+--- @param rate fun(part) number
+--- @param level number level of the message
+--- @param state table
+function M.multipart_foreach_dfs_alt(multipart, parent, fun, rate, level, state)
+	if parent ~= multipart then
+		fun(parent, multipart, level, state)
+	end
+	if M.is_multipart(multipart) then
+		if M.is_multipart_alt(multipart) then
+			local multi = ffi.cast("GMimeMultipart *", multipart)
+			local saved
+			local rating = 0
+			local i = 0
+			local j = M.multipart_get_count(multi)
+			level = level + 1
+			while i < j do
+				local child = gmime.g_mime_multipart_get_part(multi, i)
+				local r = rate(child)
+				if r > rating then
+					rating = r
+					saved = child
+				end
+				i = i + 1
+			end
+			M.multipart_foreach_dfs_alt(saved, multipart, fun, rate, level, state)
+		else
+			local multi = ffi.cast("GMimeMultipart *", multipart)
+			local i = 0
+			local j = gmime.g_mime_multipart_get_count(multi)
+			level = level + 1
+			while i < j do
+				local child = gmime.g_mime_multipart_get_part(multi, i)
+				M.multipart_foreach_dfs_alt(child, multipart, fun, rate, level, state)
+				i = i + 1
+			end
+		end
+	end
+end
+
+--- @param message gmime.Message
+--- @param fun fun(parent, part, level, state: table)
+--- @param state table
+--- A message walker that applies fun and does depth first search
+function M.message_foreach_dfs_alt(message, fun, rate, state)
+	local level = 1
+	if not message or not fun then
+		return
+	end
+	local part = gmime.g_mime_message_get_mime_part(message)
+	local obj = ffi.cast("GMimeObject *", message)
+	fun(obj, part, level, state)
+
+	if M.is_multipart(part) then
+		M.multipart_foreach_dfs_alt(part, part, fun, rate, level, state)
+	end
+end
+
+
+--- @param message gmime.Message
+--- @param fun fun(parent, part, level, state: table)
+--- @param state table
+--- A message walker that applies fun and does breath first search
+function M.message_foreach_alt(message, fun, rate, state)
+	local level = 1
+	if not message or not fun then
+		return
+	end
+	local part = gmime.g_mime_message_get_mime_part(message)
+	local obj = ffi.cast("GMimeObject *", message)
+	fun(obj, part, level, state)
+
+	if M.is_multipart(part) then
+		M.multipart_foreach_alt(ffi.cast("GMimeMultipart*", part), fun, rate, level, state)
 	end
 end
 
@@ -205,7 +335,7 @@ end
 --- @param message gmime.Message
 --- @return string
 function M.message_get_subject(message)
-	return ffi.string(gmime.g_mime_message_get_subject(message))
+	return safe.safestring(gmime.g_mime_message_get_subject(message))
 end
 
 --- @param message gmime.Message
@@ -220,8 +350,10 @@ end
 --- @return integer
 function M.message_get_date(message)
 	local gdate = gmime.g_mime_message_get_date(message)
-	local date = tonumber(gmime.g_date_time_to_unix(gdate))
-	return date
+	if gdate ~= nil then
+		local date = tonumber(gmime.g_date_time_to_unix(gdate))
+		return date
+	end
 end
 
 --- @param message gmime.Message
@@ -816,6 +948,24 @@ end
 --- @return boolean
 function M.is_multipart_signed(object)
 	return gmime.gmime_is_multipart_signed(object) ~= 0
+end
+
+--- @param object gmime.MimeObject
+--- @return string
+function M.part_mime_type(object)
+	local content_type = gmime.g_mime_object_get_content_type(object)
+	local type = ffi.string(gmime.g_mime_content_type_get_mime_type(content_type))
+	return type
+end
+
+--- @param object gmime.MimeObject
+--- @return boolean
+function M.is_multipart_alt(object)
+	local type = M.part_mime_type(object)
+	if type == "multipart/alternative" then
+		return true
+	end
+	return false
 end
 
 return M
