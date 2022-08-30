@@ -28,6 +28,9 @@ Other than the basic notmuch features Galore has support for:
 - encrypting and decrypting emails
 - signing and verifying emails
 
+The idea is to provide a good email experiance by default where you configure
+every everything to your needs
+
 ## Installation
 WIP, mail galore is under heavy development, expect crashes and thing changing.
 Atm it's pre 0.1 software. If you don't intend to read code / write patches, you should wait.
@@ -45,9 +48,9 @@ With packer:
 use {'dagle/galore', run = 'make', 
 	requires = {
 		'nvim-telescope/telescope.nvim',
+		'nvim-telescope/telescope-file-browser.nvim',
 		'nvim-lua/popup.nvim',
 		'nvim-lua/plenary.nvim',
-		'nvim-telescope/telescope-file-browser.nvim',
 		'hrsh7th/nvim-cmp',
 	}
 }
@@ -56,6 +59,8 @@ You need to install **telescope** and **cmp** if you want support for that
 
 For livesearch support in telescope you need to install [nm-livesearch](https://github.com/dagle/nm-livesearch)
 
+It also has optional support for the address book mates,  so in stall that for
+mates support
 
 ## Usage
 After installing galore, you need to add the following to init:
@@ -81,6 +86,7 @@ Galore exports the following telescope functions (require 'galore.telescope' to 
 - notmuch_search
 - load_draft
 - attach_file (only works in compose)
+- save_files (only works in message_view)
 
 ### Cmp
 Galore has 2 ways to find emails addresses,
@@ -121,39 +127,81 @@ And with a couple of windows together
 
 Global functions
 ----------------
-The following global functions exist
-```lua
--- compose a new message in a tab
-require("galore.compose"):create("tab")
+Most of galore functionallity can be ran globaly, from anywhere but you want to make sure
+that libs are loaded (they are lazy loaded by default). 
 
--- browse drafts in telescope
-require("galore.telescope").load_draft()
+Here are 2 examples:
 
--- construct a new search in telescope
-require("galore.telescope").notmuch_search()
+``` lua
+vim.keymap.set('n', '<leader>mf', function()
+	require("galore").withconnect(function ()
+		require("galore.telescope").load_draft() end)
+	end, {desc='Load draft'})
 
--- pull new messages from notmuch
-require("galore.jobs").new()
-
--- edit the file for local saved searches
-require("galore.runtime").edit_saved()
+vim.keymap.set('n', '<leader>mw', function()
+	require("galore").withconnect(function ()
+		require("galore.thread_message_browser"):create("tag:work", {}) end)
+	end, {desc='Open work inbox'})
 ```
+
+Some jobs doesn't require notmuch to be started:
+
+``` lua
+require("galore.jobs").new()
+```
+But most do.
 
 config values
 -------------
+For settings to change, look in lua/galore/config.lua
+for values to change with setup.
+They will be documented here in the future.
+
+For cmp support you need to add the following:
+		{ name = 'vcard_addr'},
+		{ name = 'notmuch_addr'},
+to your cmp sources
 
 views
 -----
-If you wanna customize how galore looks, you need to not only customize the 
-the print functions but also the syntax files.
-So if you want to customize the thread-viewer, you need to create your own
-syntax/galore-threads.vim that matches your syntax.
+If you want to customize colors, just change the Galore* highlights.
+
+If you wanna customize how galore is rendered, you change the print
+functions and also the syntax files. You need to create your own
+syntax/galore-browser.vim that matches your syntax.
 
 If you only wanna customize the colors, you can just 
 
-## TODO:
-See the todo-file, even the todo has stuff missing.
+Buffers
+-------
 
+Galore comes with a couple of different buffers to navigate your email
+
+Saved is a buffer for saved searches, selecting a saved search will run that search
+in a selected browsers. Saved accepts a list of generators that produce output.
+gen_tags: Take all tags the db uses and display them one by one.
+gen_internal: All searches we have saved internally and 
+    don't want to export into the ecosystem (saved in a file)
+gen_excluded: tags excluded from our searches. For example if we exclude archive, 
+    then archive will gets it's own entry
+
+Browsers:
+A browser lets you browse your messages, with a preview of date, sender(s) and subject. 
+Galore comes with 3 browsers depending on your need/preference.
+Message browser: Display one message at the time, sorted by date.
+Thread browser: Display a thread as one entry, sorted by when the thread resieved it's last message.
+Thread message browser: Display messages but group them as threads, displaying a treelike structure.
+
+View:
+Views emails and comes in 2 flavours: thread viewer and message viewer.
+Thread viewer: View all messages in a thread. Action taken depends on the cursor location.
+Message view: View a single message.
+
+Compose:
+Write an email, send it, store as a draft or discard it. Compared to mutt, attachments are added
+while editing the email (or when generating the response) and displayed as virtual lines at the bottom
+of the text. Compose also allows hidden headers (see compose_headers in config), 
+to unclutter your mailing experiance.
 
 Tips and trix
 -------------
