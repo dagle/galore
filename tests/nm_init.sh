@@ -11,6 +11,7 @@ TMP_DIRECTORY="${TEST_ROOT}/$1"
 TEST_DATA="${TEST_ROOT}/testdata"
 TEST_MAIL="${TEST_DATA}/testmail"
 
+# try to pull if if we have testdata
 if [[ ! -d "$TEST_DATA" ]]; then
 	git clone https://github.com/dagle/galore-testdata testdata
 fi
@@ -35,8 +36,8 @@ hook_dir=${NOTMUCHDIR}
 
 [user]
 name=Testi McTest
-primary_email=testi@daglemail.org
-other_email=test_suite_other@daglemail.org;test_suite@otherdomain.org
+primary_email=testi@testmail.org
+other_email=test_suite_other@testmailtwo.org;test_suite@otherdomain.org
 EOF
 
 # setup gpg
@@ -57,9 +58,9 @@ add_gnupg_home () {
     echo no-emit-version >> "$GNUPGHOME"/gpg.conf
 
     # Change this if we ship a new test key
-    FINGERPRINT="945C289BEC95362D88C9BD5DC7BEF55C3396773C"
+    FINGERPRINT="F998009F4AD9084F82096B36140FC9CB9DB2A71B"
     # SELF_USERID="Notmuch Test Suite <test_suite@notmuchmail.org> (INSECURE!)"
-    SELF_EMAIL="testi@daglemail.org"
+    SELF_EMAIL="testi@testmail.org"
     printf '%s:6:\n' "$FINGERPRINT" | gpg --quiet --batch --no-tty --import-ownertrust
 	gpgconf --kill all 2>/dev/null || true; 
 }
