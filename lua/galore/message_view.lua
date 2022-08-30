@@ -1,36 +1,30 @@
 local r = require("galore.render")
+local u = require("galore.util")
 local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
-local config = require("galore.config")
-local Path = require("plenary.path")
+local views = require("galore.views")
 local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
+local nm = require("galore.notmuch")
 local runtime = require("galore.runtime")
 local browser = require("galore.browser")
+local gp = require("galore.gmime.parts")
+local gcu = require("galore.crypt-utils")
+local o = require("galore.opts")
 
 local Message = Buffer:new()
 
-local function save_attachment(attachments, filename, save_path)
-	if attachments[filename] then
-		-- better way to do this?
-		local path = Path:new(Path:new(save_path):expand())
-		if path:is_dir() then
-			path = path:joinpath(filename)
-		end
-		gu.save_part(attachments[filename], path:expand())
-		return
-	end
-	error("No attachment with that name")
-end
-
 --- add opts
 function Message:select_attachment(cb)
-	local files = vim.tbl_keys(self.state.attachments)
+	local files = {}
+	for _, v in ipairs(self.state.attachments) do
+		table.insert(files, v.filename)
+	end
 	vim.ui.select(files, {
-		prompt = "Attachment to save:",
-	}, function(item, _)
+		prompt = "Select attachment: ",
+	}, function(item, idx)
 		if item then
-			cb(item)
+			cb(self.state.attachments[idx])
 		else
 			error("No file selected")
 		end
@@ -45,13 +39,17 @@ function Message:update(line)
 	if message then
 		vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
 		self.message = message
+		local buffer = {}
 		r.show_headers(message, self.handle, { ns = self.ns }, self.line)
-		self.state = r.show_message(message, self.handle, {
+		self.state = r.render_message(r.default_render, message, buffer, {
 			ns = self.ns,
 			keys = line.keys
 		})
+		u.purge_empty(buffer)
+		self:set_lines(-1, -1, true, buffer)
+		local ns_line = vim.fn.line("$") - 1
 		if not vim.tbl_isempty(self.state.attachments) then
-			ui.render_attachments(self.state.attachments, self)
+			ui.render_attachments(self.state.attachments, ns_line, self.handle, self.ns)
 		end
 	end
 	self:lock()
@@ -62,27 +60,55 @@ function Message:redraw(line)
 	self:update(line)
 end
 
---- this crashes atm
-local function mark_read(pb, line_info, vline)
+-- move this config!/views
+-- 
+local function mark_read(self, pb, line, vline)
 	runtime.with_db_writer(function (db)
-		config.values.tag_unread(db, line_info.id)
-		nu.tag_if_nil(db, line_info, config.values.empty_tag)
-		nu.update_line(db, pb, line_info, vline)
+		self.opts.tag_unread(db, line.id)
+		nu.tag_if_nil(db, line.id, self.opts.empty_tag)
+		nu.update_line(db, pb, line, vline)
 	end)
+end
+
+-- move this config!
+local function mark_read_delay(self, pb, line, vline)
+	local timer = vim.loop.new_timer()
+	self.add_timer(timer)
+	timer:start(5000, 0, vim.schedule_wrap(function ()
+		mark_read(self, pb, line, vline)
+	end))
 end
 
 function Message:next()
 	if self.vline and self.parent then
-		local line_info, vline = browser.next(self.parent, self.vline)
-		Message:create(line_info, {kind="replace", parent=self.parent, vline=vline})
+		local mid, vline = browser.next(self.parent, self.vline)
+		Message:create(mid, {kind="replace", parent=self.parent, vline=vline})
 	end
 end
 --
 function Message:prev()
 	if self.vline and self.parent then
-		local line_info, vline = browser.prev(self.parent, self.vline)
-		Message:create(line_info, {kind="replace", parent=self.parent, vline=vline})
+		local mid, vline = browser.prev(self.parent, self.vline)
+		Message:create(mid, {kind="replace", parent=self.parent, vline=vline})
 	end
+end
+
+local function verify_signatures(self)
+	local state = {}
+	local function verify(_, part, _)
+		if gp.is_multipart_signed(part) then
+			local verified = gcu.verify_signed(part)
+			if state.verified == nil then
+				state.verified = verified
+			end
+			state.verified = state.verified and verified
+		end
+	end
+	if not self.message then
+		return
+	end
+	gp.message_foreach_dfs(self.message, verify)
+	return state.verified or state.verified == nil
 end
 
 function Message:commands()
@@ -92,32 +118,56 @@ function Message:commands()
 			if #args.fargs > 2 then
 				save_path = args.fargs[2]
 			end
-			save_attachment(self.state.attachments, args.fargs[1], save_path)
+			views.save_attachment(self.state.attachments, args.fargs[1], save_path)
 		end
 	end, {
 	nargs = "*",
 	complete = function ()
-		return vim.tbl_keys(self.state.attachments)
+		local files = {}
+		for _, v in ipairs(self.state.attachments) do
+			table.insert(files, v.filename)
+		end
+		return files
 	end,
+	})
+	vim.api.nvim_buf_create_user_command(self.handle, "GaloreVerify", function ()
+		print(verify_signatures(self))
+	end, {
 	})
 end
 
-function Message:create(line, opts)
+function Message:thread_view()
+	local tw = require("galore.thread_view")
+	local opts = o.bufcopy(self.opts)
+	opts.index = self.line.index
+	tw:create(self.line.tid, opts)
+end
+
+function Message:create(mid, opts)
+	o.view_options(opts)
+	local line
+	runtime.with_db(function (db)
+		local message = nm.db_find_message(db, mid)
+		line = nu.get_message(message)
+		nu.line_populate(db, line)
+	end)
 	Buffer.create({
-		name = line.filenames[1],
+		name = opts.bufname(line.filenames[1]),
 		ft = "mail",
 		kind = opts.kind,
 		parent = opts.parent,
 		cursor = "top",
-		mappings = config.values.key_bindings.message_view,
+		mappings = opts.key_bindings,
 		init = function(buffer)
 			buffer.line = line
+			buffer.opts = opts
 			buffer.vline = opts.vline
 			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
-			mark_read(opts.parent, line, opts.vline)
+			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
+			mark_read(buffer, opts.parent, line, opts.vline)
 			buffer:update(line)
 			buffer:commands()
-			config.values.bufinit.message_view(buffer)
+			opts.init(buffer)
 		end,
 	}, Message)
 end

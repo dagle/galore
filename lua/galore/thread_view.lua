@@ -1,106 +1,198 @@
--- When we view an thread, this is the view
-local v = vim.api
-local nm = require("galore.notmuch")
+local r = require("galore.render")
+local u = require("galore.util")
+local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
-local M = {}
+-- local Path = require("plenary.path")
+-- local ui = require("galore.ui")
+local nu = require("galore.notmuch-util")
+local nm = require("galore.notmuch")
+local runtime = require("galore.runtime")
+local o = require("galore.opts")
 
---use vim.split(str, "\n")
-local function split_lines(str)
-	local lines = {}
-	-- return vim.split(str, "[^\r\n]+", false)
-	for s in str:gmatch("[^\r\n]+") do
-		table.insert(lines, s)
-	end
-	return lines
+local Thread = Buffer:new()
+
+function Thread:update(tid)
+	self:unlock()
+	self:clear()
+	self.thread_parts = {}
+	self.states = {}
+	self.lines = {}
+
+	--- print in reverse that makes it easier to add attachments?
+	runtime.with_db(function (db)
+		local query = nm.create_query(db, "thread:" .. tid)
+		nm.query_set_sort(query, self.opts.sort)
+		local i = 1
+		local tot = nm.query_count_messages(query)
+		for nm_message in nm.query_get_messages(query) do
+			local message_start = vim.fn.line("$")
+
+			local line = nu.get_message(nm_message)
+			line.total = tot
+			line.index = i
+
+			local message = gu.construct(line.filenames)
+
+			local buffer = {}
+			r.show_headers(message, self.handle, { ns = self.ns }, line, message_start)
+			local body = vim.fn.line("$")
+			local state = r.render_message(r.default_render, message, buffer, {
+				ns = self.ns,
+				-- keys = line.keys
+			})
+			table.insert(self.states, state)
+			table.insert(self.lines, line)
+			u.purge_empty(buffer)
+			self:set_lines(-1, -1, true, buffer)
+			local message_stop = vim.fn.line("$")
+			table.insert(self.thread_parts, {start=message_start, stop=message_stop, body= body, mid=line.id})
+			i = i + 1
+		end
+		self:set_lines(0, 1, true, {})
+	end)
+	-- for _, k in ipairs(self.thread_parts) do
+	-- We want to highlight the headers
+	-- end
+
+	self:lock()
 end
 
-local function collect(iter)
-	local box = {}
-	for k, val in iter do
-		box[k] = val
+function Thread:with_all_attachments(func, ...)
+	local attachments = {}
+	for _, state in ipairs(self.states) do
+		vim.list_extend(attachments, state.attachments)
 	end
-	return box
+	func(attachments, ...)
 end
 
-local function filter(func, map)
-	for k, v in pairs(map) do
-		if not func(k, v) then
-			map[k] = nil
+function Thread:with_selected_attachments(func, ...)
+	local _, i = self:get_selected()
+	local attachments = self.states[i].attachments
+	func(attachments, ...)
+end
+
+function Thread:get_selected()
+	local line = unpack(vim.api.nvim_win_get_cursor(0))
+	line = line + 1
+	for i, m in ipairs(self.thread_parts) do
+		if m.start <= line and m.stop >= line then
+			return m.mid, i
 		end
 	end
 end
 
-local function format(iter)
-	local box = {}
-	for k, val in pairs(iter) do
-		local str = string.gsub(val, "\n", "")
-		table.insert(box, k .. ": " .. str)
-	end
-	return box
+function Thread:message_view()
+	local mid = self:get_selected()
+	local mw = require("galore.message_view")
+	local opts = o.bufcopy(self.opts)
+	mw:create(mid, opts)
 end
-local function in_map(k, _)
-	for _, a in ipairs(conf.values.headers) do
-		if a == k then
-			return true
+
+function Thread:redraw(line)
+	self:focus()
+	self:update(line)
+end
+
+function Thread:set(i)
+	local _, col = unpack(vim.api.nvim_win_get_cursor(0))
+	for j, m in ipairs(self.thread_parts) do
+		if i == j then
+			vim.api.nvim_win_set_cursor(0, {m.start, col})
 		end
 	end
-	return false
 end
 
-function M.create(thread, kind)
-	local tid = nm.thread_get_id(thread)
-
-	if M.message_buffer then
-		M.message_buffer:focus()
-		return
+function Thread:next()
+	local found = false
+	local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+	for _, m in ipairs(self.thread_parts) do
+		if m.start <= line and m.stop >= line then
+			vim.api.nvim_win_set_cursor(0, {m.start, col})
+			found = true
+		elseif found then
+			vim.api.nvim_win_set_cursor(0, {m.start, col})
+			return
+		end
 	end
-	-- try to find a buffer first
-	Buffer.create({
-		name = "galore-message",
-		ft = "mail",
-		kind = kind,
-		cursor = "top",
-		init = function(buffer)
-			M.message_buffer = buffer
-
-			for message in nm.thread_get_messages(thread) do
-				-- v.nvim_buf_set_lines(buffer.handle, -2, -1, true, {})
-			end
-			v.nvim_buf_set_lines(buffer.handle, 0, 1, true, {})
-			-- local message = show_message(tid)
-			-- local formated = format_message(message)
-
-			-- set keybindings etc, later
-			for bind, func in pairs(conf.values.key_bindings.thread_v) do
-				v.nvim_buf_set_keymap(buffer.handle, "n", bind, func, { noremap = true, silent = true })
-			end
-		end,
-	})
 end
 
--- local function ppMail(message)
--- 	print(message.get_path())
--- end
+function Thread:prev()
+	local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+	for i, m in ipairs(self.thread_parts) do
+		if m and m.start <= line and m.stop >= line then
+			vim.api.nvim_win_set_cursor(0, {m.start, col})
+			return
+		end
+	end
+end
 
--- function M.show_message(settings, thread)
--- local messages = thread:get_messages()
--- for _, message in ipairs(messages) do
--- 	local file = messages.get_path(message)
--- 	-- feed this into gmime?
--- 	for line in io.lines(file) do
--- 		print(line)
+-- local function verify_signatures(self)
+-- 	local state = {}
+-- 	local function verify(_, part, _)
+-- 		if gp.is_multipart_signed(part) then
+-- 			local verified = gcu.verify_signed(part)
+-- 			if state.verified == nil then
+-- 				state.verified = verified
+-- 			end
+-- 			state.verified = state.verified and verified
+-- 		end
 -- 	end
--- 	-- print(ppMail())
+-- 	if not self.message then
+-- 		return
+-- 	end
+-- 	gp.message_foreach_dfs(self.message, verify)
+-- 	return state.verified or state.verified == nil
 -- end
--- -- print(vim.inspect(thread:get_messages()))
--- end
 
-function M.next() end
+function Thread:commands()
+	-- vim.api.nvim_buf_create_user_command(self.handle, "GaloreSaveAttachment", function (args)
+	-- 	if args.fargs then
+	-- 		local save_path = "."
+	-- 		if #args.fargs > 2 then
+	-- 			save_path = args.fargs[2]
+	-- 		end
+	-- 		save_attachment(self.state.attachments, args.fargs[1], save_path)
+	-- 	end
+	-- end, {
+	-- nargs = "*",
+	-- complete = function ()
+	-- 	local files = {}
+	-- 	for _, v in ipairs(self.state.attachments) do
+	-- 		table.insert(files, v.filename)
+	-- 	end
+	-- 	return files
+	-- end,
+	-- })
+	-- vim.api.nvim_buf_create_user_command(self.handle, "GaloreVerify", function ()
+	-- 	print(verify_signatures(self))
+	-- end, {
+	-- })
+end
 
-function M.prev() end
 
-function M.open_attach() end
 
-function M.save_attach() end
+function Thread:create(tid, opts)
+	o.thread_view_options(opts)
+	Buffer.create({
+		name = opts.bufname(tid),
+		ft = "mail",
+		kind = opts.kind,
+		parent = opts.parent,
+		mappings = opts.key_bindings,
+		init = function(buffer)
+			buffer.opts = opts
+			buffer.vline = opts.vline
+			buffer.ns = vim.api.nvim_create_namespace("galore-thread-view")
+			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
+			-- mark_read(buffer, opts.parent, line, opts.vline)
+			buffer:update(tid)
+			buffer:commands()
+			buffer:set(opts.index)
+			opts.init(buffer)
+		end,
+	}, Thread)
+end
 
-return M
+function Thread.open_attach() end
+
+return Thread

@@ -1,27 +1,24 @@
 local nm = require("galore.notmuch")
 local u = require("galore.util")
--- local nu = require("galore.notmuch-util")
-local config = require("galore.config")
 local Buffer = require("galore.lib.buffer")
 local runtime = require("galore.runtime")
 local dia = require("galore.diagnostics")
+local o = require("galore.opts")
+local async = require("plenary.async")
+local scheduler = require("plenary.async").util.scheduler
 
 local Mb = Buffer:new()
 
-local function get_message(message, tid, i, total)
+local function get_message(message, i, total)
 	local id = nm.message_get_id(message)
-	local filenames = u.collect(nm.message_get_filenames(message))
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
 	local date = nm.message_get_date(message)
 	local matched = nm.message_get_flag(message, 0)
 	local excluded = nm.message_get_flag(message, 1)
-	local keys = u.collect(nm.message_get_properties(message, "session-key", true))
 	return {
 		id = id,
-		tid = tid,
-		filenames = filenames,
 		level = 0,
 		-- pre = nil,
 		index = i,
@@ -32,46 +29,82 @@ local function get_message(message, tid, i, total)
 		tags = tags,
 		matched = matched,
 		excluded = excluded,
-		keys = keys,
 	}
 end
 
-local function cmp_time(l1, l2)
-	return l2.date - l1.date
+local function cmp_newest(l1, l2)
+	return l1.date > l2.date
+end
+
+local function cmp_oldest(l1, l2)
+	return l1.date < l2.date
+end
+
+local function cmp_id(l1, l2)
+	return l1.id > l2.id
 end
 
 function Mb:get_messages(db, search)
-	local state = {}
+	self.State = {}
+	local lines = {}
 	local query = nm.create_query(db, search)
-	for _, ex in ipairs(config.values.exclude_tags) do
+	for _, ex in ipairs(self.opts.exclude_tags) do
 		nm.query_add_tag_exclude(query, ex)
 	end
-	for thread in nm.query_get_threads(query) do
-		local total = nm.thread_get_total_messages(thread)
-		local tid = nm.thread_get_id(thread)
-		local i = 1
-		for message in nm.thread_get_messages(thread) do
-			local line = get_message(message, tid, i, total)
-			if line.matched then
-				table.insert(state, line)
+	local i = 1
+	local first = true
+	nm.query_set_sort(query, self.opts.sort)
+
+	--- learn how async and the gc works, feels like we are 
+	--- using gced memory, maybe we should do the callable table trick?
+	local func = async.void(function ()
+		for message in nm.query_get_messages(query) do
+			local line = get_message(message, 1, 1)
+			local formated = self.opts.show_message_description(line)
+			table.insert(lines, formated)
+			table.insert(self.State, line.id)
+			if self.maxlines and self.maxlines < i then
+				break
+			end
+			if i % 1000 == 0 then
+				self:set_lines(-1, -1, false, lines)
+				lines = {}
+				if first then
+					self:set_lines(0, 1, true, {})
+					first = false
+				end
+				scheduler()
 			end
 			i = i + 1
 		end
+	self:set_lines(-1, -1, false, lines)
+	if first then
+		self:set_lines(0, 1, true, {})
 	end
-	state = vim.fn.sort(state, cmp_time)
-	self.State = state
-end
-
-function Mb:ppMessage(messages)
-	local box = {}
-	local lasttid
-	for _, message in ipairs(messages) do
-		local formated = config.values.show_message_description(message, lasttid == message.tid)
-		table.insert(box, formated)
-		lasttid = message.tid
-	end
-	self:set_lines(-1, -1, true, box)
-	self:set_lines(0, 1, true, {})
+	self:lock()
+	end)
+	func()
+	-- ppMessage(self, lines)
+	-- dia.set_emph(self, lines, self.opts.emph)
+	-- for thread in nm.query_get_threads(query) do
+	-- 	local total = nm.thread_get_total_messages(thread)
+	-- 	local tid = nm.thread_get_id(thread)
+	-- 	local i = 1
+	-- 	for message in nm.thread_get_messages(thread) do
+	-- 		local line = get_message(message, tid, i, total)
+	-- 		if line.matched then
+	-- 			table.insert(state, line)
+	-- 		end
+	-- 		i = i + 1
+	-- 	end
+	-- end
+	-- if self.opts.sort == "oldest" then
+	-- 	table.sort(state, cmp_oldest)
+	-- elseif self.opts.sort == "newest" then
+	-- 	table.sort(state, cmp_newest)
+	-- elseif self.opts.sort == "message-id" then
+	-- 	table.sort(state, cmp_id)
+	-- end
 end
 
 function Mb:refresh()
@@ -80,22 +113,24 @@ function Mb:refresh()
 	runtime.with_db(function (db)
 		self:get_messages(db, self.search)
 	end)
-	self:ppMessage(self.State)
-	self:lock()
 end
 
 function Mb:tmb_search()
 	local tmb = require("galore.thread_message_browser")
-	local opts = vim.deepcopy(self.opts)
+	local opts = o.bufcopy(self.opts)
+	opts.parent = self
 	tmb:create(self.search, opts)
 end
 
---- move these
-function Mb:update(start)
-	local message = self.State[start]
-	local formated = config.values.show_message_description(message)
+function Mb:update(line_nr)
+	local id = self.State[line_nr]
+	local formated
+	runtime.with_db(function(db)
+		local message = nm.db_find_message(db, id)
+		formated = self.opts.show_message_description(message)
+	end)
 	self:unlock()
-	self:set_lines(start-1, start, true, {formated})
+	self:set_lines(line_nr-1, line_nr, true, {formated})
 	self:lock()
 end
 
@@ -112,21 +147,21 @@ end
 
 -- create a browser class
 function Mb:create(search, opts)
+	o.mb_options(opts)
 	Buffer.create({
-		name = "galore-messages: " .. search,
-		ft = "galore-threads",
+		name = opts.bufname(search),
+		ft = "galore-browser",
 		kind = opts.kind,
 		cursor = "top",
 		parent = opts.parent,
-		mappings = config.values.key_bindings.message_browser,
+		mappings = opts.key_bindings,
 		init = function(buffer)
 			buffer.opts = opts
 			buffer.search = search
 			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
 			buffer:refresh()
-			dia.set_emph(buffer, config.values.default_emph)
 			buffer:commands()
-			config.values.bufinit.message_browser(buffer)
+			opts.init(buffer)
 		end,
 	}, Mb)
 end
