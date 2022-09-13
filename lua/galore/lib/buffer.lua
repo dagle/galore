@@ -41,24 +41,62 @@ function Buffer:set_parent(parent)
 	self.parent = parent
 end
 
+function Buffer:add_timer(timer)
+	if self.timers == nil then
+		self.timers = {}
+	end
+	table.insert(self.timers, timer)
+end
+
+function Buffer:stop_timers()
+	for _, timer in ipairs(self.timers) do
+		timer:stop()
+	end
+	-- free timers so we don't have backpointers etc
+	self.timers = {}
+end
+
+local function cleanup(self)
+	if self.cleanup then
+		self:cleanup()
+	end
+	self.timers = {}
+	self.parent = nil
+end
+
 -- split up this and add a callback handler for when the buffer is deleted
 function Buffer:close(delete)
-	if self.cleanup then
-		self.cleanup(self)
-	end
-	if self.kind == "replace" and self.part then
-		vim.api.nvim_win_set_buf(0, self.parent.handle)
-	elseif self.kind == "floating" then
+	local bufwins = #vim.fn.win_findbuf(self.handle)
+
+	local floating = vim.api.nvim_win_get_config(0).zindex
+
+	if floating then
 		vim.api.nvim_win_close(0, true)
 		if self.parent then
 			self.parent:focus()
 		end
+	elseif self.kind == "replace" and self.parent then
+		if self.parent.handle and vim.fn.bufexists(self.parent.handle) ~= 0 then
+			vim.api.nvim_win_set_buf(0, self.parent.handle)
+		end
+	-- elseif self.kind == "floating" then
+	-- 	vim.api.nvim_win_close(0, true)
+	-- 	if self.parent then
+	-- 		self.parent:focus()
+	-- 	end
 	else
 		if self.parent then
 			self.parent:focus()
 		end
 	end
-	if delete then
+	if delete and bufwins <= 1 then
+		if self.runner then
+			self.runner.close()
+		end
+		if self.timers then
+			self:stop_timers()
+		end
+		cleanup(self)
 		vim.api.nvim_buf_delete(self.handle, {})
 	end
 end
@@ -142,6 +180,7 @@ function Buffer:open_fold(line, reset_pos)
 	end
 end
 
+-- remove?
 function Buffer:set_ns(name)
 	self.ns = vim.api.nvim_create_namespace(name)
 end
@@ -220,7 +259,7 @@ end
 function Buffer.create(config, class)
 	config = config or {}
 
-	local kind = config.kind or "split"
+	local kind = config.kind or "replace"
 	local buffer = nil
 	class = class or Buffer
 
@@ -256,6 +295,8 @@ function Buffer.create(config, class)
 		buffer = class:new({handle = vim.api.nvim_get_current_buf()})
 	elseif kind == "floating" then
 		-- Creates the border window
+		-- TODO maybe do something fancy, like checking if we
+		-- there are more floating windows shift the windows
 		local vim_height = vim.api.nvim_eval([[&lines]])
 		local vim_width = vim.api.nvim_eval([[&columns]])
 		local width = math.floor(vim_width * 0.8) + 5
@@ -263,7 +304,15 @@ function Buffer.create(config, class)
 		local col = vim_width * 0.1 - 2
 		local row = vim_height * 0.15 - 1
 
-		local content_buffer = vim.api.nvim_create_buf(true, true)
+		local content_buffer
+		local inited = false
+		if vim.fn.bufexists(config.name) ~= 0 then
+			content_buffer = vim.fn.bufnr(config.name)
+			inited = true
+		else
+			content_buffer = vim.api.nvim_create_buf(true, true)
+		end
+
 		local content_window = vim.api.nvim_open_win(content_buffer, true, {
 			relative = "editor",
 			width = width,
@@ -275,9 +324,12 @@ function Buffer.create(config, class)
 			border = "single"
 		})
 
+		buffer = class:new({handle = content_buffer})
+		if inited then
+			return
+		end
 		vim.wo.winhl = "Normal:Normal"
 		vim.api.nvim_win_set_cursor(content_window, { 1, 0 })
-		buffer = Buffer:new({handle = content_buffer})
 	else
 		assert("Wrong buffer mode!")
 	end
@@ -290,7 +342,9 @@ function Buffer.create(config, class)
 	vim.wo.nu = false
 	vim.wo.rnu = false
 
-	buffer:set_name(config.name)
+	if config.name then
+		buffer:set_name(config.name)
+	end
 
 	buffer:set_option("buflisted", config.buflisted or false)
 	buffer:set_option("bufhidden", config.bufhidden or "hide")
@@ -312,8 +366,9 @@ function Buffer.create(config, class)
 			for key, cb in pairs(val) do
 				local opts = mapopts
 				if type(cb) == "table" then
-					opts = vim.tbl_extend("keep", cb[2], mapopts)
-					cb = cb[1]
+					opts = vim.tbl_extend("keep", cb, mapopts)
+					opts.rhs = nil
+					cb = cb.rhs
 				end
 				local cbfunc = function()
 					cb(buffer)
@@ -341,15 +396,15 @@ function Buffer.create(config, class)
 		vim.api.nvim_win_set_cursor(0, { 1, 0 })
 	end
 
-	if config.autocmds then
-		-- vim.api.nvim_create_augroup("") -- unique id?
-		for event, cb in pairs(config.autocmds) do
-			local cbfunc = function ()
-				cb(buffer)
-			end
-			vim.api.nvim_create_autocmd(event, {callback = cbfunc, buffer = buffer.handle})
-		end
-	end
+	-- if config.autocmds then
+	-- 	-- vim.api.nvim_create_augroup("") -- unique id?
+	-- 	for event, cb in pairs(config.autocmds) do
+	-- 		local cbfunc = function ()
+	-- 			cb(buffer)
+	-- 		end
+	-- 		vim.api.nvim_create_autocmd(event, {callback = cbfunc, buffer = buffer.handle})
+	-- 	end
+	-- end
 	vim.api.nvim_create_autocmd("BufDelete", {
 		callback = function ()
 			-- buffer_delete(buffer.handle)
@@ -357,9 +412,9 @@ function Buffer.create(config, class)
 		buffer = buffer.handle
 	})
 
-	if not config.modifiable then
-		buffer:set_option("modifiable", false)
-	end
+	-- if not config.modifiable then
+	-- 	buffer:set_option("modifiable", false)
+	-- end
 
 	if config.readonly ~= nil and config.readonly then
 		buffer:set_option("readonly", true)

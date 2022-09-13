@@ -23,13 +23,13 @@ end
 --- @param message any
 --- @return boolean
 function M.has_attachment(message)
-	local find_attachment = function (_, part, state)
+	local state = {}
+	local find_attachment = function (_, part)
 		if gp.is_part(part) and gp.part_is_attachment(part) then
 			state.attachment = true
 		end
 	end
-	local state = {}
-	gp.message_foreach(message, find_attachment, state)
+	gp.message_foreach(message, find_attachment)
 	return state.attachment
 end
 

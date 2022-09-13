@@ -1,6 +1,7 @@
 // helper C functions for gmime
 #define _GNU_SOURCE
 #define ENABLE_CRYPTO
+#include "gmime/gmime-parser.h"
 #include <glib.h>
 #include <gmime/gmime.h>
 
@@ -20,36 +21,232 @@
 
 #define _(x) x
 
-int gmime_is_message_part(GMimeObject *obj){
+int gmime_is_message_part(void *obj){
 	return GMIME_IS_MESSAGE_PART(obj);
 }
 
-int gmime_is_message_partial(GMimeObject *obj){
+int gmime_is_message_partial(void *obj){
 	return GMIME_IS_MESSAGE_PARTIAL(obj);
 }
 
-int gmime_is_multipart(GMimeObject *obj){
+int gmime_is_multipart(void *obj){
 	return GMIME_IS_MULTIPART(obj);
 }
 
-int gmime_is_part(GMimeObject *obj){
+int gmime_is_part(void *obj){
 	return GMIME_IS_PART(obj);
 }
 
-int gmime_is_multipart_signed(GMimeObject *obj){
+int gmime_is_multipart_signed(void *obj){
 	return GMIME_IS_MULTIPART_SIGNED(obj);
 }
 
-int gmime_is_multipart_encrypted(GMimeObject *obj){
+int gmime_is_multipart_encrypted(void *obj){
 	return GMIME_IS_MULTIPART_ENCRYPTED(obj);
 }
 
-int internet_address_is_mailbox(InternetAddress *ia) {
+int gmime_is_object(void *obj){
+	return GMIME_IS_OBJECT(obj);
+}
+
+int gmime_is_parser(void *obj) {
+	return GMIME_IS_PARSER(obj);
+}
+
+int gmime_is_message(void *obj) {
+	return GMIME_IS_MESSAGE(obj);
+}
+
+int gmime_is_filter_from(void *obj) {
+	return GMIME_IS_FILTER_FROM(obj);
+}
+
+int gmime_is_filter_best(void *obj) {
+	return GMIME_IS_FILTER_BEST(obj);
+}
+
+int gmime_is_filter_gzip(void *obj) {
+	return GMIME_IS_FILTER_GZIP(obj);
+}
+
+int gmime_is_filter_strip(void *obj) {
+	return GMIME_IS_FILTER_STRIP(obj);
+}
+
+int gmime_is_filter_dos2unix(void *obj) {
+	return GMIME_IS_FILTER_DOS2UNIX(obj);
+}
+
+int gmime_is_filter(void *obj) {
+	return GMIME_IS_FILTER(obj);
+}
+
+int gmime_is_filter_basic(void *obj) {
+	return GMIME_IS_FILTER_BASIC(obj);
+}
+
+int gmime_is_filter_enriched(void *obj) {
+	return GMIME_IS_FILTER_ENRICHED(obj);
+}
+
+int gmime_is_filter_windows(void *obj) {
+	return GMIME_IS_FILTER_WINDOWS(obj);
+}
+
+int gmime_is_filter_smtp_data(void *obj) {
+	return GMIME_IS_FILTER_SMTP_DATA(obj);
+}
+
+int gmime_is_filter_openpgp(void *obj) {
+	return GMIME_IS_FILTER_OPENPGP(obj);
+}
+
+int gmime_is_filter_unix2dos(void *obj) {
+	return GMIME_IS_FILTER_UNIX2DOS(obj);
+}
+
+int gmime_is_filter_yenc(void *obj) {
+	return GMIME_IS_FILTER_YENC(obj);
+}
+
+int gmime_is_filter_html(void *obj) {
+	return GMIME_IS_FILTER_HTML(obj);
+}
+
+int gmime_is_text_part(void *obj) {
+	return GMIME_IS_TEXT_PART(obj);
+}
+
+int gmime_is_pkcs7_context(void *obj) {
+	return GMIME_IS_PKCS7_CONTEXT(obj);
+}
+
+int gmime_is_content_type(void *obj) {
+	return GMIME_IS_CONTENT_TYPE(obj);
+}
+
+int gmime_is_gpg_context(void *obj) {
+	return GMIME_IS_GPG_CONTEXT(obj);
+}
+
+int gmime_is_crypto_context(void *obj) {
+	return GMIME_IS_CRYPTO_CONTEXT(obj);
+}
+
+int gmime_is_application_pkcs7_mime(void *obj) {
+	return GMIME_IS_APPLICATION_PKCS7_MIME(obj);
+}
+
+int gmime_is_data_wrapper(void *obj) {
+	return GMIME_IS_DATA_WRAPPER(obj);
+}
+
+int gmime_is_content_disposition(void *obj) {
+	return GMIME_IS_CONTENT_DISPOSITION(obj);
+}
+
+int gmime_is_autocrypt_header(void *obj) {
+	return GMIME_IS_AUTOCRYPT_HEADER(obj);
+}
+
+int gmime_is_autocrypt_header_list(void *obj) {
+	return GMIME_IS_AUTOCRYPT_HEADER_LIST(obj);
+}
+
+int internet_address_is_mailbox(void *ia) {
 	return INTERNET_ADDRESS_IS_MAILBOX(ia);
 }
 
-int internet_address_is_group(InternetAddress *ia) {
+int internet_address_is_group(void *ia) {
 	return INTERNET_ADDRESS_IS_GROUP(ia);
+}
+
+int is_internet_address_list(void *obj) {
+	return IS_INTERNET_ADDRESS_LIST(obj);
+}
+
+int is_internet_address(void *obj) {
+	return IS_INTERNET_ADDRESS(obj);
+}
+
+int gmime_is_header(void *obj) {
+	return GMIME_IS_HEADER(obj);
+}
+
+int gmime_is_header_list(void *obj) {
+	return GMIME_IS_HEADER_LIST(obj);
+}
+
+int gmime_is_certificate(void *obj) {
+	return GMIME_IS_CERTIFICATE(obj);
+}
+
+int gmime_is_certificate_list(void *obj) {
+	return GMIME_IS_CERTIFICATE_LIST(obj);
+}
+
+int gmime_is_signature(void *obj) {
+	return GMIME_IS_SIGNATURE(obj);
+}
+
+int gmime_is_signature_list(void *obj) {
+	return GMIME_IS_SIGNATURE_LIST(obj);
+}
+
+int gmime_is_param(void *obj) {
+	return GMIME_IS_PARAM(obj);
+}
+
+int gmime_is_param_list(void *obj) {
+	return GMIME_IS_PARAM_LIST(obj);
+}
+
+int gmime_is_decrypt_result(void *obj) {
+	return GMIME_IS_DECRYPT_RESULT(obj);
+}
+
+int gmime_is_stream(void *obj) {
+	return GMIME_IS_STREAM(obj);
+}
+
+int gmime_is_stream_pipe(void *obj) {
+	return GMIME_IS_STREAM_PIPE(obj);
+}
+
+int gmime_is_stream_file(void *obj) {
+	return GMIME_IS_STREAM_FILE(obj);
+}
+
+int gmime_is_stream_gio(void *obj) {
+	return GMIME_IS_STREAM_GIO(obj);
+}
+
+int gmime_is_stream_mmap(void *obj) {
+	return GMIME_IS_STREAM_MMAP(obj);
+}
+
+int gmime_is_stream_mem(void *obj) {
+	return GMIME_IS_STREAM_MEM(obj);
+}
+
+int gmime_is_stream_null(void *obj) {
+	return GMIME_IS_STREAM_NULL(obj);
+}
+
+int gmime_is_stream_cat(void *obj) {
+	return GMIME_IS_STREAM_CAT(obj);
+}
+
+int gmime_is_stream_filter(void *obj) {
+	return GMIME_IS_STREAM_FILTER(obj);
+}
+
+int gmime_is_stream_fs(void *obj) {
+	return GMIME_IS_STREAM_FS(obj);
+}
+
+int gmime_is_stream_buffer(void *obj) {
+	return GMIME_IS_STREAM_BUFFER(obj);
 }
 
 GMimeObject *message_part(GMimeMessage *message){
@@ -63,6 +260,7 @@ uint multipart_len(GMimeMultipart *mp){
 GMimeObject *multipart_child(GMimeMultipart *mp, int i){
 	return mp->children->pdata[i];
 }
+
 static void
 safe_gethostname (char *hostname, size_t len) {
     char *p;
@@ -99,6 +297,19 @@ char *get_domainname(InternetAddressMailbox *mailbox) {
 	char *domain = mailbox->addr + mailbox->at + 1;
 	return domain;
 }
+
+// void callback(gint64 offset, GMimeParserWarning errcode, const gchar *item, gpointer user_data) {
+//
+// }
+//
+// GMimeMessage *parse_message(const char *path, parse_error **error) {
+// 	GMimeParserOptions *options = g_mime_parser_options_new();
+// 	g_mime_parser_options_set_warning_callback(options, callback, error);
+// 	GMimeStream *stream = g_mime_stream_file_open(path, 0, NULL);
+// 	GMimeParser *parser = g_mime_parser_new_with_stream(stream);
+// 	GMimeMessage *message = g_mime_parser_construct_message(parser, options);
+// 	return message;
+// }
 
 GMimeObject *
 g_mime_multipart_encrypted_decrypt_pass (GMimeMultipartEncrypted *encrypted, GMimeDecryptFlags flags,
@@ -137,6 +348,10 @@ g_mime_multipart_encrypted_decrypt_pass (GMimeMultipartEncrypted *encrypted, GMi
 	}
 	if (request_passwd) {
 		g_mime_crypto_context_set_request_password (ctx, request_passwd);
+	} else {
+		g_set_error (err, GMIME_ERROR, GMIME_ERROR_PROTOCOL_ERROR,
+			     "Cannot set the password function");
+		return NULL;
 	}
 	
 	supported = g_mime_crypto_context_get_encryption_protocol (ctx);

@@ -7,75 +7,170 @@
     version: 0.0.11
 @end
 
-Ideas: 
-  - [ ] Select multiple messages for cb
-  -- No, this isn't vim-ish
-  -- Can we search/match, can we add our own match() search mode? 
-  -- Can we do object matching?
-  -- Can we do movement?
+Maybe load the message again before we send it to templates, because templates
+are destructive atm
 
-  - Note: Use folds in the future?
-  -- Currently the fold api is not what we want, maybe in the future
-  -- Pros: Searches will work, selecting will work, goto works, nested folds, builtin movement,
-  -- Don't write more code that depends on the current fold method
+- Being able to reuse bindings from different views?
 
+- make Galoremailto safe?
+
+- mixminion support?
+
+- keybase
+
+- What is the semantics for folds in (n)vim? A fold is local to a buffer and window
+-- With an api we could:
+--- define folds on buffers and make it possible to make window-local folds
+--- vim.api.nvim_buf_create_fold(buf, start, stop)
+---- we can update a buffer in the background etc
+--- Syntax highlighting in folds
+--- Being able to run code on open
+
+Maybe use a sliding reader that loads messages when you scroll instead of loading all messages
 
 * 0.0.1
   - [ ] Cleanup code
-  - [x] sort saved
-  - [x] Unify the attachments api
-  -- Cycles in requires, use "uml" to get it correct?
   - [ ] Clunky stuff, setup etc
-  - [x] Init
-  - [ ] Don't loose a compose, set better name etc
-  -- How to make this not annoying:
-  -- Shouldn't warn if the buffer have been saved to draft or sent etc
 
-  - [x] Fix builder
-  -- [x] Rename to builder
-  -- [x] Generate a correct email
-  - [x] Set headers? Or is that up to sendmail? 
-  -- [x] Message id? Makes both send and save draft easier
-  -- [x] Have an opts to set return-path etc, maybe move ref to this?
-  -- [x] Return-Path
-  -- [x] Reply-To
-  -- [x] Registering to saved
 
 * 0.0.2
-today: 
--- A way to see if all our to, cc, bcc are in the keyring
---- works but not for autocrypt
--- Use nvim_buf_create_user_command 
--- Finish autocrypt
--- Make callbacks into categories? require("galore.callback").browser?
--- Look for the session key in the notmuch database
+Todo: Tests, (hooks, templates, compose), documentation, logging
 
-  - [x] Guard against untagged messages: No tags => +archive?
-  - [x] Render multipart messages
+- Logging 
+-- logging (when should we use vim.notify and when to log?)
+-- let users set log-level in config to get more or less logging
+-- look into print and util.notify
 
-  - [x] Commands / Finding the class from a bufnum?
-  - [x] Remove everything in global
-  - [x] https://efail.de/ secure, only render html in non-encrypted emails
-  - [x] Pipes, pipe keys, git am etc.
-  -- [ ] Test it, do we actually need all of that?
+- Wrap functions? Config is a bit long atm 
 
-  - [-] Searching
-  -- [-] Highlight messages matching description
-  -- [x] Movement between matches
-  - [x] Highlights etc, explore options <- Make a proof of concept
-  -- [x] Being able to control what is highlighted
-  -- [x] For matches messages in tmb
-  -- [x] Being able to move between matched.
-  -- [x] match-face, underline the match?
+(
+-- [ ] Can we add/delete dias the future?
+-- [ ] Being able to select the whole line instead of 100 atm.
+)
 
-  - [-] Notmuch saved queries 
-  -- [x] Being able to save queries and write them to notmuch config
-  -- [x] Easy way to create new queries or should we rely on telescope?
-  -- [x] How easy is it to build on an old search, can we help?
-  --- Toy around with ideas to do this in a good way
+- [ ] Callbacks for checking signatures: Can we do this in another thread or something
+- [ ] add options for buffer-stuff: buffer should be listed, hidden etc?
+-- Mostly for floating terms
 
-  - [x] Make a directory for all of files etc and don't polute the data directory.
+- [ ] documentation
+-- [ ] Read the Emmy page!
+-- use @alias for enums
+-- [ ] Write types for everything
+-- [ ] Use the correct types in documentation
 
+- [ ] A nicer way to do buffer commands? How do we avoid adding 100 commands?
+-- [ ] Can we collect the arguments?
+
+- Make the test framework actually work
+- [ ] Add test for (integration tests):
+-- [ ] Autocrypt tests
+-- [ ] Buffer specific tests: saved, tmb, mb, tb, mv, tv, compose
+--- [ ] Saved create a view with all generators 
+--- [ ] Create a browser and make sure it creates the correct folds
+--- [ ] A view should render email correctly and return correct state
+-- [ ] Buffer generic
+--- [ ] Push all default keybindings making sure that it doesn't crash
+- [ ] Profiling, cpu and memory
+
+(
+- [ ] Decouple notmuch.lua
+- [ ] ref-pointers and if we are using dangling pointers/leaking memory
+
+-- [ ] Notmuch
+--- [x] Finish OO bindings
+--- [ ] Tests
+)
+
+- [ ] Cleanup
+-- [ ] Cleanup util, it's horrible
+-- [ ] cleanup all (compose, util, template etc)
+-- [ ] Move mime-preview and mime-view etc
+-- [ ] FIXME and XXX
+-- Iterators in util
+-- Fix and test builder, and secure
+-- Do we still get an extra line into body?
+
+- [ ] Being able to recreate the mutt UI
+-- [ ] A window can have a child?
+-- [ ] Make a general way to make movements from message_view
+
+- [ ] Templates 
+-- [x] How to deal with the body of a message
+-- [x] How to add the -- Forward Message --- part? Or not?
+-- [ ] Being able to send a template without doing a compose
+-- [ ] Clean up and test (then done)
+-- [ ] A way to interact with the templates and set values (through opts)
+
+
+- [ ] Builder
+-- [ ] Cleanup (esp encryption and signing), better failing
+-- [ ] Testing
+-- [ ] Document what should/could be in each variable
+
+- [ ] Compose
+-- [ ] Headers should be able to do multiline fields
+--- [ ] Can we make cmp modules work correctly with multiline?
+-- [ ] Concat multiple Adresses instead of overwriting them
+
+Compose mode:
+- [ ] Custom headers, add to builder (add to config or should we just do it in init?)
+
+========================
+* 0.0.3
+
+- optional dsn support! off by default and very optional
+-- Alternate-Recipient
+
+-- Batch-mode
+
+- later!
+Use fs_poll from vim.loop to update wins?
+
+- Functions to do add the selected email address to an addressbook.
+
+- Being able to respond to html emails, with correct qouting etc
+
+- Mime-type config (/etc/mime.types)?
+- Make a neo-view tool/function/module? Or just use xdg-open?
+-- xdg-open seems better
+-- save tmpfiles and register them until deleted? Is this safe?
+
+-- autoview
+-- Being able to add autoviews
+-- [ ] Support more than just html
+
+- [ ] User defined templates
+
+- [ ] Attaching a directory could automatcally create a tar.gz of the directory
+
+-- [ ] Compose to sender
+
+- [ ] Progressbar for async stuff?
+
+- [ ] header_diagnostics 
+-- [ ] A function to parse an adresses, return a iterator that returns an email
+ and (position and end), so we can do diagnostics for addresses
+-- [ ] A way to add diagnostics for failed email addresses
+-- [ ] A way to add diagnostics for failed gpg keys (connected to email addresses)
+
+- [ ] Mark as read-delay 
+-- You have to have a mail open for at least 5 seconds before we count it as read
+-- This is only an example, a good api should make this easy to implement this correctly.
+
+- [ ] Partial renders
+
+- [ ] Change colors for attachments, filter attachments etc depending on rules
+
+- [ ] From shouldn't search address book but only our addresses.
+
+- [ ] A send-buffer command
+
+- [ ] Spell detection? Learn how spell works in vim first
+
+- [ ] Treesitter syntax, for better control, for embeded syntax and navigation
+- [ ] A way to close the window if it's the last one
+
+- [ ] Finish AU
 --- almost done, take a break from this ----
   - [ ] Autocrypt headers support
   --- When to add key? When we open an email, when we reply, never?
@@ -86,130 +181,81 @@ today:
   -- [ ] History so we can uncrypt old messages?
   use g_mime_crypto_context_register
 
---------
-Compose mode:
-  https://www.gnu.org/software/emacs/manual/html_mono/message.html
-  - [ ] Missing headers in sending?
-  -- [x] Why is the buffer edited, how do we fix this
+-- libmagic?
 
-  -- Create a tmp file? That way, if we don't do anything, we don't need to save etc
-  - [x] After a send, we should mark it as written
-  - [ ] Don't double decrypt
-  - [ ] Don't qoute an decrypt that we can't encrypt
+- [ ] setopts instead of config
+- [ ] Something like nvim-treesitter-context? For headers, maybe 
 
-  - [ ] Have a way to indicate that we are sending an encrypted email?
-  - [ ] Custom headers
+-- Mailinglist functions
+-- ListArchive, ListHelp, ListId, ListOwner, ListPost, ListSubscribe, ListUnsubscribe,
 
-  -- [ ] When we create a compose, we don't take the original message 
-	but we generate a new one from the buffer, apply hooks on that, generate a file
-	and then send that to compose? That way we get the power of vim and gmime?
-	We need the headers from the original message though.
+- [ ] select action, change on thread, change on select etc
+- [ ] Thread view / entire-thread
+-- [ ] Opening a thread in thread view should scroll it to the current unread email
+-- [ ] When replying in a thread view, we should reply to the correct message
 
- -- Content-builder system:
- --- the builder should do the healy lifting but you should be able to use different
- --- content-builders, that way we can have html-mode etc
+-- [ ] Delete draft when sent
 
- - Things in opts:
- -- Reply
+- [ ] Error handling in notmuch/Make a status handler for notmuch
+- [ ] Multiselect?
+- [ ] Revise diagnostics
+- [ ] Use an opt based system instead of a static config
+-- [ ] Fix diagnostics for update 
 
-  -- On send, do hooks like:
-  --- [x] Unset modified
-  ---- Hooks, close buffer on send?
-  --- make message stand-alone
-  --- mailing lists (MFT support)
-  --- All the config options
+- [ ] Being able to reindex message (esp for decrypted messages)
+-- How should this be done? Do we need to edit the file? 
+-- If we need to decrypt this forever, we can just let notmuch do this?
 
-  - Annoying:
-  - [ ] Hooks, where and why? (init, send, sent ...)
-  - [ ] FIXME and XXX
-  - [ ] Why does tab before enter in save make searches fail?
-   -- seems to be because of m being bound
-  - [ ] Fix Subject names, can we convert these to unicode, we still need to sub newline.
+- [ ] add an opt for show_presearch that moves presearch into default_text
+-- [ ] add an "and" by default? Maybe a setting?
 
-  - [ ] Telescope
-  -- [ ] Make it less clunky to use/costumize
-  -- [ ] Split everything up, thing that isn't telescope should be moved
+- [ ] Support "raw actions" etc?
+-- [ ] Buffer and global?
+-- [ ] Actions: Tags
+-- [ ] Incremental support?
 
-  -- [ ] Can we make it into a telescope extension?
-  -- [ ] Remove presearch and just use default_text?
-  --- [ ] add an "and" by default? Maybe a setting?
+- [ ] Slowdowns and ui
+-- [ ] Render the message/tmb async?
+--- [ ] Being able to cancel and limit searches
+-- [ ] Render everything async? (Does that even make sense?)
+-- [ ] Can we reuse the filters (or at least most parts)?
 
-  - [ ] Autocmd and UI
-  -- Parts
+- [ ] Managed windows, a way to update windows and 
+-- [ ] Re-implement the mutt-ui.
 
-  - [ ] Use a window for attachments
-  -- Doesn't scroll correctly, maybe a bad idea?
+- [ ] Rewrite notmuch-rs, the state of the lib is meh, maybe
 
-  - [ ] Remove all commands and use vim.api.nvim_buf_create_user_command
+- [ ] Don't assume utf8 but convert from and to the charset in vim?
 
-  - [x] Do snippets for aliases
+- [ ] Doing GaloreNew should be able to update UI?
 
-  - [x] Closing a window with q or :q should be the same?
-  -- And it doesn't do that now? Be specific.
 
-  -- Should we list buffers etc
-  -- What about compose? How do we not lose data? (:wq to send?)
+- [ ] Make different tiers, so it's easier to lazy load more of the code etc
+- [ ] Different kind of builder modes
+- [ ] A way to format markdown, neorg etc and get html
 
-  - [x] Email groups, maybe this is vcard?
-  --- How the fuck do I use groups?
-  - [x] Write an example using khards
-  - [x] Write an example using pipe and mates
-  
-  - [ ] Add opts to config so simple customizations doesn't require you to rewrite code
-  - [ ] Use telescope when selecting parts and attachments
-  -- [ ] Make preview telescope with media view?
+- [ ] Fcc outside of notmuch, not in 0.1
+-- [ ] Make fcc automatically detect if it should insert or not, abs path vs relative
 
-  - [ ] A way to close the window if it's the last one
+- [ ] Add limit and offset to searches.
+- [ ] Make Gmime iterator stateless
 
-  - [ ] Add tests to the project that actually work
-  - [ ] Benchmark, dunno if galore is that slow but we need to benchmark
+- [ ] Add support other encryption methoods
+- [ ] Add support for sq to gmime?
 
-  - [ ] Being able to reindex message (esp for decrypted messages)
-  -- How should this be done? Do we need to edit the file? 
-  -- If we need to decrypt this forever, we can just let notmuch do this?
+- [ ] Modular design: 
+-- [ ] cmp
+-- [ ] autocrypt
+-- [ ] telescope
+-- [ ] ...
 
-  -- Mailinglist functions
-  -- ListArchive, ListHelp, ListId, ListOwner, ListPost, ListSubscribe, ListUnsubscribe,
-
-  - [ ] Slowdowns:
-  -- [ ] Render the buffers async?
-  -- [ ] Render everything async? (Does that even make sense?)
-  -- [ ] Can we reuse the filters (or at least most parts)?
-  -- [ ] Can we reuse the same crypto ctx?
-  -- [x] Verify async
-
-* 0.0.3 
-  - Out of scope:
-	  - [ ] Managed windows
-	  - [ ] Rewrite notmuch-rs, the state of the lib is meh, maybe
-
-  - [ ] Don't assume utf8 but convert from and to the charset in vim?
-
-  - [ ] Doing GaloreNew should be able to update UI?
-
-  - [ ] Decouple notmuch.lua and gmime.lua to their own projects
-
-  - [ ] Make different tiers, so it's easier to lazy load more of the code etc
-  - [ ] Different kind of builder modes
-	- [ ] A way to format markdown, neorg etc and get html
-
-  - [ ] Fcc outside of notmuch, not in 0.1
-  -- [ ] Make fcc automatically detect if it should insert or not, abs path vs relative
-
-  - [ ] Add limit and offset to searches.
-  - [ ] Make Gmime iterator stateless
-
-  - [ ] Add support other encryption methoods
-	- [ ] Add support for sq to gmime?
-
-  - [ ] Move tmb to folds
-  - [ ] Make the buffer class into buffer variable
-
-  - [ ] Modular design: 
-  -- [ ] cmp
-  -- [ ] autocrypt
-  -- [ ] telescope
-  -- [ ] ...
+- [ ] Telescope
+-- [ ] Make it an plugin for searching with a telescope extension
+-- [ ] When the terminal gets media support
+--- [ ] Make preview telescope with media view?
+--- [ ] Make a picker that can display both images and text
+-- [ ] Use telescope for select_attachment, so we can preview the attachment
+--- Set a limit for attachments over x-mb
 
   - [ ] Non-standard headers: ‘Mail-Reply-To’, ‘Mail-Followup-To’
   - [ ] Template system
@@ -221,3 +267,50 @@ Compose mode:
   -- Reply, reply-all, compose to sender, compose, forward, unsubsribe
 
   - [ ] Is it worth doing your own gpg functions instead of adding the keys into a autocrypt keyring?
+
+lsp for emails?!
+-- hover?
+-- completion?
+-- symbols?
+-- references? (I think not)
+-- formating? rangef?
+
+- 0.4 
+- LSP/LATER
+- [x] A way to see if all our to, cc, bcc are in the keyring
+- [ ] make it easier to extend, so you can use virtual_text to display verified keys
+	(works but not for autocrypt, todo)
+- [ ] Solves the problem of callback hell
+
+- RIIR?
+-- The whole plugin?
+-- Without making the config less powerful?
+-- Without making anything less powerful/configable/dynamic
+-- What does it solve?
+-- Only make producers in rust? (Or C?)
+--- Speed ups? Can't we just rewrite stuff in C?
+--- No callback problems?
+
+
+- Go through https://www.rfc-editor.org/rfc/rfc4021.html#section-2.1 once more
+- Easy ways to generate these headers
+-- Comments?
+-- Keywords support?
+
+gmime stuff:
+Mail-Reply-To support?
+Add support for sq to gmime?
+Fix the password thing for gpg
+
+-- unprotected error in call to Lua API (bad callback), REMOVE ALL CALLBACKS from ffi
+Remove callbacks from parsing methods, because callbacks are bad-mkay
+
+((
+- [ ] Different parser options
+- [ ] This is bad! This is all callbacks!
+-- [ ] render_parser_options (the current one, mark as done when logging is done)
+-- [ ] build_parser_options
+-- [ ] diagnostic_parser_options
+))
+
+-- [ ] A sister plugin for outlook support
