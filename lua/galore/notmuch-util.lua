@@ -1,5 +1,6 @@
 local nm = require("galore.notmuch")
 local u = require("galore.util")
+-- local browser = require("galore.browser")
 
 local M = {}
 
@@ -19,14 +20,16 @@ end
 --- Get a single message and convert it into a line
 function M.get_message(message)
 	local id = nm.message_get_id(message)
+	local tid = nm.message_get_thread_id(message)
 	local filenames = u.collect(nm.message_get_filenames(message))
 	local sub = nm.message_get_header(message, "Subject")
 	local tags = u.collect(nm.message_get_tags(message))
 	local from = nm.message_get_header(message, "From")
-	local date = tonumber(nm.message_get_header(message, "Subject"))
-	local keys = u.collect(nm.message_get_properties(message, "session-key", true))
+	local date = nm.message_get_date(message)
+	local key = u.collect(nm.message_get_properties(message, "session-key", true))
 	return {
 		id = id,
+		tid = tid,
 		filenames = filenames,
 		level = 1,
 		pre = "",
@@ -36,8 +39,31 @@ function M.get_message(message)
 		from = from,
 		sub = sub,
 		tags = tags,
-		keys = keys,
+		key = key,
 	}
+end
+
+local function pop_helper(line, iter, i)
+	for message in iter do
+		if line.id == nm.message_get_id(message) then
+			line.index = i
+			break
+		end
+		local new_iter = nm.message_get_replies(message)
+		i = pop_helper(line, new_iter, i+1)
+	end
+	return i
+end
+
+function M.line_populate(db, line)
+	local id = line.id
+	local query = nm.create_query(db, "mid:" .. id)
+	for thread in nm.query_get_threads(query) do
+		local i = 1
+		line.total = nm.thread_get_total_messages(thread)
+		local iter = nm.thread_get_toplevel_messages(thread)
+		pop_helper(line, iter, i)
+	end
 end
 
 local function update_tags(message, changes)
@@ -62,30 +88,29 @@ end
 function M.change_tag(db, id, str)
 	local changes = vim.split(str, " ")
 	local message = nm.db_find_message(db, id)
-	if message ~= nil then
-		nm.db_atomic_begin(db)
-		update_tags(message, changes)
-		nm.db_atomic_end(db)
+	if message == nil then
+		vim.notify("Can't change tag, message not found", vim.log.levels.ERROR)
+		return
 	end
+	nm.db_atomic_begin(db)
+	update_tags(message, changes)
+	nm.db_atomic_end(db)
 end
 
-function M.tag_if_nil(db, line_info, tag)
-	local message = nm.db_find_message(db, line_info.id)
+function M.tag_if_nil(db, id, tag)
+	local message = nm.db_find_message(db, id)
 	local tags = u.collect(nm.message_get_tags(message))
 	if vim.tbl_isempty(tags) and tag then
-		M.change_tag(db, line_info.id, tag)
+		M.change_tag(db, id, tag)
 	end
 end
 
-function M.update_line(db, browser, line_info, vline)
+function M.update_line(db, line_info)
 	local message = nm.db_find_message(db, line_info.id)
 	local new_info = M.get_message(message)
 	line_info.id = new_info.id
 	line_info.filenames = new_info.filenames
 	line_info.tags = new_info.tags
-	if vline and browser then
-		browser:update(vline)
-	end
 end
 
 return M

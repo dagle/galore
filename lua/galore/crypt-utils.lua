@@ -1,8 +1,6 @@
-local ge = require("galore.gmime.crypt")
-local gp = require("galore.gmime.parts")
-local gmime = require("galore.gmime.gmime_ffi")
 local config = require("galore.config")
-local ffi = require("ffi")
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
 
 local M = {}
 
@@ -11,22 +9,17 @@ local function verify_list(siglist)
 		return false
 	end
 
-	local sigs = ge.signature_list_length(siglist) > 0
-	for sig in ge.sig_iterator(siglist) do
-		local test = config.values.validate_key(ge.signature_get_status(sig))
-		-- local cert = ge.signature_get_certificate(sig)
-		-- local name = ge.certificate_get_fingerprint(cert)
-		-- local name = ge.certificate_get_email(cert)
+	local sigs = siglist:length(siglist) > 0
+	for i = 1, siglist:length() do
+		local sig = siglist:get_signature(i)
+		local test = config.values.validate_key(sig:get_status())
 		sigs = sigs and test
 	end
 	return sigs
 end
 
---- @param obj gmime.MultipartSigned
---- @return boolean
-function M.verify_signed(obj)
-	local mps = ffi.cast("GMimeMultipartSigned *", obj)
-	local signatures, error = gp.multipart_signed_verify(mps, config.values.verify_flags)
+function M.verify_signed(object)
+	local signatures, error = object:verify(config.values.verify_flags)
 	if not signatures and error then
 		return false
 	else
@@ -34,38 +27,41 @@ function M.verify_signed(obj)
 	end
 end
 
-function M.sign(ctx, obj)
-	local ret, err = gp.multipart_signed_sign(ctx, obj, config.gpg_id)
-	return ret, err
-end
-
-function M.encrypt(ctx, part, recipients)
-	local multi, err = gp.multipart_encrypted_encrypt(ctx, part, true, config.gpg_id, config.values.encrypt_flags, recipients)
-	return multi, err
-end
-
-function M.decrypt_and_verify(obj, passfun, key)
-	local encrypted = ffi.cast("GMimeMultipartEncrypted *", obj)
-	local decrypted, res, err = gp.multipart_encrypted_decrypt_pass(
-		encrypted,
-		config.values.decrypt_flags,
-		passfun,
-		key
+function M.decrypt_and_verify(obj, flags, key)
+	-- local result = gmime.DecryptResult.new()
+	-- how to make result work, since it's **
+	local decrypted, err = obj:decrypt(
+		flags,
+		key,
+		result
 	)
 
 	if err ~= nil then
-		vim.notify("Failed to decrypt message", 3)
+		local str = string.format("Failed to decrypt message: %s", err)
+		vim.notify(str, vim.log.levels.ERROR)
 		return
 	end
 
 	local sign
-	if res then
-		sign = verify_list(gmime.g_mime_decrypt_result_get_signatures(res))
+	if result then
+		sign = verify_list(result:get_signatures())
 	end
 
-	local new_key = ge.decrypt_result_get_session_key(res)
+	local new_key = result:get_session_key()
 
 	return decrypted, sign, new_key
+end
+
+-- maybe not do these
+function M.sign(ctx, obj)
+	local ret, err = gmime.MultipartSigned.sign(ctx, obj, config.gpg_id)
+	return ret, err
+end
+
+-- maybe not do these
+function M.encrypt(ctx, obj, opts, recipients)
+	local multi, err = gmime.MultipartEncrypted.encrypt(ctx, obj, opts.sign, opts.gpg_id, opts.encrypt_flags, recipients)
+	return multi, err
 end
 
 return M

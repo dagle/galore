@@ -1,58 +1,76 @@
-local gs = require("galore.gmime.stream")
-local go = require("galore.gmime.object")
+local nm = require("galore.notmuch")
 local runtime = require("galore.runtime")
 local Buffer = require("galore.lib.buffer")
-local gu = require("galore.gmime.util")
-local ffi = require("ffi")
-local ft = require("plenary.filetype")
+local gu = require("galore.gmime-util")
+local uv = vim.loop
 
-local M = {}
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
+
+local debug = {}
 
 --- Functions to aid in debugging.
 --- Atm it's just functions to view raw messages
-
-function M.view_raw_file(filename, kind)
+function debug.view_raw_file(filename, kind)
 	Buffer.create({
-		name = filename,
 		ft = "mail",
 		kind = kind or "floating",
 		cursor = "top",
-		init = function(_)
-			vim.cmd(":e " .. filename)
+		init = function(buffer)
+			local fd = assert(uv.fs_open(filename, "r", 438))
+			local stat = assert(uv.fs_fstat(fd))
+			local data = assert(uv.fs_read(fd, stat.size, 0))
+			assert(uv.fs_close(fd))
+			data = vim.split(data, "\n")
+			buffer:set_lines(0,0, true, data)
 		end,
 	})
 end
 
-function M.view_raw_attachment(name, part, kind)
-	kind = kind or "floating"
+--- requires that the message is in the notmuch db
+function debug.view_raw_mid(mid, kind)
+	local filename
+	runtime.with_db(function (db)
+		local message = nm.db_find_message(db, mid)
+		filename = nm.message_get_filename(message)
+	end)
+	debug.view_raw_file(filename, kind)
+end
 
+--- maybe not do this for really big files? Maybe keep a cap?
+function debug.view_raw_attachment(attachment, kind)
 	Buffer.create({
-		name = name,
-		ft = ft.detect(name),
+		ft = attachment.mime_type,
 		kind = kind or "floating",
 		cursor = "top",
 		init = function(buffer)
-			M.attachment_view_buffer = buffer
-			local buf = gu.part_to_buf(part)
+			local buf
+			if attachment.part then
+				buf = gu.part_to_string(attachment.part)
+			elseif attachment.data then
+				buf = attachment.data
+			elseif attachment.filename then
+				local fd = assert(uv.fs_open(attachment.filename, "r", 438))
+				local stat = assert(uv.fs_fstat(fd))
+				buf = assert(uv.fs_read(fd, stat.size, 0))
+				assert(uv.fs_close(fd))
+			end
 			local fixed = vim.split(buf, "\n", false)
 			buffer:set_lines(0, 0, true, fixed)
-			buffer:set_lines(-2, -1, true, {})
 		end,
 	})
 end
 
-function M.view_raw_message(message, kind)
+function debug.view_raw_message(message, kind)
 	if not message then
 		return
 	end
-	local object = ffi.cast("GMimeObject *", message)
-	local mem = gs.stream_mem_new()
-	go.object_write_to_stream(object, runtime.format_opts, mem)
-	gs.stream_flush(mem)
-	local str = gu.mem_to_string(mem)
+	local mem = gmime.StreamMem.new()
+	message:write_to_stream(nil, mem)
+	mem:flush()
+	local str = mem:get_byte_array()
 	local tbl = vim.split(str, "\n")
 	Buffer.create({
-		name = "Galore-preview",
 		ft = "mail",
 		kind = kind or "floating",
 		cursor = "top",
@@ -62,4 +80,4 @@ function M.view_raw_message(message, kind)
 	})
 end
 
-return M
+return debug

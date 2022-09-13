@@ -1,74 +1,59 @@
 local config = require("galore.config")
-local started = false
 
 local galore = {}
+
+galore.connected = false
+
 function galore.open(opts)
 	opts = opts or {}
-	opts.kind = opts.kind or "replace"
-	galore.connect()
-	config.values.init(opts)
+	galore.withconnect(function ()
+		config.values.init(opts)
+	end)
 end
 
-function galore.connect(reconnect)
-	if reconnect then
-		galore.connected = false
-	end
+function galore.connect()
 	local runtime = require("galore.runtime")
-	local def = require("galore.default")
-	if not started then
-		require("galore.gmime.init").init()
-	end
+	local lgi = require 'lgi'
+	local gmime = lgi.require("GMime", "3.0")
+	gmime.init()
 	if not galore.connected then
-		def.gen_config()
 		if galore.user_config ~= nil then
 			config.values = vim.tbl_deep_extend("force", config.values, galore.user_config)
 		end
 		runtime.init()
 	end
 	galore.connected = true
-	started = true
-end
-
-local function colors()
-	vim.api.nvim_set_hl(0, "GaloreVerifyGreen", {fg="Green"})
-	vim.api.nvim_set_hl(0, "GaloreVerifyRed", {fg="Red"})
-	vim.api.nvim_set_hl(0, "GaloreSeperator", {fg="Red"})
-	vim.api.nvim_set_hl(0, "GaloreAttachment", {fg="Red"})
-	vim.api.nvim_set_hl(0, "GaloreHeader", {fg="Red"})
 end
 
 function galore.setup(opts)
-	-- Move this later
-	colors()
 	galore.user_config = opts
 end
 
-function galore.withconnect(func, ...)
+function galore.withconnect(func)
 	if not galore.connected then
 		galore.connect()
 	end
-	func(...)
+	func()
 end
 
-function galore.compose(args, kind)
-	local opts = {}
-	if type(args) == "string" then
-		args = args:gsub("mailto:", "")
-		if string.gmatch(args, "?") then
-			local lp = args:gsub(".*?", "")
-			for k, v in string.gmatch(lp, "([^&=?]+)=([^&=?]+)" ) do
-				opts[k] = v
-			end
-		end
-		opts.mailto = args:gsub("?.*", "")
-	end
-	if not galore.connected then
-		galore.connect()
-	end
-	galore.withconnect(function (...)
-	local comp = require('galore.compose')
-	comp:create(kind, ...)
-	end, nil, nil, opts)
+function galore.compose(kind)
+	galore.withconnect(function ()
+		local cb = require('galore.callback')
+		cb.new_message(kind)
+	end)
+end
+
+function galore.mailto(kind, str)
+	local url = galore("galore.url")
+	str = str:gsub("<%s*(.*)%s*>", "%1")
+	local opts = url.parse_url(str)
+
+	-- remove things we don't trust in a mailto
+	opts = url.normalize(opts)
+	galore.withconnect(function ()
+		local cb = require('galore.callback')
+		cb.new_message(kind, opts)
+	end)
 end
 
 --- setup things like

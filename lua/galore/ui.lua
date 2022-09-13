@@ -4,28 +4,28 @@
 local M = {}
 
 --- Adds the attachments in the bottom of the buffer
-function M.render_attachments(attachments, buf)
+function M.render_attachments(attachments, line, buffer, ns)
+	if #attachments == 0 then
+		return
+	end
 	local marks = {}
-	for k, _ in pairs(attachments) do
-		local str = string.format("-[%s]", k)
+	for _, v in ipairs(attachments) do
+		local str = string.format("- [%s]", v.filename)
 		table.insert(marks, {str, "GaloreAttachment"})
 	end
-	local line = vim.fn.line("$") - 1
 	local opts = {
 		virt_lines = {
 			marks
 		},
-		-- virt_lines_above = true,
 	}
-	buf:set_extmark(buf.ns, line, 0, opts)
+	vim.api.nvim_buf_set_extmark(buffer, ns, line, 0, opts)
 end
 
-function M.exmark(buf, ns, style, text, line)
+function M.extmark(buf, ns, style, text, line)
 	-- for now
 	if not ns then
 		return
 	end
-	line = line or vim.fn.line("$") - 1
 	local opts = {
 		virt_lines = {
 			{{text, style}}

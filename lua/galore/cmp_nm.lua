@@ -1,7 +1,7 @@
 local ok, cmp = pcall(require, "cmp")
 local config = require("galore.config")
 if not ok then
-	print("Error can't load cmp needed for address book")
+	vim.api.nvim_err_writeln("Error can't load cmp needed for address book")
 	return
 end
 

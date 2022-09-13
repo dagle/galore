@@ -1,19 +1,19 @@
-local gp = require("galore.gmime.parts")
-local gc = require("galore.gmime.content")
-local gu = require("galore.gmime.util")
-local go = require("galore.gmime.object")
-local gcu = require("galore.crypt-utils")
-local gs = require("galore.gmime.stream")
-local gf = require("galore.gmime.filter")
-local runtime = require("galore.runtime")
--- local nm = require("galore.notmuch")
-local ffi = require("ffi")
 local config = require("galore.config")
+local gcu = require("galore.crypt-utils")
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
+local gu = require("galore.gmime-util")
 
 local M = {}
 
 local function format(str)
 	return vim.split(str, "\n", false)
+end
+
+local function mime_type(object)
+	local ct = object:get_content_type()
+	local type = ct:get_mime_type()
+	return type
 end
 
 -- TODO
@@ -42,14 +42,37 @@ local marks = {
 	end
 }
 
+local function show_key(key)
+	local at = gmime.AddressType
+	if key == at.SENDER then
+		return "Sender"
+	end
+	if key == at.FROM then
+		return "From"
+	end
+	if key == at.REPLY_TO then
+		return "Reply_to"
+	end
+	if key == at.TO then
+		return "To"
+	end
+	if key == at.CC then
+		return "Cc"
+	end
+	if key == at.BCC then
+		return "Bcc"
+	end
+end
+
 local function show_header(buffer, key, value, ns, i, line)
 	if value and value ~= "" then
 		local str = key .. ": " .. value
-		vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, { str })
+		local lines = vim.fn.split(str, "\n")
+		vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, lines)
 		if marks[key] and ns then
 			marks[key](buffer, ns, i, line)
 		end
-		return i+1
+		return i+#lines
 	end
 	return i
 end
@@ -57,70 +80,83 @@ end
 -- TODO
 -- this should also be user defined
 function M.show_headers(message, buffer, opts, line, start)
+	local at = gmime.AddressType
 	opts = opts or {}
 	local i = start or 0
-	local address_headers = {"From", "To", "Cc", "Bcc"}
+	local address_headers = {at.FROM, at.TO, at.CC, at.BCC} --[[ gmime.AddressType.SENDER ]]
 	for _, head in ipairs(address_headers) do
-		local addr = gu.get_addresses(gp.message_get_address(message, head))
-		i = show_header(buffer, head, addr, opts.ns, i, line)
+		local addr = message:get_addresses(head)
+		local addr_str = addr:to_string(nil, false)
+		i = show_header(buffer, show_key(head), addr_str, opts.ns, i, line)
 	end
 
-	local gdate = gp.message_get_date(message)
-	if gdate then
-		local date = os.date("%c", gdate)
-		i = show_header(buffer, "Date", date, opts.ns, i, line)
-	end
-	local subject = gp.message_get_subject(message)
-	if subject then
-		i = show_header(buffer, "Subject", subject, opts.ns, i, line)
-	end
+	local date = message:get_date()
+	local num = date:to_unix()
+	local date_str = os.date("%c", num)
+	i = show_header(buffer, "Date", date_str, opts.ns, i, line)
+	local subject = message:get_subject()
+	i = show_header(buffer, "Subject", subject, opts.ns, i, line)
 	return i
 end
 
 --- XXX add a way to configure what filters are used etc
 function M.part_to_stream(part, opts, outstream)
-	local datawrapper = gp.part_get_content(part)
-	local stream = gs.data_wrapper_get_stream(datawrapper)
-	gs.stream_reset(stream)
-	local filters = gs.stream_filter_new(stream)
-	local streamfilter = ffi.cast("GMimeStreamFilter *", filters)
+	local dw = part:get_content()
+	local stream = dw:get_stream()
+	stream:reset()
+	local filters = gmime.StreamFilter.new(stream)
 
-	local enc = gs.data_wrapper_get_encoding(datawrapper)
+	local enc = dw:get_encoding()
 	if enc then
-		local basic = gf.filter_basic_new(enc, false)
-		gs.stream_filter_add(streamfilter, basic)
+		local basic = gmime.FilterBasic.new(enc, false)
+		filters:add(basic)
 	end
 
-	local object = ffi.cast("GMimeObject *", part)
-	local charset = go.object_get_content_type_parameter(object, "charset")
+	local charset = part:get_content_type_parameter("charset")
 	if charset then
-		local utf = gf.filter_charset_new(charset, "UTF-8")
-		gs.stream_filter_add(streamfilter, utf)
+		local utf8 = gmime.FilterCharset.new(charset, "UTF-8")
+		filters:add(utf8)
 	end
 
-	local unix = gf.filter_dos2unix_new(false)
-	gs.stream_filter_add(streamfilter, unix)
+	local unix = gmime.FilterDos2Unix.new(false)
+	filters:add(unix)
 
 	if opts.reply then
-		local reply_filter = gf.filter_reply_new(true)
-		gs.stream_filter_add(streamfilter, reply_filter)
+		local reply_filter = gmime.FilterReply.new(true)
+		filters:add(reply_filter)
 	end
 
-	gs.stream_write_to_stream(filters, outstream)
+	filters:write_to_stream(outstream)
 end
 
--- applies filters and writes it to memory
 -- @param part gmime.Part
--- @return string of the part
+-- @return string
 function M.part_to_string(part, opts)
-	local mem = gs.stream_mem_new()
+	local mem = gmime.StreamMem.new()
 	M.part_to_stream(part, opts, mem)
-	return gu.mem_to_string(mem)
+	return mem:get_byte_array()
+end
+
+local function rate_function(render, buf, opts, state, object, fun)
+	local saved
+	local rating = 1000
+	local i = 0
+	local j = object:get_count()
+	while i < j do
+		local child = object:get_part(i)
+		local r = fun(child)
+		if r < rating then
+			rating = r
+			saved = child
+		end
+		i = i + 1
+	end
+	M.walker(render, saved, buf, opts, state)
 end
 
 --- TODO list could be a function
-local function rate(object, list)
-	local type = gu.part_mime_type(object)
+local function rate_alt(object, list)
+	local type = mime_type(object)
 	for i, v in ipairs(list) do
 		if v == type then
 			return i
@@ -150,41 +186,42 @@ end
 --- Also do we want to be able to rewrite the Subject and From
 --- using From and Subject in the message?
 local function rate_lang(object, list)
-	local mp = ffi.cast("GMimeMessagePart *", object)
-	local message = gp.message_part_get_message(mp)
-	local mobject = ffi.cast("GMimeObject *", message)
-	local lang = go.object_get_header(mobject, "Content-Language")
+	-- local mp = ffi.cast("GMimeMessagePart *", object)
+	-- local message = gp.message_part_get_message(mp)
+	-- local mobject = ffi.cast("GMimeObject *", message)
+	-- local lang = go.object_get_header(mobject, "Content-Language")
 	-- local ttype = go.object_get_header(object, "Content-Translation-Type")
-	for i, v in ipairs(list) do
-		-- if type(v) == "table" then
-		-- 	if lang and ttype and
-		-- 		v[1] == lang  ttype == v[2] then
-		-- 		return i
-		-- 	end
-		-- else
-		if lang and language_match(v, lang) then
-			return i
-		end
-	end
+	-- for i, v in ipairs(list) do
+	-- 	-- if type(v) == "table" then
+	-- 	-- 	if lang and ttype and
+	-- 	-- 		v[1] == lang  ttype == v[2] then
+	-- 	-- 		return i
+	-- 	-- 	end
+	-- 	-- else
+	-- 	if lang and language_match(v, lang) then
+	-- 		return i
+	-- 	end
+	-- end
 	return 999
 end
-
--- local rate2 = {"text/plain", "text/enriched", "text/html"}
 
 -- @param message gmime.Message
 -- @param state table containing the parts
 local function render_message_helper(render, message, buf, opts, state)
-	local object = gp.message_get_mime_part(message)
+	local object = message:get_mime_part()
 	if object == nil then
 		return
 	end
 
 	--- I want to remove this too, but let it stay for now
 	if opts.reply then
-		local date = gp.message_get_date(message)
-		local author = gc.internet_address_list_to_string(
-				gp.message_get_from(message), runtime.format_opts, false)
-		local qoute = config.values.qoute_header(date, author)
+		local date = message:get_date()
+		local num = date:to_unix()
+
+		-- export a date and author intead? Or the whole message?
+		local author = message:get_from()
+		local str = author:to_string()
+		local qoute = config.values.qoute_header(num, str)
 		render.draw(buf, { qoute })
 	end
 
@@ -202,14 +239,16 @@ function M.render_message(render, message, buf, opts)
 	-- opts.unsafe = true
 	local state = {}
 	local function find_encrypted(_, part, _)
-		if gp.is_multipart_encrypted(part) then
+		if gmime.MultipartEncrypted:is_type_of(part) then
 			state.unsafe = true
 		end
 	end
 
-	gp.message_foreach(message, find_encrypted)
+	message:foreach(find_encrypted)
+
 	state.attachments = {}
 	state.keys = {}
+	state.callbacks = {}
 	render_message_helper(render, message, buf, opts, state)
 	return state
 end
@@ -217,11 +256,10 @@ end
 --- TODO how to do this well?
 --- Something like this
 function M.add_custom_header(names, render)
-	local function custom_header(self, to_obj, buf, opts, state)
-		local object = ffi.cast("GMimeObject *", to_obj) --- @type gmime.MimeObject
+	local function custom_header(self, object, buf, opts, state)
 		local headers = {}
 		for _, name in ipairs(names) do
-			headers[name] = go.object_get_header(object, name)
+			headers[name] = object.get_header(object, name)
 		end
 		for k, v in pairs(headers) do
 			local str = string.format("%s:%s", k, v)
@@ -318,9 +356,11 @@ M.default_render = {
 		render_message_helper(self, message, buf, opts, state)
 	end,
 	part = function (self, part, buf, opts, state)
-		local type = gu.part_mime_type(part)
+		local type = mime_type(part)
 		if type == "text/plain" then
 			local str = M.part_to_string(part, opts)
+			-- TODO this crashes sometimes
+			if str == nil then str = "" end
 			self.draw(buf, format(str))
 		elseif type == "text/html" then
 			local str = M.part_to_string(part, opts)
@@ -332,13 +372,13 @@ M.default_render = {
 		vim.list_extend(buf, str)
 	end,
 	attachment = function (self, part, opts, state)
-		local filename = gp.part_get_filename(part)
-		local type = gu.part_mime_type(part)
-		local attachment = {filename = filename, part = go.g_object_ref(part), mime_type = type}
+		local filename = part:get_filename(part)
+		local type = mime_type(part)
+		local attachment = {filename = filename, part = part, mime_type = type}
 		table.insert(state.attachments, attachment)
 	end,
-	verify = function (self, list, buf, opts, state)
-		config.values.annotate_signature(buf, opts.ns, list, before, after, names)
+	verify = function (self, bufnr, ns, list, before, after, names)
+			config.values.annotate_signature(bufnr, ns, list, before, after, names)
 	end,
 	encrypted = function (self, mp, buf, opts, state)
 		-- Idk, these feels bad, do we only check with key or
@@ -347,97 +387,81 @@ M.default_render = {
 		for _, key in pairs(opts.keys) do
 			--- TODO what flags be?
 			--- should we really apply all keys and not just with the correct name?
-			de_part, verified, new_keys = gcu.decrypt_and_verify(mp, "none", runtime.get_password, key)
+			de_part, verified, new_keys = gcu.decrypt_and_verify(mp, "none", key)
 			if de_part ~= nil then
 				return de_part, verified, new_keys
 			end
 		end
-		de_part, verified, new_keys = gcu.decrypt_and_verify(mp, config.values.decrypt_flags, runtime.get_password, nil)
+		-- de_part, verified, new_keys = gcu.decrypt_and_verify(mp, config.values.decrypt_flags, runtime.get_password, nil)
 		return de_part, verified, new_keys
 	end,
 }
 
+local signed_content = 0
+-- local signed_signature = 1
+
 function M.walker(render, object, buf, opts, state)
-	if gp.is_message_part(object) then
-		local mp = ffi.cast("GMimeMessagePart *", object)
-		local message = gp.message_part_get_message(mp)
+	if gmime.MessagePart:is_type_of(object) then
+		local message = object:get_message()
 		render:message(message, buf, opts, state)
-	elseif gp.is_part(object) then
-		local part = ffi.cast("GMimePart *", object)
-		if gp.part_is_attachment(part) then
+	elseif gmime.Part:is_type_of(object) then
+		if object:is_attachment() then
 			if render.attachment then
-				render:attachment(part, opts, state)
+				render:attachment(object, opts, state)
 			end
 		else
 			if render.part then
-				render:part(part, buf, opts, state)
+				render:part(object, buf, opts, state)
 			end
 		end
-	elseif gp.is_multipart(object) then
-		local mp = ffi.cast("GMimeMultipart *", object)
-		if gp.is_multipart_encrypted(object) then
-			local de_part, verify_list, new_keys = render:encrypted(mp, buf, opts, state)
+	elseif gmime.Multipart:is_type_of(object) then
+		if gmime.MultipartEncrypted:is_type_of(object) then
+			local de_part, verify_list, new_keys = render:encrypted(object, buf, opts, state)
 
 			if not de_part then
 				return
 			end
 
 			table.insert(state.keys, new_keys)
+			-- maybe these are a bad idea?
+			-- local before = #buf + opts.offset
 			M.walker(render, de_part, buf, opts, state)
+			-- local after = #buf + opts.offset - 1
 
 			if render.verify then
-				vim.schedule(function()
-					render:verify(verify_list, opts, state)
+				table.insert(state.callbacks, function (bufnr, ns)
+					-- what is names?
+					render:verify(bufnr, ns, verify_list, before, after, nil)
 				end)
 			end
-		elseif gp.is_multipart_signed(object) then
-			local se_part = gp.multipart_get_part(mp, gp.multipart_signed_content)
+		elseif gmime.MultipartSigned:is_type_of(object) then
+			local se_part = object:get_part(signed_content)
+			-- maybe these are a bad idea?
+			-- local before = #buf + opts.offset
 			M.walker(render, se_part, buf, opts, state)
+			-- local after = #buf + opts.offset - 1
 
 			if render.verify then
-				vim.schedule(function()
-					local list = gcu.verify_signed(object)
-					render:verify(list, opts, state)
+				table.insert(state.callbacks, function (bufnr, ns)
+					local verify_list = gcu.verify_signed(object)
+					render:verify(bufnr, ns, verify_list, before, after, nil)
 				end)
 			end
 		elseif config.values.alt_mode and gu.is_multipart_alt(object) then
-			local multi = ffi.cast("GMimeMultipart *", object)
-			local saved
-			local rating = 1000
-			local i = 0
-			local j = gp.multipart_get_count(multi)
-			while i < j do
-				local child = gp.multipart_get_part(multi, i)
-				local r = rate(child, config.values.alt_order)
-				if r < rating then
-					rating = r
-					saved = child
-				end
-				i = i + 1
-			end
-			M.walker(render, saved, buf, opts, state)
+			rate_function(render, buf, opts, state, object, function (child)
+				return rate_alt(child, config.values.alt_order)
+			end)
 		elseif config.values.multilingual and gu.is_multipart_multilingual(object) then
-			local multi = ffi.cast("GMimeMultipart *", object)
-			local saved
-			local rating = 1000
-			local i = 0
-			local j = gp.multipart_get_count(multi)
-			while i < j do
-				local child = gp.multipart_get_part(multi, i)
-				local r = rate_lang(child, config.values.lang_order)
-				if r < rating then
-					rating = r
-					saved = child
-				end
-				i = i + 1
-			end
-			M.walker(render, saved, buf, opts, state)
+			rate_function(render, buf, opts, state, object, function (child)
+				return rate_lang(child, config.lang_order)
+			end)
+		elseif config.values.related and gu.is_multipart_related(object) then
+			-- TODO
 		else
-			local multi = ffi.cast("GMimeMultipart *", object)
 			local i = 0
-			local j = gp.multipart_get_count(multi)
+			local j = object:get_count()
 			while i < j do
-				local child = gp.multipart_get_part(multi, i)
+				local child = object:get_part( i)
 				M.walker(render, child, buf, opts, state)
 				i = i + 1
 			end

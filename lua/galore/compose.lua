@@ -1,19 +1,26 @@
 local u = require("galore.util")
+local gu = require("galore.gmime-util")
 local ui = require("galore.ui")
 local Buffer = require("galore.lib.buffer")
 local job = require("galore.jobs")
-local config = require("galore.config")
 local builder = require("galore.builder")
-local render = require("galore.render")
-local gp = require("galore.gmime.parts")
 local nu = require("galore.notmuch-util")
 local runtime = require("galore.runtime")
-local r = require("galore.render")
+local Path = require("plenary.path")
+local debug = require("galore.debug")
+local o = require("galore.opts")
+-- local hd = require("galore.header-diagnostics")
 
 local Compose = Buffer:new()
 
-function Compose:add_attachment(file)
-	self.attachments[file] = true
+function Compose:add_attachment_path(file_path)
+	local path = Path:new(file_path)
+	if path:exists() and not path:is_file() then
+		local filename = path:normalize()
+		local mime_type = job.get_type(file_path)
+		table.insert(self.attachments,
+			{filename = filename, path = file_path, mime_type = mime_type})
+	end
 end
 
 function Compose:remove_attachment()
@@ -26,143 +33,140 @@ function Compose:remove_attachment()
 end
 
 function Compose:set_header_option(key, value)
-	self.header_opts[key] = value
+	self.extra_headers[key] = value
 end
 
 function Compose:unset_option()
-	local list = vim.tbl_keys(self.header_opts)
+	local list = vim.tbl_keys(self.extra_headers)
 	vim.ui.select(list,{
 		prompt = 'Option to unset',
 		format_item = function (item)
-			return string.format("%s = %s", item, self.header_opts[item])
+			return string.format("%s = %s", item, self.extra_headers[item])
 		end,
 	},
 	function (item, _)
 		if item then
-			self.header_opts[item] = nil
+			self.extra_headers[item] = nil
 		end
 	end)
 end
 
+local function empty(str)
+	return u.trim(str) == ""
+end
+
+--- TODO Test multiline!
 local function get_headers(self)
 	local headers = {}
-	local lines = vim.api.nvim_buf_get_lines(self.handle, 0, -1, true)
-	local body_line = vim.api.nvim_buf_get_extmark_by_id(self.handle, self.ns, self.marks, {})[1]
-	for i = 1, body_line do
-		local start, stop = string.find(lines[i], "^%a+:")
-		-- ignore lines that isn't xzy: abc
-		if start ~= nil then
-			local word = string.sub(lines[i], start, stop - 1)
-			word = string.lower(word)
-			local content = string.sub(lines[i], stop + 1)
-			content = u.trim(content)
-			headers[word] = {content, i}
+	local body_line = vim.api.nvim_buf_get_extmark_by_id(self.handle, self.compose, self.marks, {})[1]
+	local lines = vim.api.nvim_buf_get_lines(self.handle, 0, body_line, true)
+	local last_key
+	for i, line in ipairs(lines) do
+		if empty(line) then
+			goto continue
 		end
+		local start, _, key, value = string.find(line, "^%s*(.-)%s*:(.+)")
+		if start ~= nil and key ~= "" and value ~= "" then
+			key = string.lower(key)
+			last_key = key
+			value = vim.fn.trim(value)
+			headers[key] = value
+		else
+			if not last_key then
+				error("Bad formated headers, trying to add to value header above that doesn't exist")
+			end
+			-- local value, prev = unpack(headers[last_key])
+			local key = headers[last_key]
+			local extra = vim.fn.trim(line)
+			-- headers[key] = {value .. " " .. extra, prev}
+			headers[key] = value .. " " .. extra
+		end
+		::continue::
 	end
 	return headers, body_line
 end
 
--- XXX Adds an empty line to body, maybe it's suppose to be like that?
 function Compose:parse_buffer()
 	local buf = {}
-	local body = {}
 	local headers, body_line = get_headers(self)
-	local lines = vim.api.nvim_buf_line_count(self.handle)
+	-- local lines = vim.api.nvim_buf_line_count(self.handle)
+	local body = vim.api.nvim_buf_get_lines(self.handle, body_line+1, -1, false)
 	if headers.subject == nil then
-		headers.subject = config.values.empty_topic
+		headers.subject = self.opts.empty_topic
 	end
 
-	for i = body_line + 1, #lines do
-		table.insert(body, lines[i])
-	end
+	-- for i = body_line + 1, lines do
+	-- 	table.insert(body, lines[i])
+	-- end
 	buf.body = body
 	buf.headers = headers
 	return buf
 end
 
-
-local function get_sent_folder(sent_folder, from)
-	if type(sent_folder) == "string" then
-		return sent_folder
-	elseif type(sent_folder) == "function" then
-		return sent_folder(from)
-	end
-	return "sent"
-end
-
--- Tries to send what is in the current buffer
-function Compose:send(opts)
-	opts = opts or {}
+-- TODO add opts
+function Compose:preview(kind)
+	kind = kind or "floating"
 	local buf = self:parse_buffer()
-	local message = builder.create_message(buf, opts, self.attachments, self.header_opts, builder.textbuilder)
-	if not message then
-		return
-	end
-	if config.values.pree_hooks then
-		config.values.pree_hooks(message)
-	end
-	job.send_mail(message)
-	-- we should try to figure out the sent folder from the message
-	-- local folder = get_sent_folder(config.values.sent_folder, buf.from)
-	-- job.insert_mail(message, folder, config.values.sent_tags)
-	--- change the the old tag
-	if self.in_reply_to then
-		runtime.with_db_writer(function(db)
-			nu.change_tag(db, self.reply.in_reply_to, "+replied")
-		end)
-	end
-	job.insert_mail(message, config.values.draftdir, "+sent")
-	if config.values.pree_hooks then
-		config.values.post_hooks(message)
-	end
+
+	local message = builder.create_message(buf, self.opts, self.attachments, self.header_opts, builder.textbuilder)
+	debug.view_raw_message(message, kind)
 	self:set_option("modified", false)
 end
 
-function Compose:preview(kind, opts)
-	kind = kind or "floating"
-	opts = opts or {}
+-- Tries to send what is in the current buffer
+function Compose:send()
+	-- local opts = {}
 	local buf = self:parse_buffer()
+	--- should be do encryt here or not?
 
-	local message = builder.create_message(buf, opts, self.attachments, self.header_opts, builder.textbuilder)
-	Buffer.create({
-		kind = kind,
-		ft = "mail",
-		init = function (buffer)
-			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
-			mime_view(buffer.handle, message, {ns=buffer.ns})
-		end
-	}, nil)
-end
-
-function Compose:save_draft(opts)
-	opts = opts or {}
-	local buf = self:parse_buffer()
-	if config.values.draftencrypt and config.values.gpg_id then
-		opts.encrypt = true
-		opts.recipients = config.values.gpg_id
-	end
-	local message = builder.create_message(buf, opts, self.attachments, self.header_opts, builder.textbuilder)
+	--- from here we want to be async
+	local message = builder.create_message(buf, self.opts, self.attachments, self.extra_headers, builder.textbuilder)
 	if not message then
+		vim.notify("Couldn't create message for sending", vim.log.levels.ERROR)
 		return
 	end
-	if ret ~= nil then
-		print("Failed to parse draft")
-		return ret
+	if self.opts.pre_sent_hooks then
+		self.opts.pre_sent_hooks(message)
 	end
-	job.insert_mail(message, config.values.draftdir, "+draft")
+
+	job.send_mail(message, function ()
+		vim.notify("Mail sent", vim.log.levels.INFO)
+		local reply = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
+		if reply then
+			local mid = gu.unbracket(reply)
+			runtime.with_db_writer(function(db)
+				nu.change_tag(db, mid, "+replied")
+			end)
+		end
+		--- add an option for this or move it to post_ehooks?
+		job.insert_mail(message, self.opts.sent_dir, "+sent")
+		if self.opts.post_sent_hooks then
+			self.opts.post_sent_hooks(message)
+		end
+	end)
+	self:set_option("modified", false)
 end
 
-local function make_template(message, reply_all)
-	local response = gu.respone_headers(message, reply_all)
-	local sub = gp.message_get_subject(message)
-	sub = "Subject: " .. u.add_prefix(sub, "Re:")
-	table.insert(response, sub)
-	return response
+function Compose:save_draft(build_opts)
+	build_opts = build_opts or {}
+	local buf = self:parse_buffer()
+	if self.opts.draft_encrypt and self.opts.gpg_id then
+		build_opts.encrypt = true
+		build_opts.recipients = self.opts.gpg_id
+	end
+	local message = builder.create_message(buf, build_opts, self.attachments, self.extra_headers, builder.textbuilder)
+	if not message then
+		vim.notify("Couldn't create message for sending", vim.log.levels.ERROR)
+		return
+	end
+	--- TODO from here we want to be async
+	job.insert_mail(message, self.opts.draft_dir, "+draft")
 end
 
 function Compose:update_attachments()
 	vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
-	ui.render_attachments(self.attachments, self)
+	local line = vim.fn.line("$") - 1
+	ui.render_attachments(self.attachments, line, self.handle, self.ns)
 end
 
 function Compose:delete_tmp()
@@ -170,28 +174,28 @@ function Compose:delete_tmp()
 end
 
 local function addfiles(self, files)
+	self.attachments = {}
 	if not files then
 		return
 	end
 	if type(files) == "string" then
-		self:add_attachment(files)
+		self:add_attachment_path(files)
 		return
-	end
-	for _, file in ipairs(files) do
-		self:add_attachment(file)
+	else
+		self.attachments = files
 	end
 end
 
 local function make_seperator(buffer, lines)
-	buffer.ns = vim.api.nvim_create_namespace("galore-compose")
-
 	local line_num = lines
 	local col_num = 0
 
-	local virt_lines = {
-		virt_lines = { { { "Email body", "GaloreSeperator" } } },
+	local opts = {
+		virt_lines = {
+			{ { "Emailbody", "GaloreSeperator" } },
+		},
 	}
-	buffer.marks = buffer:set_extmark(buffer.ns, line_num, col_num, virt_lines)
+	buffer.marks = buffer:set_extmark(buffer.compose, line_num, col_num, opts)
 end
 
 function Compose:commands()
@@ -208,52 +212,84 @@ function Compose:commands()
 })
 end
 
-function Compose:update()
-	self:clear()
-	r.show_headers(self.message, self.handle, nil, nil)
-	local after = vim.fn.line('$') - 1
-	self.state = r.show_message(self.message, self.handle, self.opts)
+local function consume_headers(buffer)
+	local lines = {}
+	local extra_headers = {}
+	local lookback = {}
+	for _, v in ipairs(buffer.opts.compose_headers) do
+		lookback[v[1]] = v[2]
+	end
 
-	make_seperator(self.handle, after)
+	for _, v in ipairs(buffer.opts.compose_headers) do
+		if v[2] and not buffer.headers[v[1]] then
+			local header = string.format("%s: ", v[1])
+			table.insert(lines, header)
+		elseif buffer.headers[v[1]] then
+			local header = string.format("%s: %s", v[1], buffer.headers[v[1]])
+			local multiline = vim.fn.split(header, "\n")
+			vim.list_extend(lines, multiline)
+		end
+	end
 
-	if not vim.tbl_isempty(self.attachments) then
-		ui.render_attachments(self.attachments, self)
+	for k, v in pairs(buffer.headers) do
+		if lookback[k] == nil then
+			extra_headers[k] = v
+		end
+	end
+	buffer.extra_headers = extra_headers
+	buffer:set_lines(0, 0, true, lines)
+end
+
+local function render_body(buffer)
+	if buffer.body then
+		buffer:set_lines(-1, -1, true, buffer.body)
 	end
 end
 
+function Compose:update()
+	self:clear()
+	consume_headers(self)
+	local after = vim.fn.line('$') - 1
+	render_body(self)
+
+	make_seperator(self, after)
+end
+
+local function checkheaders(self)
+	vim.api.nvim_create_autocmd("InsertLeave", {callback = function ()
+		local headers = get_headers(self)
+		hd.checkheaders(self.dians, self.handle, headers)
+	end, buffer = self.handle})
+end
+
+
 -- change message to file
-function Compose:create(kind, old_message, header_opts, opts)
-	opts = opts or {}
-	header_opts = header_opts or {}
-	-- local template
-	-- this sucks
-	local message = tm.default_template()
-	if old_message then
-		tm.response_message(message, old_message, opts.response_mode)
-	else
-		tm.compose_new(message, opts.mailto)
-	end
+function Compose:create(kind, opts)
+	o.compose_options(opts)
 	Buffer.create({
-		name = vim.fn.tempname(),
+		name = opts.bufname(),
 		ft = "mail",
 		kind = kind,
 		cursor = "top",
-		buftype = "",
+		parent = opts.parent,
+		buftype = "", -- fix this
 		modifiable = true,
-		mappings = config.values.key_bindings.compose,
+		mappings = opts.key_bindings,
 		init = function(buffer)
-			buffer.message = message
 			buffer.opts = opts
-			addfiles(buffer, opts.attach)
-			buffer.header_opts = header_opts
-			buffer.ns = vim.api.nvim_create_namespace("galore-compose")
+			buffer.headers = opts.headers
+			buffer.body = opts.Body
+			addfiles(buffer, opts.Attach)
+			buffer.ns = vim.api.nvim_create_namespace("galore-attachments")
+			buffer.compose = vim.api.nvim_create_namespace("galore-compose")
 			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
 			buffer:update()
+			-- checkheaders(buffer)
 
 			buffer:set_option("modified", false)
 
-			config.values.bufinit.compose(buffer)
 			buffer:update_attachments()
+			opts.init(buffer)
 		end,
 	}, Compose)
 end

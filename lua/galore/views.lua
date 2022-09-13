@@ -1,5 +1,5 @@
 local Path = require("plenary.path")
-local gu = require("galore.gmime.util")
+local gu = require("galore.gmime-util")
 local runtime = require("galore.runtime")
 local M = {}
 

@@ -1,5 +1,8 @@
 local Job = require("plenary.job")
-local nm = require("galore.notmuch")
+-- local nm = require("galore.notmuch")
+local config = require("galore.config")
+local runtime = require("galore.runtime")
+local galore =  require("galore")
 
 local M = {}
 -- lets do it like this for now
@@ -11,12 +14,15 @@ end)()
 local script = test_path .. "nm_init.sh"
 
 function M.setup(testname)
-	local db_path = test_path .. testname .. "/mail/.notmuch"
+	local config_path = test_path .. testname .. "/notmuch/notmuch-config"
 	Job:new({
 		command = script,
 		args = {testname}
 	}):sync()
-	return nm.db_open(db_path, 0)
+	galore.setup({
+		nm_config = config_path
+	})
+	galore.connect()
 end
 
 function M.cleanup(testname)
@@ -24,7 +30,10 @@ function M.cleanup(testname)
 	vim.fn.delete(test, "rf")
 end
 
-function M.load_rawmessages()
+function M.notmuch_random_message()
+end
+
+function M.gmime_random_message()
 end
 
 return M

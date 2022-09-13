@@ -1,6 +1,3 @@
---- this file shouldn't contain config?
---- Clean up unused code etc
-local conf = require("galore.config")
 local M = {}
 
 function M.trim(s)
@@ -126,37 +123,41 @@ function M.format(part, qoute)
 	local box = {}
 	for line in string.gmatch(part, "[^\n]+") do
 		table.insert(box, line)
-		-- if qoute then
-		-- 	table.insert(box, "> " .. line)
-		-- end
 	end
 	return box
 end
 
---- maybe add from
-local completion_headers = {
-	"to:",
-	"cc:",
-	"bcc:",
-}
+
+local completion_pattern =  "^\\(Resent-\\)\\?\\(To\\|B\\?Cc\\|Reply-To\\|From\\|Mail-Followup-To\\|Mail-Copies-To\\):"
 
 function M.completion_header(line)
-	line = line:lower()
-	for _, v in ipairs(completion_headers) do
-		if vim.startswith(line, v) then
-			return true
-		end
-	end
-	return false
+	return vim.fn.match(line, completion_pattern) >= 0
 end
 
-M.default_template = function(mailto)
-	mailto = mailto or ""
-	return {
-		"From: " .. conf.values.name .. " <" .. conf.values.primary_email .. ">",
-		"To: " .. mailto,
-		"Subject: ",
-	}
+function M.purge_empty(list)
+	--- remove any empty line at the start of the list
+	for i, v in ipairs(list) do
+		if v == "" then
+			table.remove(list, i)
+		else
+			break
+		end
+	end
+
+	--- remove any empty line at the end of the list
+	local stop = #list
+	while (stop > 0) do
+		if list[stop] == "" then
+			table.remove(list, stop)
+			stop = stop - 1
+		else
+			break
+		end
+	end
+end
+
+function M.unmailto(addr)
+	return addr:gsub("<mailto:(.*)>", "%1")
 end
 
 return M

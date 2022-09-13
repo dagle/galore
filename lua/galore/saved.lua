@@ -1,21 +1,15 @@
--- saved is saved searches, the first view you get when you start notmuch
 local nm = require("galore.notmuch")
 local Buffer = require("galore.lib.buffer")
-local config = require("galore.config")
-local u = require("galore.util")
 local runtime = require("galore.runtime")
 local ordered = require("galore.lib.ordered")
+local o = require("galore.opts")
 
 local Saved = Buffer:new()
 
---- Don't do num
-Saved.num = 0
-local generators = {}
-
-local function make_entry(db, box, search, name, exclude)
+local function make_entry(self, db, box, search, name, exclude)
 	local q = nm.create_query(db, search)
 	if exclude then
-		for _, ex in ipairs(config.values.exclude_tags) do
+		for _, ex in ipairs(self.opts.exclude_tags) do
 			nm.query_add_tag_exclude(q, ex)
 		end
 	end
@@ -25,7 +19,7 @@ local function make_entry(db, box, search, name, exclude)
 	table.insert(box, { i, unread_i, name, search})
 end
 
-local function gen_tags(searches)
+function Saved:gen_tags(searches)
 	runtime.with_db(function (db)
 		for tag in nm.db_get_all_tags(db) do
 			local search = "tag:" .. tag
@@ -34,31 +28,26 @@ local function gen_tags(searches)
 	end)
 end
 
-local function gen_internal(searches)
+function Saved:gen_internal(searches)
 	for search in runtime.iterate_saved() do
 		ordered.insert(searches, search, {search, search, true})
 	end
 end
 
-local function gen_excluded(searches)
-	for _, tag in ipairs(config.values.exclude_tags) do
+function Saved:gen_excluded(searches)
+	for _, tag in ipairs(self.opts.exclude_tags) do
 		local search = "tag:" .. tag
 		ordered.insert(searches, search, {search, tag, false})
 	end
 end
 
 
-function Saved.get_searches()
+function Saved:get_searches()
 	local searches = ordered.new()
-	for _, gen in ipairs(generators) do
-		gen(searches)
+	for _, gen in ipairs(self.searches) do
+		gen(self, searches)
 	end
 	return searches
-end
-
---- Add a new generator for the next refresh
-function Saved.Register(generator)
-	table.insert(generators, generator)
 end
 
 local function ppsearch(tag)
@@ -70,10 +59,10 @@ function Saved:refresh()
 	self:unlock()
 	self:clear()
 	local box = {}
-	local searches = self.get_searches()
+	local searches = self:get_searches()
 	runtime.with_db(function (db)
 		for _, value in ordered.pairs(searches) do
-			make_entry(db, box, value[1], value[2], value[3])
+			make_entry(self, db, box, value[1], value[2], value[3])
 		end
 	end)
 	local formated = vim.tbl_map(ppsearch, box)
@@ -93,19 +82,19 @@ end
 --- Create a new window for saved searches
 --- @param opts table {kind}
 --- @return any
-function Saved:create(opts)
-	self.num = self.num + 1
+function Saved:create(opts, searches)
+	o.saved_options(opts)
 	return Buffer.create({
-		name = u.gen_name("galore-saved", self.num),
+		name = opts.bufname,
 		ft = "galore-saved",
 		kind = opts.kind,
 		cursor = "top",
-		mappings = config.values.key_bindings.saved,
+		mappings = opts.key_bindings,
 		init = function(buffer)
-			buffer.Register(gen_tags)
-			buffer.Register(gen_internal)
-			buffer.Register(gen_excluded)
+			buffer.searches = searches
+			buffer.opts = opts
 			buffer:refresh()
+			opts.init(buffer)
 		end,
 	}, Saved)
 end

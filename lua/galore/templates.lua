@@ -1,20 +1,17 @@
-local gu = require("galore.gmime.util")
-local gs = require("galore.gmime.stream")
-local ge = require("galore.gmime.crypt")
-local gc = require("galore.gmime.content")
-local gp = require("galore.gmime.parts")
-local go = require("galore.gmime.object")
+local gu = require("galore.gmime-util")
+
+local r = require("galore.render")
 local config = require("galore.config")
 local runtime = require("galore.runtime")
-local r = require("galore.render")
-local ffi = require("ffi")
 local u = require("galore.util")
-local builder = require("galore.builder")
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
 
 local M = {}
 
 local function addrlist_parse(str)
-	return gc.internet_address_list_parse(nil, str)
+	local ialist = gmime.InternetAddressList.parse(runtime.parser_opts, str)
+	return ialist
 end
 
 -- TODO, make things more composable
@@ -24,29 +21,13 @@ end
 
 -- TODO move helper functions that could be useful for outside of this file
 
-local function get_list(message)
-	local list = go.object_get_header(ffi.cast("GMimeObject *", message), "List-Post")
-	return list
-end
-
 -- Get the first none-nil value in a list of fields
 --- Can use non-standard fields
 local function get_backup(message, list)
-	-- for _, item in ipairs(list) do
-	-- 	local header = go.object_get_header(ffi.cast("GMimeObject *", message), item)
-	-- 	if header ~= nil then
-	-- 		local addr = addrlist_parse(header)
-	-- 		if addr ~= nil then
-	-- 			return addr
-	-- 		end
-	-- 	end
-	-- end
 	for _, v in ipairs(list) do
-		local addr = gp.message_get_address(message, v)
-		if addr ~= nil then
-			if gc.internet_address_list_length(addr) > 0 then
-				return addr
-			end
+		local addr = message:get_addresses(v)
+		if addr ~= nil and addr:length(addr) > 0 then
+			return addr
 		end
 	end
 	return nil
@@ -54,9 +35,9 @@ end
 
 local function remove(list, addr)
 	local i = 0
-	for demail in gc.internet_address_list_iter(list) do
+	for demail in gu.internet_address_list_iter(list) do
 		if gu.address_equal(demail, addr) then
-			gc.internet_address_list_remove_at(list, i)
+			list:remove_at(i)
 			return true
 		end
 		i = i + 1
@@ -67,16 +48,16 @@ end
 local function append_no_dup(addr, dst)
 	local matched = gu.ialist_contains(addr, dst)
 	if not matched then
-		gc.internet_address_list_add(dst, addr)
+		dst:add(addr)
 	end
 end
 
 local function PP(list)
-	return gc.internet_address_list_to_string(list, nil, false)
+	return list:to_string(nil, false)
 end
 
 local function pp(ia)
-	return gc.internet_address_to_string(ia, nil, false)
+	return ia:to_string(nil, false)
 end
 
 local function safelist(...)
@@ -92,8 +73,8 @@ end
 
 local function issubscribed(addresses)
 	local str = table.concat(config.values.mailinglist_subscribed, ", ")
-	local list = gc.internet_address_list_parse(runtime.parser_opts, str)
-	for v in gc.internet_address_list_iter(list) do
+	local list = gmime.InternetAddressList.parse(runtime.parser_opts, str)
+	for v in gu.internet_address_list_iter(list) do
 		if gu.ialist_contains(v, addresses) then
 			return true
 		end
@@ -101,15 +82,15 @@ local function issubscribed(addresses)
 end
 
 local function get_key(gpg_id)
-	local ctx = ge.gpg_context_new()
-	local mem = gs.stream_mem_new()
-	ge.crypto_context_export_keys(ctx, {gpg_id}, mem)
-	return gu.mem_to_string(mem)
+	local ctx = gmime.GpgContext.new()
+	local mem = gmime.StreamMem.new()
+	ctx:export_keys({gpg_id}, mem)
+	return mem:get_byte_array()
 end
 
 function M.compose_new(opts)
 	local headers = opts.headers or {}
-	local our = gc.internet_address_mailbox_new(config.values.name, config.values.primary_email)
+	local our = gmime.InternetAddressMailbox.new(config.values.name, config.values.primary_email)
 	headers.From = pp(our)
 
 	opts.headers = headers
@@ -136,32 +117,31 @@ end
 
 function M.load_headers(message, opts)
 	opts = opts or {}
-	local object = ffi.cast("GMimeObject *", message)
 	local headers = {}
-	for k, v in gu.header_iter(object) do
+	for k, v in gu.header_iter(message) do
 		headers[k] = v
 	end
 	opts.headers = headers
 end
 
---- TODO clean up mft stuff
 function M.subscribed(old_message)
-	local to = gp.message_get_to(old_message)
-	local cc = gp.message_get_cc(old_message)
+	local to = old_message:get_to(old_message)
+	local cc = old_message:get_cc(old_message)
 	if issubscribed(to) or issubscribed(cc) then
 		return true
 	end
 end
 
+--- TODO clean up mft stuff
 function M.mft_response(old_message, opts, type)
 	local headers = opts.headers or {}
 	if not type or type == "author" then
-		local from = get_backup(old_message, { "Mail-Reply-To", "reply_to", "from", "sender" })
+		local from = get_backup_header(old_message, { "Mail-Reply-To", "reply_to", "from", "sender" })
 		headers.To = from
 	elseif type == "reply_all" then
-		local mft = go.object_get_header(ffi.cast("GMimeObject *", message), "Mail-Followup-To")
+		local mft = old_message:get_header("Mail-Followup-To")
 		if mft ~= nil then
-			local ialist = gc.internet_address_list_parse(runtime.parser_opts, mft)
+			local ialist = gmime.InternetAddressList.parse(runtime.parser_opts, mft)
 			headers.To = PP(ialist)
 		else
 			M.response_message(old_message, opts, type)
@@ -188,7 +168,7 @@ function M.mft_insert_notsubbed(old_message, opts)
 	headers["Mail-Reply-To"] = opts.headers["Reply-To"]
 	local to = addrlist_parse(headers.To)
 	local cc = addrlist_parse(headers.Cc)
-	local ml = get_list(old_message)
+	local ml = old_message:get_header("List-Post")
 	if ml ~= nil and not (issubscribed(to) or issubscribed(cc)) then
 		ml = PP(ml)
 		headers["Mail-Followup-To"] = table.concat(safelist(headers.From, ml), ",")
@@ -197,8 +177,8 @@ function M.mft_insert_notsubbed(old_message, opts)
 end
 
 function M.smart_response(old_message, opts, backup_type)
-	local list = get_list(old_message)
-	if list then
+	local ml = old_message:get_header("List-Post")
+	if ml then
 		M.response_message(old_message, opts, "mailinglist")
 		return
 	end
@@ -207,52 +187,52 @@ end
 
 
 function M.response_message(old_message, opts, type)
+	local at = gmime.AddressType
 	local headers = opts.headers or {}
 
 	local addr = gu.get_our_email(old_message)
-	local our = gc.internet_address_mailbox_new(config.values.name, addr)
+	local our = gmime.InternetAddressMailbox.new(config.values.name, addr)
 	local our_str = pp(our)
 
-	local sub = gp.message_get_subject(old_message)
+	local sub = old_message:get_subject()
 	headers.Subject = u.add_prefix(sub, "Re:")
 
 	headers.From = our_str
-	--- should you set this if it's the same as from?
-	-- headers["Reply-To"] = our_str
 
-	local from = gu.addr_head(get_backup(old_message, { "reply_to", "from", "sender" }))
+	local from = get_backup(old_message, { at.REPLY_TO, at.FROM,  at.SENDER}):get_address()
 	if not type or type == "reply" then
 		headers.To = pp(from)
 	elseif type == "reply_all" then
 		--- these are destructive
-		local to = gp.message_get_address(old_message, "to")
+		local to = old_message:get_addresses(at.TO)
 		append_no_dup(from, to)
 		remove(to, our)
 		headers.To = PP(to)
 
-		local cc = gp.message_get_address(old_message, "cc")
+		local cc = old_message:get_addresses(at.CC)
 		remove(to, our)
 		headers.Cc = PP(cc)
 
-		local bcc = gp.message_get_address(old_message, "bcc")
+		local bcc = old_message:get_addresses(at.BCC)
 		remove(to, our)
 		headers.Bcc = PP(bcc)
 	elseif type == "mailinglist" then
-		local list = get_list(old_message)
-		headers.To = u.unmailto(list)
+		local ml = old_message:get_header("List-Post")
+		headers.To = u.unmailto(ml)
 	end
 	opts.headers = headers
 end
 
 function M.forward_resent(old_message, to_str, opts)
+	local at = gmime.AddressType
 	local headers = opts.headers or {}
 
 	local addr = gu.get_our_email(old_message)
-	local our = gc.internet_address_mailbox_new(config.values.name, addr)
+	local our = gmime.InternetAddressMailbox.new(config.values.name, addr)
 	local our_str = pp(our)
 	headers.From = our_str
 
-	local sub = gp.message_get_subject(old_message)
+	local sub = old_message:get_subject()
 	sub = u.add_prefix(sub, "FWD:")
 	headers.Subject = sub
 
@@ -260,44 +240,47 @@ function M.forward_resent(old_message, to_str, opts)
 
 	opts.headers = headers
 
-	headers["Resent-To"] = PP(gp.message_get_address(old_message, "To"))
-	headers["Resent-From"] = PP(gp.message_get_address(old_message, "From"))
-	headers["Resent-Cc"] = PP(gp.message_get_address(old_message, "Cc"))
-	headers["Resent-Bcc"] = PP(gp.message_get_address(old_message, "Bcc"))
-	headers["Recent-Date"] = gp.message_get_subject(old_message)
-	headers["Recent-Id"] = gp.message_get_message_id(old_message)
-	table.insert(opts.Body, {"--- Forwarded message ---"})
+	headers["Resent-To"] = PP(old_message:get_address(at.TO))
+	headers["Resent-From"] = PP(old_message:get_address(at.FROM))
+	headers["Resent-Cc"] = PP(old_message:get_address(at.CC))
+	headers["Resent-Bcc"] = PP(old_message:get_address(at.BCC))
+	headers["Recent-Date"] = old_message:get_date()
+	headers["Recent-Id"] = old_message:get_message_id()
+	-- insert before the body
+	table.insert(opts.Body, 1, {"--- Forwarded message ---"})
 	opts.headers = headers
 end
 
 function M.bounce(old_message, opts)
-	local from = get_backup(old_message, { "reply_to", "from", "sender" })
+	local at = gmime.AddressType
+	local from = get_backup(old_message, { at.REPLY_TO, at.FROM,  at.SENDER}):get_address(0)
 	M.forward_resent(old_message, from, opts)
 
-	local sub = gp.message_get_subject(old_message)
+	local sub = old_message:get_subject()
 	sub = u.add_prefix(sub, "Return:")
 	opts.headers.Subject = sub
 	table.remove(opts.Body, 1)
-	table.insert(opts.Body, {"--- This email isn't for me ---"})
+	table.insert(opts.Body, 1, {"--- This email isn't for me ---"})
 	opts.attachments = {} -- do not bounce the attachments
 end
 
 function M.Resent(old_message, opts)
+	local at = gmime.AddressType
 	local headers = opts.headers or {}
 
-	headers.To = PP(gp.message_get_address(old_message, "To"))
-	headers.From = PP(gp.message_get_address(old_message, "From"))
-	headers.Cc = PP(gp.message_get_address(old_message, "Cc"))
-	headers.Bcc = PP(gp.message_get_address(old_message, "Bcc"))
-	headers.Subject = gp.message_get_subject(old_message)
+	headers.To = PP(old_message:get_address(at.TO))
+	headers.From = PP(old_message:get_address(at.FROM))
+	headers.Cc = PP(old_message:get_address(at.CC))
+	headers.Bcc = PP(old_message:get_address(at.BCC))
+	headers.Subject = old_message:get_subject()
 
 	opts.headers = headers
 end
 
 function M.subscribe(old_message, opts)
-	local unsub = go.object_get_header(ffi.cast("GMimeObject *", old_message), "List-Subscribe")
+	local unsub = old_message:get_header("List-Subscribe")
 	if unsub == nil then
-		error("Subscribe header not supported")
+		error("Subscribe header not found")
 		return
 	end
 	local addr = gu.get_our_email(old_message)
@@ -309,9 +292,9 @@ function M.subscribe(old_message, opts)
 end
 
 function M.unsubscribe(old_message, opts)
-	local unsub = go.object_get_header(ffi.cast("GMimeObject *", old_message), "List-Unsubscribe")
+	local unsub = old_message:get_header("List-Unsubscribe")
 	if unsub == nil then
-		error("Unsubscribe header not supported")
+		error("Unsubscribe header not found")
 		return
 	end
 	local addr = gu.get_our_email(old_message)
@@ -320,15 +303,6 @@ function M.unsubscribe(old_message, opts)
 	headers.To = u.unmailto(unsub)
 	headers.Subject = "Unsubscribe"
 	opts.headers = headers
-end
-
-function M.send_template(opts)
-	local buf = {headers=opts.headers, body=opts.Body}
-	local send_opts = {}
-	local message = builder.create_message(buf, send_opts, opts.Attach, {}, builder.textbuilder)
-	-- something like this
-	-- job.send_mail(message, function ()
-	-- end
 end
 
 return M

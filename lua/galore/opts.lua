@@ -41,11 +41,46 @@ function M.bufcopy(opts)
 	return {}
 end
 
+local function runtime(opts)
+	opts.runtime = vim.F.if_nil(opts.runtime, {})
+	opts.runtime.config = vim.F.if_nil(opts.runtime.config, config.values.nm_config)
+	opts.runtime.db_path = vim.F.if_nil(opts.runtime.db_path, config.values.db_path)
+	opts.runtime.profile = vim.F.if_nil(opts.runtime.profile, config.values.nm_profile)
+	opts.runtime.mail_root = vim.F.if_nil(opts.runtime.config, config.values.mail_root)
+	opts.runtime.exclude_tags = vim.F.if_nil(opts.runtime.exclude_tags, config.values.synchronize_flags)
+	opts.runtime.synchronize_flags = vim.F.if_nil(opts.runtime.synchronize_flags, config.values.synchronize_flags)
+end
+
 function M.saved_options(opts)
 	opts.bufname = vim.F.if_nil(opts.bufname, "galore-saved")
 	opts.key_bindings = keybindings(opts.key_bindings, config.values.key_bindings.saved)
 	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
+	opts.default_browser = vim.F.if_nil(opts.default_browser, config.values.default_browser)
 	opts.init = vim.F.if_nil(opts.init, config.values.bufinit.saved)
+end
+
+local function default_view(def_view, context_value)
+	if def_view then
+		if def_view == "context" then
+			return context_value
+		end
+	end
+	if config.values.default_view then
+		if config.values.default_view == "context" then
+			return context_value
+		end
+	end
+	return vim.F.if_nil(def_view, config.values.default_view)
+end
+
+local function browser_opts(opts)
+	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
+	opts.sort = vim.F.if_nil(opts.sort, config.values.sort)
+	opts.limit = vim.F.if_nil(opts.limit, config.values.limit)
+	-- change this to format
+	opts.show_message_description = vim.F.if_nil(opts.show_message_description, config.values.show_message_description)
+	opts.emph = vim.F.if_nil(opts.emph, config.values.default_emph)
+	runtime(opts)
 end
 
 function M.tmb_options(opts)
@@ -54,13 +89,10 @@ function M.tmb_options(opts)
 	end)
 	opts.thread_reverse = vim.F.if_nil(opts.thread_reverse, config.values.thread_reverse)
 	opts.thread_expand = vim.F.if_nil(opts.thread_expand, config.values.thread_expand)
-	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
-	opts.sort = vim.F.if_nil(opts.sort, config.values.sort)
-	opts.thread_expand = vim.F.if_nil(opts.thread_expand, config.values.thread_expand)
-	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
-	opts.show_message_description = vim.F.if_nil(opts.show_message_description, config.values.show_message_description)
+	browser_opts(opts)
+
 	opts.key_bindings = keybindings(opts.key_bindings, config.values.key_bindings.thread_message_browser)
-	opts.emph = vim.F.if_nil(opts.emph, config.values.default_emph)
+	opts.default_view = default_view(default_view, "message_view")
 	opts.init = vim.F.if_nil(opts.init, config.values.bufinit.thread_message_browser)
 end
 
@@ -68,11 +100,9 @@ function M.mb_options(opts)
 	opts.bufname = parse_bufname(opts.bufname, function (search)
 		return "galore-messages: " .. search
 	end)
-	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
-	opts.sort = vim.F.if_nil(opts.sort, config.values.sort)
-	opts.show_message_description = vim.F.if_nil(opts.show_message_description, config.values.show_message_description)
+	browser_opts(opts)
 	opts.key_bindings = keybindings(opts.key_bindings, config.values.key_bindings.message_browser)
-	opts.emph = vim.F.if_nil(opts.emph, config.values.default_emph)
+	opts.default_view = default_view(default_view, "message_view")
 	opts.init = vim.F.if_nil(opts.init, config.values.bufinit.message_browser)
 end
 
@@ -80,11 +110,9 @@ function M.threads_options(opts)
 	opts.bufname = parse_bufname(opts.bufname, function (search)
 		return "galore-threads: " .. search
 	end)
-	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
-	opts.sort = vim.F.if_nil(opts.sort, config.values.sort)
-	opts.show_message_description = vim.F.if_nil(opts.show_message_description, config.values.show_message_description)
+	browser_opts(opts)
+	opts.default_view = default_view(default_view, "threads_view")
 	opts.key_bindings = keybindings(opts.key_bindings, config.values.key_bindings.thread_browser)
-	opts.emph = vim.F.if_nil(opts.emph, config.values.default_emph)
 	opts.init = vim.F.if_nil(opts.init, config.values.bufinit.thread_browser)
 end
 

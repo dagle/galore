@@ -1,13 +1,12 @@
 local r = require("galore.render")
 local u = require("galore.util")
-local gu = require("galore.gmime.util")
 local Buffer = require("galore.lib.buffer")
--- local Path = require("plenary.path")
--- local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
 local nm = require("galore.notmuch")
+local ui = require("galore.ui")
 local runtime = require("galore.runtime")
 local o = require("galore.opts")
+local gu = require("galore.gmime-util")
 
 local Thread = Buffer:new()
 
@@ -18,7 +17,6 @@ function Thread:update(tid)
 	self.states = {}
 	self.lines = {}
 
-	--- print in reverse that makes it easier to add attachments?
 	runtime.with_db(function (db)
 		local query = nm.create_query(db, "thread:" .. tid)
 		nm.query_set_sort(query, self.opts.sort)
@@ -31,28 +29,36 @@ function Thread:update(tid)
 			line.total = tot
 			line.index = i
 
-			local message = gu.construct(line.filenames)
+			local message = gu.parse_message(line.filenames[1])
 
 			local buffer = {}
 			r.show_headers(message, self.handle, { ns = self.ns }, line, message_start)
 			local body = vim.fn.line("$")
 			local state = r.render_message(r.default_render, message, buffer, {
-				ns = self.ns,
-				-- keys = line.keys
+				offset = body - 1,
+				keys = line.keys
 			})
 			table.insert(self.states, state)
 			table.insert(self.lines, line)
 			u.purge_empty(buffer)
 			self:set_lines(-1, -1, true, buffer)
 			local message_stop = vim.fn.line("$")
-			table.insert(self.thread_parts, {start=message_start, stop=message_stop, body= body, mid=line.id})
+			if not vim.tbl_isempty(state.attachments) then
+				ui.render_attachments(state.attachments, message_stop-1, self.handle, self.ns)
+			end
+			table.insert(self.thread_parts, {start=message_start, stop=message_stop, body=body, mid=line.id})
 			i = i + 1
 		end
 		self:set_lines(0, 1, true, {})
+		-- vim.schedule(function ()
+		-- 	for idx, state in ipairs(self.states) do
+		-- 		for _, cb in ipairs(state.callbacks) do
+		-- 			cb(self.handle, self.ns)
+		-- 		end
+		-- 		self.states[idx] = nil
+		-- 	end
+		-- end)
 	end)
-	-- for _, k in ipairs(self.thread_parts) do
-	-- We want to highlight the headers
-	-- end
 
 	self:lock()
 end
@@ -168,8 +174,6 @@ function Thread:commands()
 	-- end, {
 	-- })
 end
-
-
 
 function Thread:create(tid, opts)
 	o.thread_view_options(opts)
