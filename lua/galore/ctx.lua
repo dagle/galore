@@ -1,1 +1,0 @@
--- global state for galore

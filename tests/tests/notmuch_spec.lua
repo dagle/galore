@@ -56,8 +56,8 @@ describe("Testing notmuch", function ()
 
 	it("Get message", function ()
 		runtime.with_db_writer(function (db)
-			local query = nm.create_query(db, "tag:inbox")
-			local message = nm.query_get_messages(query)()
+			-- local query = nm.create_query(db, "tag:inbox")
+			-- local message = nm.query_get_messages(query)()
 		end)
 	end)
 
