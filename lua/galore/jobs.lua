@@ -135,7 +135,7 @@ local function raw_pipe(object, cmd, args, cb)
 			local dw = part:get_content()
 			dw:write_to_stream(stream)
 		else
-			local r = require("galore.render2")
+			local r = require("galore.render")
 			r.part_to_stream(part, {}, stream)
 		end
 	else

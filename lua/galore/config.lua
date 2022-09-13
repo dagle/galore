@@ -433,7 +433,7 @@ config.values = {
 				["mw"] = { rhs = function (message_view)
 					--- view the part in a webbrowser
 					local tele = require("galore.telescope")
-					local r = require("galore.render2")
+					local r = require("galore.render")
 					local jobs = require("galore.jobs")
 					local cb = function (object)
 						local content = object:get_content_type()

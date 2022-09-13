@@ -13,7 +13,7 @@ local action_state = require("telescope.actions.state")
 local action_set = require("telescope.actions.set")
 local config = require("galore.config")
 
-local r = require("galore.render2")
+local r = require("galore.render")
 
 local gu = require("galore.gmime-util")
 
