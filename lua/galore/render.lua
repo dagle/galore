@@ -364,6 +364,7 @@ M.default_render = {
 			self.draw(buf, format(str))
 		elseif type == "text/html" then
 			local str = M.part_to_string(part, opts)
+			if str == nil then str = "" end
 			local html = config.values.show_html(str, state.unsafe)
 			self.draw(buf, html)
 		end
