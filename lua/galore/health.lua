@@ -1,5 +1,5 @@
 local M = {}
-local health = require("health")
+local health = vim.health
 
 M.check = function()
 	health.report_start("Galore health check")
@@ -26,22 +26,22 @@ M.check = function()
 	if pcall(require, "cmp") then
 		health.report_ok("Found cmp")
 	else
-		health.report_error("Missing cmp for email completion")
+		health.report_info("Missing cmp for email completion")
 	end
 	if pcall(require, "telescope") then
 		health.report_ok("Found telescope")
 	else
-		health.report_error("Missing telescope for email search")
+		health.report_info("Missing telescope for email search")
 	end
 	if vim.fn.executable("mates") == 1 then
 		health.report_ok("Found mates")
 	else
-		health.report_error("Missing mates for vcard support")
+		health.report_info("Missing optional mates for vcard support")
 	end
 	if vim.fn.executable("w3m") == 1 then
 		health.report_ok("found w3m")
 	else
-		health.report_error("Missing w3m default html render")
+		health.report_info("Missing w3m, the default html render")
 	end
 end
 
