@@ -3,6 +3,9 @@ local u = require("galore.util")
 local nm = require("galore.notmuch")
 local log = require("galore.log")
 
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
+
 -- TODO Password
 
 local runtime_dir = vim.fn.stdpath('data') .. '/galore'
@@ -107,14 +110,14 @@ local function parser_warning(offset, error, item, _)
 end
 
 local function make_gmime_parser_options()
-	local parser_opt = gopt.parser_options_new()
+	local parser_opt = gmime.ParserOptions.new()
 	--- set more stuff
-	-- gopt.parser_options_set_warning_callback(parser_opt, parser_warning, nil)
+	-- parser_opt:set_warning_callback(parser_warning, nil)
 	runtime.parser_opts = parser_opt
 end
 
 local function make_gmime_format_options()
-	local format = gopt.format_options_new()
+	local format = gmime.FormatOptions.new()
 
 	runtime.format_opts = format
 end
@@ -150,8 +153,8 @@ function runtime.init()
 	end
 	notmuch_init(config.values.db_path, config.values.nm_config, config.values.nm_profile)
 	-- runtime.header_function = {}
-	-- make_gmime_parser_options()
-	-- make_gmime_format_options()
+	make_gmime_parser_options()
+	make_gmime_format_options()
 end
 
 return runtime
