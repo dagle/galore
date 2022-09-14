@@ -106,8 +106,11 @@ config.values = {
 		end
 	end,
 	from_length = 25, --- The from length the default show_message_descripiton
-	show_message_description = 
-		"{date} [{index:02}/{total:02}] {from:25}│ {subject} ({tags})",
+	show_message_description =
+		{
+			"{date} [{index:02}/{total:02}] {from:25}│ {subject} ({tags})",
+			"{date} [{index:02}/{total:02}] {from:25}│ {response}▶ ({tags})",
+		},
 	key_bindings = {
 		telescope = {
 			i = {
