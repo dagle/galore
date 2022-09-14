@@ -42,8 +42,13 @@ function Browser.set_line(browser, line)
 end
 
 --- TODO use opts
-function Browser.update_lines_helper(mode, path, bufnr, search, line_nr)
-	vim.fn.jobstart({"nm-livesearch", "-d", path, mode, search},
+function Browser.update_lines_helper(self, mode, search, line_nr)
+	local bufnr = self.handle
+	local args = {"nm-livesearch", "-d", self.opts.runtime.db_path, mode, search}
+	if self.opts.show_message_description then
+		args = vim.list_extend({"-e", self.opts.show_message_description}, args)
+	end
+	vim.fn.jobstart(args,
 	{
 		stdout_buffered = true,
 		stderr_buffered = true,
@@ -72,10 +77,14 @@ function Browser.get_entries(self, mode, buffer_runner)
 
 	local job
 	local iter
+	local args = {"-d", self.opts.runtime.db_path, mode, self.search}
+	if self.opts.show_message_description then
+		args = vim.list_extend({"-e", self.opts.show_message_description}, args)
+	end
 
 	job = async_job.spawn {
 		command = "nm-livesearch",
-		args = {"-d", self.opts.runtime.db_path, mode, self.search},
+		args = args,
 		writer = writer,
 
 		stdout = stdout,

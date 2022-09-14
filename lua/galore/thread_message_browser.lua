@@ -262,7 +262,7 @@ end
 
 function Tmb:update(line_nr)
 	local id = self.State[line_nr]
-	browser.update_lines_helper("show-single-tree", self.opts.runtime.db_path, self.handle, "id:"..id, line_nr)
+	browser.update_lines_helper(self, "show-single-tree", "id:"..id, line_nr)
 end
 
 function Tmb:commands()

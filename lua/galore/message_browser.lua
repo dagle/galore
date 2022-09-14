@@ -123,7 +123,7 @@ end
 
 function Mb:update(line_nr)
 	local id = self.State[line_nr]
-	browser.update_lines_helper("show-message", self.opts.runtime.db_path, self.handle, "id:"..id, line_nr)
+	browser.update_lines_helper(self, "show-message", "id:"..id, line_nr)
 end
 
 function Mb:commands()

@@ -106,11 +106,8 @@ config.values = {
 		end
 	end,
 	from_length = 25, --- The from length the default show_message_descripiton
-	show_message_description = function(line, group)
-		-- We don't do it like this, show_message_description should be a template sent to nm-livesearch
-		-- local def = require("galore.default")
-		-- return def.message_description(line, group)
-	end,
+	show_message_description = 
+		"{date} [{index:02}/{total:02}] {from:25}│ {subject} ({tags})",
 	key_bindings = {
 		telescope = {
 			i = {

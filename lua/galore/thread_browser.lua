@@ -105,7 +105,7 @@ end
 
 function Threads:update(line_nr)
 	local id = self.State[line_nr]
-	browser.update_lines_helper("show-thread", self.opts.runtime.db_path, self.handle, "id:"..id, line_nr)
+	browser.update_lines_helper(self, "show-thread", "thread:"..id, line_nr)
 end
 
 function Threads:commands()
