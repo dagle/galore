@@ -37,7 +37,15 @@ Atm it's pre 0.1 software. If you don't intend to read code / write patches, you
 Galore requires the git branch of neovim or 0.7 to work.
 
 Galore uses luajit and the C-bindings to do its magic, depending on notmuch and gmime.
-To view html emails, you need a htmlviewer, by default it uses html2text.
+To view html emails, you need a htmlviewer, by default it uses w3m.
+
+To be able to run qeuries async it uses another program called [nm-livesearch](https://github.com/dagle/nm-livesearch),
+it's used to both populate browser windows and telescope. You *need* to install it before using galore
+
+Some html emails are just to impossible to render in galore (or any text email client), for these
+you need full blown webbrowser. For this you can use a tool like
+[browser-pipe](https://github.com/dagle/browser-pipe) and then pipe the html into it.
+(look in config for an example)
 
 You need to install neovim and notmuch.
 
@@ -52,15 +60,18 @@ use {'dagle/galore', run = 'make',
 		'nvim-lua/popup.nvim',
 		'nvim-lua/plenary.nvim',
 		'hrsh7th/nvim-cmp',
+		rocks = {'lgi'}, -- or install lgi with your package manager
 	}
 }
 ```
 You need to install **telescope** and **cmp** if you want support for that
 
-For livesearch support in telescope you need to install [nm-livesearch](https://github.com/dagle/nm-livesearch)
+It also has optional support for the address book mates,  so install that for
+mates support (will be moved to a seperate plugin later)
 
-It also has optional support for the address book mates,  so in stall that for
-mates support
+After installing do
+:checkhealth galore
+To make sure everything is working
 
 ## Usage
 After installing galore, you need to add the following to init:
@@ -128,31 +139,30 @@ And with a couple of windows together
 Global functions
 ----------------
 Most of galore functionallity can be ran globaly, from anywhere but you want to make sure
-that libs are loaded (they are lazy loaded by default). 
-
-Here are 2 examples:
+that libs are loaded and that we setup variables (they are lazy loaded).
+Here is an example of a function that connects (if not connected) and do a telescope search:
 
 ``` lua
-vim.keymap.set('n', '<leader>mf', function()
+vim.keymap.set('n', '<leader>ms', function()
 	require("galore").withconnect(function ()
-		require("galore.telescope").load_draft() end)
-	end, {desc='Load draft'})
-
-vim.keymap.set('n', '<leader>mw', function()
-	require("galore").withconnect(function ()
-		require("galore.thread_message_browser"):create("tag:work", {}) end)
-	end, {desc='Open work inbox'})
+		require("galore.telescope").notmuch_search() end)
+	end, {desc='Search email'})
 ```
+Inside of galore you can call require("galore.telescope").notmuch_search() directly.
+
 
 Some jobs doesn't require notmuch to be started:
-
 ``` lua
 require("galore.jobs").new()
 ```
-But most do.
 
 config values
 -------------
+A lot of values are loaded from the notmuch config but
+can be overridden. I reccomend setting values in the notmuch config
+and let galore fetch them from there. That way you will not need to
+write values to multiple places.
+
 For settings to change, look in lua/galore/config.lua
 for values to change with setup.
 They will be documented here in the future.
@@ -225,21 +235,4 @@ end
 vim.keymap.set('n', '<leader>mg', gpgtui_toggle, {noremap = true, silent = true})
 ```
 
-If you wanna manually add vcards you can do the following:
-``` lua
-local terms = require("toggleterm.terminal")
-local gpgtui = terms.Terminal:new({
-  cmd = "khard add",
-  direction = "float",
-  float_opts = {
-    border = "single",
-  },
-})
-
-local function gpgtui_toggle()
-  gpgtui:toggle()
-end
-
-vim.keymap.set('n', '<leader>mk', gpgtui_toggle, {noremap = true, silent = true})
-```
-etc etc
+Look in examples for more ways extend galore for your needs.
