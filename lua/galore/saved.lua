@@ -51,7 +51,9 @@ function Saved:get_searches()
 end
 
 local function ppsearch(tag)
-	return string.format("%d(%d) %-30s (%s)", unpack(tag))
+	local num, unread, name, search = unpack(tag)
+	local left = string.format("%d(%d) %s", num, unread, name)
+	return string.format("%-35s (%s)", left, search)
 end
 
 --- Redraw all the saved searches and update the count
