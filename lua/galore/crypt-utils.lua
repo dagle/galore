@@ -28,19 +28,17 @@ function M.verify_signed(object)
 end
 
 function M.decrypt_and_verify(obj, flags, key)
-	-- local result = gmime.DecryptResult.new()
-	-- how to make result work, since it's **
-	local decrypted, err = obj:decrypt(
+	--- do we get err also from this email?
+	local decrypted, result = obj:decrypt(
 		flags,
-		key,
-		result
+		key
 	)
 
-	if err ~= nil then
-		local str = string.format("Failed to decrypt message: %s", err)
-		vim.notify(str, vim.log.levels.ERROR)
-		return
-	end
+	-- if err ~= nil then
+	-- 	local str = string.format("Failed to decrypt message: %s", err)
+	-- 	vim.notify(str, vim.log.levels.ERROR)
+	-- 	return
+	-- end
 
 	local sign
 	if result then

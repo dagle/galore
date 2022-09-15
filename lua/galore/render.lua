@@ -359,7 +359,6 @@ M.default_render = {
 		local type = mime_type(part)
 		if type == "text/plain" then
 			local str = M.part_to_string(part, opts)
-			-- TODO this crashes sometimes
 			if str == nil then str = "" end
 			self.draw(buf, format(str))
 		elseif type == "text/html" then
@@ -382,18 +381,14 @@ M.default_render = {
 			config.values.annotate_signature(bufnr, ns, list, before, after, names)
 	end,
 	encrypted = function (self, mp, buf, opts, state)
-		-- Idk, these feels bad, do we only check with key or
-		-- we do both?
 		local de_part, verified, new_keys
 		for _, key in pairs(opts.keys) do
-			--- TODO what flags be?
-			--- should we really apply all keys and not just with the correct name?
-			de_part, verified, new_keys = gcu.decrypt_and_verify(mp, "none", key)
+			de_part, verified, new_keys =
+				gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, key)
 			if de_part ~= nil then
 				return de_part, verified, new_keys
 			end
 		end
-		-- de_part, verified, new_keys = gcu.decrypt_and_verify(mp, config.values.decrypt_flags, runtime.get_password, nil)
 		return de_part, verified, new_keys
 	end,
 }

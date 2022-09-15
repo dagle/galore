@@ -67,9 +67,9 @@ end
 
 -- encrypt a part and return the multipart
 function M.secure(part, opts, recipients)
-	local ctx = ge.gpg_context_new()
+	local ctx = gmime.GpgContext.new()
 	if opts.encrypt then
-		local encrypt, err = gcu.encrypt(ctx, part, opts, recipients)
+		local encrypt, err = gmime.MultipartEncrypted.encrypt(ctx, part, opts.sign, opts.gpg_id, opts.encrypt_flags, recipients)
 		if encrypt ~= nil then
 			return encrypt
 		end

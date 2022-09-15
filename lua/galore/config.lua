@@ -42,8 +42,6 @@ config.values = {
 	qoute_header = function(date, author)
 		return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
 	end,
-	always_complete = false, -- always complete addresses, even if not in address header
-	-- move this to example
 	alt_mode = true, -- Only render one part of alts 
 	alt_order = {"text/plain", "text/enriched", "text/html"}, -- table or function?
 	-- alt_order = {"text/html", "text/plain", "text/enriched"}, -- table or function?
@@ -76,9 +74,9 @@ config.values = {
 		def.init(opts, searches)
 	end,
 	validate_key = function (status) --- what level of security we should accept?
-		-- return bit.band(status, gmime.SignatureStatus.VALID) or bit.band(status, gmime.SignatureStatus.GREEN)
-		-- return status gmime.SignatureStatus.VALID
-		-- return status.VALID or status.GREEN
+		local lgi = require 'lgi'
+		local gmime = lgi.require("GMime", "3.0")
+		return bit.band(status, gmime.SignatureStatus.VALID) or bit.band(status, gmime.SignatureStatus.GREEN)
 	end,
 	verify_flags = "keyserver", -- "none"|"session"|"noverify"|"keyserver"|"online"
 	decrypt_flags = "keyserver", -- "none"|"keyserver"|"online"
@@ -337,10 +335,6 @@ config.values = {
 					local cb = require("galore.callback")
 					cb.yank_browser(tb)
 				end, desc="Copy thread id"},
-				--- add this later
-				-- ["<C-t>"] = function (tb)
-				-- 	tb:mb_search()
-				-- end,
 				["A"] = { rhs = function (tb)
 					require("galore.runtime").add_saved(tb.search)
 				end, desc = "Save this search"},
@@ -569,7 +563,7 @@ config.values = {
 					local telescope = require("galore.telescope")
 					--- Todo, there is no message in compose
 					local mid = compose.message:get_message_id()
-					telescope.goto_references(message_id)
+					telescope.goto_references(mid)
 				end, desc="goto References"},
 			},
 		},
@@ -597,6 +591,7 @@ config.values = {
 		thread_view = function (buffer)
 		end,
 		compose = function (buffer)
+			-- TODO
 			-- BufWipout?
 			-- vim.api.nvim_create_autocmd("BufDelete", {
 			-- 	callback = function ()

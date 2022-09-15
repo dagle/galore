@@ -1,3 +1,4 @@
+--- TODO, this file includes to much globally
 local message_view = require("galore.message_view")
 local thread_view = require("galore.thread_view")
 local compose = require("galore.compose")
@@ -131,8 +132,8 @@ function M.change_tag(browser, tag)
 		runtime.with_db_writer(function(db)
 			nu.change_tag(db, id, tag)
 			nu.tag_if_nil(db, id, config.values.empty_tag)
-			nu.update_line(db, browser, nil, vline)
 		end)
+		browser:update(vline)
 	end
 end
 
@@ -157,7 +158,7 @@ function M.change_tags_threads(tb, tag)
 			nu.change_tag(db, id, tag)
 			nu.tag_if_nil(db, id, config.value.empty_tag)
 		end
-		nu.update_line(db, tb, nil, vline)
+		tb:update(vline)
 	end)
 end
 

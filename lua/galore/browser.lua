@@ -1,14 +1,5 @@
 local Browser = {}
 
---- Redraw a single line in a browser
--- function Browser.update(browser, line_info, line)
--- 	-- use browser.opts.show_message_description instead
--- 	local formated = config.values.show_message_description(line_info)
--- 	browser:unlock()
--- 	browser:set_lines(line-1, line, true, {formated})
--- 	browser:lock()
--- end
-
 --- Move to the next line in the browser
 function Browser.next(browser, line)
 	line = math.min(line + 1, #browser.State)
@@ -41,7 +32,6 @@ function Browser.set_line(browser, line)
 	end
 end
 
---- TODO use opts
 function Browser.update_lines_helper(self, mode, search, line_nr)
 	local bufnr = self.handle
 	local args = {"nm-livesearch", "-d", self.opts.runtime.db_path, mode, search}

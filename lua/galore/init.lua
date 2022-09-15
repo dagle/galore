@@ -56,21 +56,4 @@ function galore.mailto(kind, str)
 	end)
 end
 
---- setup things like
---- galore.desktop
---- xdg-mime?
---- autocrypt?
-function galore.configure()
-	vim.fn.system('xdg-mime default galore.desktop "x-scheme-handler/mailto"')
-	-- vim.ui.input({prompt="Setup autoconfig?"}, function(choice)
-	-- 	if not choice then
-	-- 		return
-	-- 	end
-	-- 	choice = choice:lower()
-	-- 	if choice == "yes" or  choice == "y" then
-	-- 		require("galore.autocrypt").init()
-	-- 	end
-	-- end)
-end
-
 return galore

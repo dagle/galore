@@ -5,65 +5,6 @@ local browser = require("galore.browser")
 
 local Mb = Buffer:new()
 
--- local function get_message(message, i, total)
--- 	local id = nm.message_get_id(message)
--- 	local sub = nm.message_get_header(message, "Subject")
--- 	local tags = u.collect(nm.message_get_tags(message))
--- 	local from = nm.message_get_header(message, "From")
--- 	local date = nm.message_get_date(message)
--- 	local matched = nm.message_get_flag(message, 0)
--- 	local excluded = nm.message_get_flag(message, 1)
--- 	return {
--- 		id = id,
--- 		level = 0,
--- 		-- pre = nil,
--- 		index = i,
--- 		total = total,
--- 		date = date,
--- 		from = from,
--- 		sub = sub,
--- 		tags = tags,
--- 		matched = matched,
--- 		excluded = excluded,
--- 	}
--- end
---
--- function Mb:get_messages(db, search)
--- 	self.State = {}
--- 	local lines = {}
--- 	local query = nm.create_query(db, search)
--- 	for _, ex in ipairs(self.opts.exclude_tags) do
--- 		nm.query_add_tag_exclude(query, ex)
--- 	end
--- 	local i = 1
--- 	local first = true
--- 	nm.query_set_sort(query, self.opts.sort)
---
--- 	for message in nm.query_get_messages(query) do
--- 		local line = get_message(message, 1, 1)
--- 		local formated = self.opts.show_message_description(line)
--- 		table.insert(lines, formated)
--- 		table.insert(self.State, line.id)
--- 		if self.maxlines and self.maxlines < i then
--- 			break
--- 		end
--- 		if i % 1000 == 0 then
--- 			self:set_lines(-1, -1, false, lines)
--- 			lines = {}
--- 			if first then
--- 				self:set_lines(0, 1, true, {})
--- 				first = false
--- 			end
--- 		end
--- 		i = i + 1
--- 	end
--- 	self:set_lines(-1, -1, false, lines)
--- 	if first then
--- 		self:set_lines(0, 1, true, {})
--- 	end
--- 	self:lock()
--- end
-
 function Mb:tmb_search()
 	local tmb = require("galore.thread_message_browser")
 	local opts = o.bufcopy(self.opts)
@@ -101,11 +42,13 @@ local function mb_get(self)
 end
 
 function Mb:async_runner()
+	self.updating = true
 	local func = async.void(function ()
-		local runner = mb_get(self)
+		self.runner = mb_get(self)
 		pcall(function ()
-			runner.resume()
+			self.runner.resume()
 			self:lock()
+			self.updating = false;
 		end)
 	end)
 	func()

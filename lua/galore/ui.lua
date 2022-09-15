@@ -1,6 +1,3 @@
--- local gs = require("galore.gmime.stream")
--- local convert = require("galore.gmime.convert")
--- local ffi = require("ffi")
 local M = {}
 
 --- Adds the attachments in the bottom of the buffer

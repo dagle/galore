@@ -103,14 +103,6 @@ function M.save_path(path, default_path)
 	return path
 end
 
-function M.split_lines(str)
-	local lines = {}
-	for s in str:gmatch("[^\r\n]+") do
-		table.insert(lines, s)
-	end
-	return lines
-end
-
 function M.gen_name(name, num)
 	if num == 1 then
 		return name
@@ -128,14 +120,7 @@ function M.format(part, qoute)
 end
 
 
-local completion_pattern =  "^\\(Resent-\\)\\?\\(To\\|B\\?Cc\\|Reply-To\\|From\\|Mail-Followup-To\\|Mail-Copies-To\\):"
-
-function M.completion_header(line)
-	return vim.fn.match(line, completion_pattern) >= 0
-end
-
 function M.purge_empty(list)
-	--- remove any empty line at the start of the list
 	for i, v in ipairs(list) do
 		if v == "" then
 			table.remove(list, i)

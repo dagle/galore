@@ -62,64 +62,20 @@ function Message:update2(line)
 	self:lock()
 end
 
--- function Message:update(line)
--- 	self:unlock()
--- 	self:clear()
--- 	local message = gu.construct(line.filenames)
--- 	-- au.process_au(message, line)
--- 	if message then
--- 		vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
--- 		self.message = message
--- 		local buffer = {}
--- 		r.show_headers(message, self.handle, { ns = self.ns }, self.line)
--- 		local offset = vim.fn.line("$") - 1
--- 		self.state = r.render_message(r.default_render, message, buffer, {
--- 			offset = offset,
--- 			keys = line.keys
--- 		})
--- 		u.purge_empty(buffer)
--- 		self:set_lines(-1, -1, true, buffer)
--- 		local ns_line = vim.fn.line("$") - 1
--- 		if not vim.tbl_isempty(self.state.attachments) then
--- 			ui.render_attachments(self.state.attachments, ns_line, self.handle, self.ns)
--- 		end
--- 		vim.schedule(function ()
--- 			for i, cb in ipairs(self.state.callbacks) do
--- 				cb(self.handle, self.ns)
--- 				self.state.callbacks[i] = nil
--- 			end
--- 		end)
--- 	end
--- 	self:lock()
--- end
-
 function Message:redraw(line)
 	self:focus()
 	self:update(line)
 end
 
--- move this config!/views
--- 
 local function mark_read(self, pb, line, vline)
 	runtime.with_db_writer(function (db)
 		self.opts.tag_unread(db, line.id)
 		nu.tag_if_nil(db, line.id, self.opts.empty_tag)
 		nu.update_line(db, line)
 	end)
-	-- runtime.with_db(function (db)
-	-- end)
 	if vline and pb then
 		pb:update(vline)
 	end
-end
-
--- move this config!
-local function mark_read_delay(self, pb, line, vline)
-	local timer = vim.loop.new_timer()
-	self.add_timer(timer)
-	timer:start(5000, 0, vim.schedule_wrap(function ()
-		mark_read(self, pb, line, vline)
-	end))
 end
 
 function Message:next()
@@ -134,24 +90,6 @@ function Message:prev()
 		local mid, vline = browser.prev(self.parent, self.vline)
 		Message:create(mid, {kind="replace", parent=self.parent, vline=vline})
 	end
-end
-
-local function verify_signatures(self)
-	local state = {}
-	local function verify(_, part, _)
-		-- if gp.is_multipart_signed(part) then
-		-- 	local verified = gcu.verify_signed(part)
-		-- 	if state.verified == nil then
-		-- 		state.verified = verified
-		-- 	end
-		-- 	state.verified = state.verified and verified
-		-- end
-	end
-	if not self.message then
-		return
-	end
-	-- gp.message_foreach_dfs(self.message, verify)
-	return state.verified or state.verified == nil
 end
 
 function Message:commands()
@@ -172,10 +110,6 @@ function Message:commands()
 		end
 		return files
 	end,
-	})
-	vim.api.nvim_buf_create_user_command(self.handle, "GaloreVerify", function ()
-		print(verify_signatures(self))
-	end, {
 	})
 end
 

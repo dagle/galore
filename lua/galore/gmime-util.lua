@@ -3,6 +3,17 @@ local gmime = lgi.require("GMime", "3.0")
 
 local M = {}
 
+function M.get_domainname(mail_str)
+	local fqdn = mail_str:gsub(".*@(%w*)%.(%w*).*", "%1.%2")
+	return fqdn
+end
+
+function M.make_id(from)
+	local fdqn = M.get_domainname(from)
+	return gmime.utils_generate_message_id(fdqn)
+end
+
+
 function M.mime_type(object)
 	local ct = object:get_content_type()
 	local type = ct:get_mime_type()

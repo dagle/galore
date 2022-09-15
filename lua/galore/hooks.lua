@@ -1,42 +1,31 @@
 --- A hook takes a message and returns a boolean if success
-
-local gp = require("galore.gmime.parts")
-local go = require("galore.gmime.object")
 local config = require("galore.config")
 local job = require("galore.jobs")
-local ffi = require("ffi")
+
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
 
 local M = {}
 
 -- A pre hook is always return a boolean. If a pre hook return false
 
--- maybe move this here
--- function M.mark_read(parent, line_info, vline)
--- 	runtime.with_db_writer(function (db)
--- 		config.values.tag_unread(db, line_info.id)
--- 		nu.tag_if_nil(db, line_info, config.values.empty_tag)
--- 		nu.update_line(db, parent, line_info, vline)
--- 	end)
--- end
-
---- @param message gmime.Message
+--- @param message any
 --- @return boolean
 local function has_attachment(message)
 	local state = {}
 	local find_attachment = function (_, part, _)
-		if gp.is_part(part) and gp.part_is_attachment(part) then
+		if gmime.Part:is_type_of(part) and part:is_attchment(part) then
 			state.attachment = true
 		end
 	end
-	gp.message_foreach(message, find_attachment)
+	message:foreach(find_attachment)
 	return state.attachment
 end
 
 --- Pre sending, check for attachments
---- @param message gmime.Message
 --- @return boolean
 function M.missed_attachment(message)
-	local sub = gp.message_get_subject(message)
+	local sub = message:get_subject()
 	local start, _ = string.find(sub, "[a,A]ttachment")
 	local re, _ = string.find(sub, "^%s*Re:")
 	if start and not re and not has_attachment(message) then
@@ -63,15 +52,10 @@ function M.confirm()
 	return ret
 end
 
--- XXX do error handling.
---- Pre send, insert the mail into fcc dir and then remove FCC header
---- This is relative to your maildir
---- @param message  gmime.Message
 --- @return boolean
 function M.fcc_nm_insert(message)
-	local obj = ffi.cast("GMimeObject *", message)
-	local fcc_str = go.object_get_header(obj, "FCC")
-	go.object_remove_header(obj, "FCC")
+	local fcc_str = message:get_header("FCC")
+	message:remove_header("FCC")
 
 	-- Should we try to guard users?
 	-- this shouldn't be an abs path
@@ -88,9 +72,8 @@ end
 --- @param message 
 --- @return boolean
 function M.fcc_fs(message)
-	local obj = ffi.cast("GMimeObject *", message)
-	local fcc_str = go.object_get_header(obj, "FCC")
-	go.object_remove_header(obj, "FCC")
+	local fcc_str = message:get_header("FCC")
+	message:remove_header("FCC")
 end
 
 function M.preview()

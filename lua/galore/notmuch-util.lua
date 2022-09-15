@@ -1,6 +1,5 @@
 local nm = require("galore.notmuch")
 local u = require("galore.util")
--- local browser = require("galore.browser")
 
 local M = {}
 

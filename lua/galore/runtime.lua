@@ -6,8 +6,6 @@ local log = require("galore.log")
 local lgi = require 'lgi'
 local gmime = lgi.require("GMime", "3.0")
 
--- TODO Password
-
 local runtime_dir = vim.fn.stdpath('data') .. '/galore'
 if os.getenv("GALOREPATH") ~= nil then
 	runtime_dir = os.getenv("GALOREPATH")
@@ -17,7 +15,6 @@ local save_file = runtime_dir .. '/nm_saved.txt'
 
 local runtime = {}
 
---- remove this later
 local function get(db, name)
 	return table.concat(u.collect(nm.config_get_values_string(db, name)))
 end
@@ -49,13 +46,9 @@ function runtime.iterate_saved()
 	return io.lines(save_file)
 end
 
--- local db
-
---- By default, these variables should be null and use the notmuch default
 local function notmuch_init(path, conf, profile)
 	local mode = 0
 	local db = nm.db_open_with_config_raw(path, mode, conf, profile)
-	-- db = nm.db_open_with_config(path, mode, conf, profile)
 	local name = get(db, "user.name")
 	local primary_email = get(db, "user.primary_email")
 	local other_email = gets(db, "user.other_email")
@@ -69,7 +62,6 @@ local function notmuch_init(path, conf, profile)
 	config.values.other_email = vim.F.if_nil(config.values.other_email, other_email)
 	config.values.exclude_tags = vim.F.if_nil(config.values.exclude_tags, exclude_tags)
 	config.values.mail_root = vim.F.if_nil(config.values.mail_root, mail_root)
-	--- shouldn't we just override it at this point?
 	config.values.db_path = vim.F.if_nil(config.values.db_path, db_path)
 	nm.db_close(db)
 end
@@ -88,7 +80,6 @@ end
 
 function runtime.with_db_writer(func)
 	local db = nm.db_open_with_config_raw(config.values.db_path, 1, config.values.nm_config, config.values.nm_profile)
-	--- we do pcall here so we don't end up erroring while having a write-lock
 	local ok, err = pcall(func, db)
 	if not ok then
 		vim.notify(err, vim.log.levels.ERROR)
@@ -106,13 +97,10 @@ local function parser_warning(offset, error, item, _)
 	local level = convert.parser_warning_level(error)
 	local notification = string.format("Parsing error, %s: %s at: %d ", error_str, str, off)
 	log.debug(notification)
-	-- vim.notify(notification, level)
 end
 
 local function make_gmime_parser_options()
 	local parser_opt = gmime.ParserOptions.new()
-	--- set more stuff
-	-- parser_opt:set_warning_callback(parser_warning, nil)
 	runtime.parser_opts = parser_opt
 end
 
@@ -120,24 +108,6 @@ local function make_gmime_format_options()
 	local format = gmime.FormatOptions.new()
 
 	runtime.format_opts = format
-end
-
---- this doesn't seem to work because
---- gpg hates me (it's mutal)
-function runtime.get_password(ctx, uid, prompt, reprompt, response_stream)
-	--- use ctx? uid?
-	--- do we need to convert ui, prompt to string?
-	if reprompt then
-		prompt = "Try again " .. prompt
-	end
-	vim.fn.inputsave()
-	local input = vim.fn.inputsecret(prompt)
-	vim.fn.inputrestore()
-	if input ~= nil or input ~= "" then
-		-- gs.stream_write_string(response_stream, input)
-		return true
-	end
-	return false
 end
 
 function runtime.runtime_dir()
