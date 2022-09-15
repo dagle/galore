@@ -1,17 +1,20 @@
 local ok, cmp = pcall(require, "cmp")
-local config = require("galore.config")
+
 if not ok then
 	vim.api.nvim_err_writeln("Error can't load cmp needed for address book")
 	return
 end
-
 local Job = require("plenary.job")
-local u = require("galore.util")
+
+local completion_pattern =  "\\c^\\(Resent-\\)\\?\\(To\\|B\\?Cc\\|Reply-To\\|From\\|Mail-Followup-To\\|Mail-Copies-To\\):"
+
+local defaults = {
+  keyword_pattern = completion_pattern,
+  filetype = "mail",
+  query = "not list and not tag:spam"
+}
 
 local source = {}
-
--- this should be configure able
-source.query = "not list and not tag:spam"
 
 source.new = function()
 	return setmetatable({ cache = {} }, {
@@ -21,8 +24,9 @@ end
 
 ---Return this source is available in current context or not. (Optional)
 ---@return boolean
-function source:is_available()
-	return vim.bo.filetype == "mail"
+function source:is_available(params)
+	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
+	return vim.bo.filetype == opts.mail
 end
 
 ---Return the debug name of this source. (Optional)
@@ -34,8 +38,9 @@ end
 ---Return keyword pattern for triggering completion. (Optional)
 ---If this is ommited, nvim-cmp will use default keyword pattern. See |cmp-config.completion.keyword_pattern|
 ---@return string
-function source:get_keyword_pattern()
-	return [[\k\+]]
+function source:get_keyword_pattern(params)
+	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
+	return opts.keyword_pattern
 end
 
 ---Return trigger characters for triggering completion. (Optional)
@@ -48,12 +53,9 @@ end
 ---@param params cmp.SourceCompletionApiParams
 ---@param callback fun(response: lsp.CompletionResponse|nil)
 function source:complete(params, callback)
+	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
 	local bufnr = vim.api.nvim_get_current_buf()
 
-	if not config.values.always_complete and not u.completion_header(params.context.cursor_before_line) then
-		callback(nil)
-		return
-	end
 	if not self.cache[bufnr] then
 		Job
 			:new({
@@ -61,7 +63,7 @@ function source:complete(params, callback)
 				args = {
 					"address",
 					"--deduplicate=address",
-					self.query },
+					opts.query },
 				on_exit = function(j, ret_val)
 					if ret_val ~= 0 then
 						callback(nil)
