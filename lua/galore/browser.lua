@@ -51,7 +51,7 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
 			vim.api.nvim_err_write(string.format("Couldn't update line for %s and %d", search, line_nr))
 		end,
 		on_stdout = function (_, data, _)
-			local message = vim.fn.json_decode(data)
+			local message = vim.json.decode(data)
 			vim.api.nvim_buf_set_option(bufnr, "readonly", false)
 			vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
 			vim.api.nvim_buf_set_lines(bufnr, line_nr-1, line_nr, false, {message.entry})
@@ -76,6 +76,10 @@ function Browser.get_entries(self, mode, buffer_runner)
 	if self.opts.show_message_description then
 		args = vim.list_extend({"-e", self.opts.show_message_description[1], "-r", self.opts.show_message_description[2]}, args)
 	end
+	if self.opts.emph then
+		local highlight = vim.json.encode(self.opts.emph)
+		args = vim.list_extend({"-h", highlight}, args)
+	end
 
 	job = async_job.spawn {
 		command = "nm-livesearch",
@@ -98,7 +102,7 @@ function Browser.get_entries(self, mode, buffer_runner)
 				local i = 1
 
 				for line in iter do
-					local entry = vim.fn.json_decode(line)
+					local entry = vim.json.decode(line)
 					i = i + buffer_runner(entry)
 					if numlocal and  i > numlocal then
 						return
