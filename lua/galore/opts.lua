@@ -76,7 +76,7 @@ end
 local function browser_opts(opts)
 	opts.exclude_tags = vim.F.if_nil(opts.exclude_tags, config.values.exclude_tags)
 	opts.sort = vim.F.if_nil(opts.sort, config.values.sort)
-	opts.limit = vim.F.if_nil(opts.limit, config.values.limit)
+	opts.limit = vim.F.if_nil(opts.limit, config.values.browser_limit)
 	-- change this to format
 	opts.show_message_description = vim.F.if_nil(opts.show_message_description, config.values.show_message_description)
 	opts.emph = vim.F.if_nil(opts.emph, config.values.default_emph)

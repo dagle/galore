@@ -28,10 +28,13 @@ config.values = {
 	thread_expand = true,
 	thread_reverse = false,
 	browser_grouped = true,
+	browser_limit = false, -- nil|number, how many browsers entries should we fetch before we stop?
+	-- when you scroll to the bottom, we resume the printer
+
 	-- Order dependant, true means always show (with "" if no value), false means only show if we added a value to it and not in the list = hidden header, if it exists
 	compose_headers = {{"From",true}, {"To",true}, {"Cc",false}, {"Bcc",false}, {"Subject",true}},
 	extra_headres = {}, -- table with key value of headers to insert if missing
-	idn = true,
+	idn = true, -- TODO
 	sort = "newest", -- "newest" | "oldest" | "message-id" | "unsort"
 	sent_tags = "+sent",
 	unsafe_tags = {"spam"}, -- tags we don't want to use for unsafe stuff
@@ -220,7 +223,10 @@ config.values = {
 					vim.cmd("normal!za")
 				end, desc = "Toggle fold on the current tab"},
 				["<C-t>"] = { rhs = function (tmb)
-					tmb:mb_search()
+					local mb = require("galore.message_browser")
+					local opts = {}
+					opts.parent = tmb
+					mb:create(tmb.search, opts)
 				end, desc = "Change mode to message browser"},
 				["A"] = { rhs = function (tmb)
 					require("galore.runtime").add_saved(tmb.search)
@@ -284,7 +290,10 @@ config.values = {
 					mb:refresh()
 				end, desc = "Refresh the search"},
 				["<C-t>"] = { rhs = function (mb)
-					mb:tmb_search()
+					local tmb = require("galore.thread_message_browser")
+					local opts = {}
+					opts.parent = mb
+					tmb:create(mb.search, opts)
 				end, desc = "Change mode to thread message browser"},
 				["gD"] = { rhs = function (mb)
 					local telescope = require("galore.telescope")
@@ -341,6 +350,12 @@ config.values = {
 				["="] = { rhs = function (tb)
 					tb:refresh()
 				end, desc = "Refresh the search"},
+				["<C-t>"] = { rhs = function (tb)
+					local tmb = require("galore.thread_message_browser")
+					local opts = {}
+					opts.parent = tb
+					tmb:create(tb.search, opts)
+				end, desc = "goto tmb"},
 				["gD"] = { rhs = function (tb)
 					local telescope = require("galore.telescope")
 					local br = require("galore.browser")
