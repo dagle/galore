@@ -196,7 +196,7 @@ end
 
 local function entry_maker()
 	return function(entry)
-		local data = vim.fn.json_decode(entry)
+		local data = vim.json.decode(entry)
 		if data == nil then
 			return
 		end
