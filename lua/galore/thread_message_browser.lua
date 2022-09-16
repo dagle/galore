@@ -62,13 +62,6 @@ function Tmb:async_runner()
 	func()
 end
 
-function Tmb:mb_search()
-	local mb = require("galore.message_browser")
-	local opts = o.bufcopy(self.opts)
-	opts.parent = self
-	mb:create(self.search, opts)
-end
-
 --- Redraw the whole window
 function Tmb:refresh()
 	if self.runner then

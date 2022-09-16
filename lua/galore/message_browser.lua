@@ -5,13 +5,6 @@ local browser = require("galore.browser")
 
 local Mb = Buffer:new()
 
-function Mb:tmb_search()
-	local tmb = require("galore.thread_message_browser")
-	local opts = o.bufcopy(self.opts)
-	opts.parent = self
-	tmb:create(self.search, opts)
-end
-
 local function mb_get(self)
 	local first = true
 	return browser.get_entries(self, "show-message", function (message)
