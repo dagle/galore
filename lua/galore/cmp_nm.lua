@@ -9,8 +9,7 @@ local Job = require("plenary.job")
 local completion_pattern =  "\\c^\\(Resent-\\)\\?\\(To\\|B\\?Cc\\|Reply-To\\|From\\|Mail-Followup-To\\|Mail-Copies-To\\):"
 
 local defaults = {
-  keyword_pattern = completion_pattern,
-  filetype = "mail",
+  line_pattern = completion_pattern,
   query = "not list and not tag:spam"
 }
 
@@ -22,25 +21,21 @@ source.new = function()
 	})
 end
 
----Return this source is available in current context or not. (Optional)
 ---@return boolean
-function source:is_available(params)
-	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
-	return vim.bo.filetype == opts.mail
+function source:is_available()
+	-- local opts = vim.tbl_deep_extend('keep', params.option, defaults)
+	-- return vim.bo.filetype == opts.mail
+	return vim.bo.filetype == "mail"
 end
 
----Return the debug name of this source. (Optional)
 ---@return string
 function source:get_debug_name()
-	return "notmuch_nm"
+	return "notmuch"
 end
 
----Return keyword pattern for triggering completion. (Optional)
----If this is ommited, nvim-cmp will use default keyword pattern. See |cmp-config.completion.keyword_pattern|
 ---@return string
 function source:get_keyword_pattern(params)
-	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
-	return opts.keyword_pattern
+	return [[\K\+]]
 end
 
 ---Return trigger characters for triggering completion. (Optional)
@@ -55,6 +50,10 @@ end
 function source:complete(params, callback)
 	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
 	local bufnr = vim.api.nvim_get_current_buf()
+
+	if not (vim.fn.match(params.context.cursor_before_line, opts.line_pattern) >= 0) then
+		return
+	end
 
 	if not self.cache[bufnr] then
 		Job

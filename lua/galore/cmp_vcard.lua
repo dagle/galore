@@ -13,8 +13,7 @@ end
 local completion_pattern =  "\\c^\\(Resent-\\)\\?\\(To\\|B\\?Cc\\|Reply-To\\|From\\|Mail-Followup-To\\|Mail-Copies-To\\):"
 
 local defaults = {
-  keyword_pattern = completion_pattern,
-  filetype = "mail",
+  line_pattern = completion_pattern,
 }
 
 local source = {}
@@ -27,9 +26,8 @@ end
 
 ---Return this source is available in current context or not. (Optional)
 ---@return boolean
-function source:is_available(params)
-	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
-	return vim.bo.filetype == opts.mail
+function source:is_available()
+	return vim.bo.filetype == "mail"
 end
 
 ---Return the debug name of this source. (Optional)
@@ -43,7 +41,7 @@ end
 ---@return string
 function source:get_keyword_pattern(params)
 	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
-	return opts.keyword_pattern
+	return [[\K\+]]
 end
 
 ---Return trigger characters for triggering completion. (Optional)
@@ -57,6 +55,11 @@ end
 ---@param callback fun(response: lsp.CompletionResponse|nil)
 function source:complete(params, callback)
 	local bufnr = vim.api.nvim_get_current_buf()
+	local opts = vim.tbl_deep_extend('keep', params.option, defaults)
+
+	if not (vim.fn.match(params.context.cursor_before_line, opts.line_pattern) >= 0) then
+		return
+	end
 
 	if not self.cache[bufnr] then
 		Job
