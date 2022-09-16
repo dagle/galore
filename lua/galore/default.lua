@@ -4,8 +4,6 @@ local M = {}
 
 function M.init(opts, searches)
 		local saved = require("galore.saved")
-		require("galore.cmp_nm")
-		require("galore.cmp_vcard")
 		local group = vim.api.nvim_create_augroup("galore-windowstyle", {clear = true})
 		vim.api.nvim_create_autocmd({"BufEnter", "Filetype"},{
 			pattern = {"galore-threads*", "galore-messages"},
