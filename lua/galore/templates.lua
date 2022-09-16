@@ -1,4 +1,5 @@
 local gu = require("galore.gmime-util")
+local au = require("galore.address-util")
 
 local r = require("galore.render")
 local config = require("galore.config")
@@ -36,7 +37,7 @@ end
 local function remove(list, addr)
 	local i = 0
 	for demail in gu.internet_address_list_iter(list) do
-		if gu.address_equal(demail, addr) then
+		if au.address_equal(demail, addr) then
 			list:remove_at(i)
 			return true
 		end
@@ -46,7 +47,7 @@ local function remove(list, addr)
 end
 
 local function append_no_dup(addr, dst)
-	local matched = gu.ialist_contains(addr, dst)
+	local matched = au.ialist_contains(addr, dst)
 	if not matched then
 		dst:add(addr)
 	end
@@ -75,7 +76,7 @@ local function issubscribed(addresses)
 	local str = table.concat(config.values.mailinglist_subscribed, ", ")
 	local list = gmime.InternetAddressList.parse(runtime.parser_opts, str)
 	for v in gu.internet_address_list_iter(list) do
-		if gu.ialist_contains(v, addresses) then
+		if au.ialist_contains(v, addresses) then
 			return true
 		end
 	end
@@ -190,7 +191,7 @@ function M.response_message(old_message, opts, type)
 	local at = gmime.AddressType
 	local headers = opts.headers or {}
 
-	local addr = gu.get_our_email(old_message)
+	local addr = au.get_our_email(old_message)
 	local our = gmime.InternetAddressMailbox.new(config.values.name, addr)
 	local our_str = pp(our)
 
@@ -199,7 +200,7 @@ function M.response_message(old_message, opts, type)
 
 	headers.From = our_str
 
-	local from = get_backup(old_message, { at.REPLY_TO, at.FROM,  at.SENDER}):get_address()
+	local from = get_backup(old_message, { at.REPLY_TO, at.FROM,  at.SENDER}):get_address(0)
 	if not type or type == "reply" then
 		headers.To = pp(from)
 	elseif type == "reply_all" then
@@ -227,7 +228,7 @@ function M.forward_resent(old_message, to_str, opts)
 	local at = gmime.AddressType
 	local headers = opts.headers or {}
 
-	local addr = gu.get_our_email(old_message)
+	local addr = au.get_our_email(old_message)
 	local our = gmime.InternetAddressMailbox.new(config.values.name, addr)
 	local our_str = pp(our)
 	headers.From = our_str
@@ -283,7 +284,7 @@ function M.subscribe(old_message, opts)
 		error("Subscribe header not found")
 		return
 	end
-	local addr = gu.get_our_email(old_message)
+	local addr = au.get_our_email(old_message)
 	local headers = opts.headers or {}
 	headers.From = {config.values.name, addr}
 	headers.To = u.unmailto(unsub)
@@ -297,7 +298,7 @@ function M.unsubscribe(old_message, opts)
 		error("Unsubscribe header not found")
 		return
 	end
-	local addr = gu.get_our_email(old_message)
+	local addr = au.get_our_email(old_message)
 	local headers = opts.headers or {}
 	headers.From = {config.values.name, addr}
 	headers.To = u.unmailto(unsub)

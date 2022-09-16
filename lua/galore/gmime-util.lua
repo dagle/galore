@@ -1,3 +1,4 @@
+local config = require("galore.config")
 local lgi = require 'lgi'
 local gmime = lgi.require("GMime", "3.0")
 
@@ -37,7 +38,7 @@ function M.make_ref(message, opts)
 		ref = gmime.References.new()
 	end
 	local mid = message:get_message_id()
-	local reply = gmime.Reference.parse(nil, mid)
+	local reply = gmime.References.parse(nil, mid)
 	ref:append(mid)
 	opts.headers = opts.headers or {}
 	opts.headers.References = M.references_format(ref)
@@ -126,7 +127,7 @@ function M.reference_iter(refs)
 	local i = 0
 	return function()
 		if i < refs:length() then
-			local ref = refs:get_message_id(refs, i)
+			local ref = refs:get_message_id(i)
 			i = i + 1
 			return ref
 		end
@@ -156,9 +157,8 @@ function M.header_iter(object)
 	end
 end
 
---- TODO
 function M.internet_address_list_iter_str(str, opt)
-	local list = M.internet_address_list_parse(opt, str)
+	local list = gmime.InternetAddressList.parse(opt, str)
 	if list == nil then
 		return function ()
 			return nil
@@ -170,21 +170,12 @@ end
 function M.internet_address_list_iter(list)
 	local i = 0
 	return function()
-		if i < M.internet_address_list_length(list) then
-			local addr = M.internet_address_list_get_address(list, i)
+		if i < list:length() then
+			local addr = list:get_address(i)
 			i = i + 1
 			return addr
 		end
 	end
-end
-
-function M.ialist_contains(ia2, ialist)
-	for ia1 in gc.internet_address_list_iter(ialist) do
-		if M.address_equal(ia1, ia2) then
-			return true
-		end
-	end
-	return false
 end
 
 return M
