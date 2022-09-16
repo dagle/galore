@@ -112,7 +112,7 @@ function M.mid_reply(kind, mid, mode, opts)
 		line = nu.get_message(nm_message)
 	end)
 	local draft = vim.tbl_contains(line.tags, "draft")
-	local message = gu.construct(line.filenames)
+	local message = gu.parse_message(line.filenames[1])
 	if message == nil then
 		error("Couldn't parse message")
 	end
