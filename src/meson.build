@@ -1,10 +1,3 @@
-project('filter-reply', 'c',
-  version : '0.1',
-  default_options : ['warning_level=3'])
-
-# subdir('src')
-
-gnome = import('gnome')
 source_c = [
   'galore-filter-reply.c',
   ]
@@ -18,9 +11,9 @@ deps = [
   dependency('glib-2.0'),
   dependency('gobject-2.0'),
   dependency('gio-2.0'),
-  # dependency('gobject-introspection-1.0')
 ]
-filter_lib = library('Galore', source_c, dependencies : deps)
+filter_lib = library('galore', source_c, dependencies : deps)
+gnome = import('gnome')
 
 if true
   gir_args = [
@@ -37,8 +30,7 @@ if true
     includes: [ 'GObject-2.0', 'Gio-2.0', 'GMime-3.0'],
     header: 'gmime/gmime-filter.h',
     dependencies: deps,
-    # install: true,
-    # extra_args: gir_args,
+    extra_args: gir_args,
     fatal_warnings: true,
     )
 else
