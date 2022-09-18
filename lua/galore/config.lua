@@ -79,10 +79,13 @@ config.values = {
 	validate_key = function (status) --- what level of security we should accept?
 		local lgi = require 'lgi'
 		local gmime = lgi.require("GMime", "3.0")
-		return bit.band(status, gmime.SignatureStatus.VALID) or bit.band(status, gmime.SignatureStatus.GREEN)
+		if type(status) == "number" then
+			return bit.band(status, gmime.SignatureStatus.VALID) or bit.band(status, gmime.SignatureStatus.GREEN)
+		end
+		return false
 	end,
-	verify_flags = "keyserver", -- "none"|"session"|"noverify"|"keyserver"|"online"
-	decrypt_flags = "keyserver", -- "none"|"keyserver"|"online"
+	verify_flags = "keyserver", -- "none"|"keyserver"|"online", use {} for multiple
+	decrypt_flags = "keyserver", -- "none"|"export"|"noverify"|"keyserver"|"online", use {} for multiple
 	sign = false, -- Should we crypto sign the email?
 	encrypt = false, -- Should we encrypt the email by default? false, 1 or 2. 1 = try to encrypt
 	-- create message anyways. 2 = always encrypt and failing is an error
@@ -420,6 +423,8 @@ config.values = {
 					local lgi = require 'lgi'
 					local gmime = lgi.require("GMime", "3.0")
 					local function cb(part)
+						-- we should only allow this if type is
+						-- "application/pgp-keys"?
 						if not gmime.Part:is_type_of(part) then
 							--- this isn't a part
 							return
