@@ -52,12 +52,12 @@ function Message:update2(line)
 		if not vim.tbl_isempty(self.state.attachments) then
 			ui.render_attachments(self.state.attachments, ns_line, self.handle, self.ns)
 		end
-		-- vim.schedule(function ()
-		-- 	for i, cb in ipairs(self.state.callbacks) do
-		-- 		cb(self.handle, self.ns)
-		-- 		self.state.callbacks[i] = nil
-		-- 	end
-		-- end)
+		vim.schedule(function ()
+			for i, cb in ipairs(self.state.callbacks) do
+				cb(self.handle, self.ns)
+				self.state.callbacks[i] = nil
+			end
+		end)
 	end
 	self:lock()
 end

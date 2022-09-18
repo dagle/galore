@@ -2,6 +2,7 @@ local config = require("galore.config")
 local gcu = require("galore.crypt-utils")
 local lgi = require 'lgi'
 local gmime = lgi.require("GMime", "3.0")
+local galore = lgi.require("Galore", "0.1")
 local gu = require("galore.gmime-util")
 
 local M = {}
@@ -122,7 +123,7 @@ function M.part_to_stream(part, opts, outstream)
 	filters:add(unix)
 
 	if opts.reply then
-		local reply_filter = gmime.FilterReply.new(true)
+		local reply_filter = galore.FilterReply.new(true)
 		filters:add(reply_filter)
 	end
 
@@ -382,6 +383,7 @@ M.default_render = {
 	end,
 	encrypted = function (self, mp, buf, opts, state)
 		local de_part, verified, new_keys
+		opts.keys = opts.keys or {}
 		for _, key in pairs(opts.keys) do
 			de_part, verified, new_keys =
 				gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, key)
@@ -389,6 +391,9 @@ M.default_render = {
 				return de_part, verified, new_keys
 			end
 		end
+		--- none of the keys worked
+		de_part, verified, new_keys =
+			gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, "")
 		return de_part, verified, new_keys
 	end,
 }

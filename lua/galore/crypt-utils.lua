@@ -10,16 +10,72 @@ local function verify_list(siglist)
 	end
 
 	local sigs = siglist:length(siglist) > 0
-	for i = 1, siglist:length() do
+	-- P(siglist:length())
+	for i = 0, siglist:length() do
 		local sig = siglist:get_signature(i)
-		local test = config.values.validate_key(sig:get_status())
-		sigs = sigs and test
+		if sig ~= nil then
+			local test = config.values.validate_key(sig:get_status())
+			sigs = sigs and test
+		end
 	end
 	return sigs
 end
 
+local function get_decrypt_flag(flags)
+	if type(flags) == "table" then
+		local flag = gmime.VerifyFlags.NONE
+		for _, v in ipairs(flags) do
+			flag = bit.bor(flag, get_decrypt_flag(v))
+		end
+		return flag
+	end
+	if type(flags) == "string" then
+		flags = flags:lower()
+		if flags == "none" then
+			return gmime.DecryptFlags.NONE
+		end
+		if flags == "export" then
+			return gmime.DecryptFlags.EXPORT_SESSION_KEY
+		end
+		if flags == "noverify" then
+			return gmime.DecryptFlags.NO_VERIFY
+		end
+		if flags == "keyserver" then
+			return gmime.DecryptFlags.ENABLE_KEYSERVER_LOOKUPS
+		end
+		if flags == "online" then
+			return gmime.DecryptFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
+		end
+	end
+	return gmime.VerifyFlags.NONE
+end
+
+local function get_verify_flag(flags)
+	if type(flags) == "table" then
+		local flag = gmime.VerifyFlags.NONE
+		for _, v in ipairs(flags) do
+			flag = bit.bor(flag, get_verify_flag(v))
+		end
+		return flag
+	end
+	if type(flags) == "string" then
+		flags = flags:lower()
+		if flags == "none" then
+			return gmime.VerifyFlags.NONE
+		end
+		if flags == "keyserver" then
+			return gmime.VerifyFlags.ENABLE_KEYSERVER_LOOKUPS
+		end
+		if flags == "online" then
+			return gmime.VerifyFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
+		end
+	end
+	return gmime.VerifyFlags.NONE
+end
+
 function M.verify_signed(object)
-	local signatures, error = object:verify(config.values.verify_flags)
+	local keyflag = get_verify_flag(config.values.verify_flags)
+	local signatures, error = object:verify(keyflag)
 	if not signatures and error then
 		return false
 	else
