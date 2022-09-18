@@ -56,4 +56,10 @@ function galore.mailto(kind, str)
 	end)
 end
 
+function galore.xdg_install()
+	local dirname = string.sub(debug.getinfo(1).source, 2, #"/init.lua" * -1)
+	local str = dirname .. "../../" .. "xdg_install.sh"
+	vim.fn.system(str)
+end
+
 return galore
