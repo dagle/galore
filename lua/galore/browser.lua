@@ -51,12 +51,14 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
 			vim.api.nvim_err_write(string.format("Couldn't update line for %s and %d", search, line_nr))
 		end,
 		on_stdout = function (_, data, _)
-			local message = vim.json.decode(data)
-			vim.api.nvim_buf_set_option(bufnr, "readonly", false)
-			vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-			vim.api.nvim_buf_set_lines(bufnr, line_nr-1, line_nr, false, {message.entry})
-			vim.api.nvim_buf_set_option(bufnr, "readonly", true)
-			vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+			local message = vim.fn.json_decode(data)
+			if message then
+				vim.api.nvim_buf_set_option(bufnr, "readonly", false)
+				vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+				vim.api.nvim_buf_set_lines(bufnr, line_nr-1, line_nr, false, {message.entry})
+				vim.api.nvim_buf_set_option(bufnr, "readonly", true)
+				vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
+			end
 		end,
 	})
 end
