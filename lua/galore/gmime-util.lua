@@ -17,8 +17,10 @@ end
 
 function M.mime_type(object)
 	local ct = object:get_content_type()
-	local type = ct:get_mime_type()
-	return type
+	if ct then
+		local type = ct:get_mime_type()
+		return type
+	end
 end
 
 function M.parse_message(filename)
