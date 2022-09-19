@@ -33,23 +33,40 @@ local gmime = lgi.require("GMime", "3.0")
 
 local Telescope = {}
 
-local function show_tree(object, opts)
-	if gmime.MessagePart:is_type_of(object) then
-		return "message-part"
-	elseif gmime.MessagePartial:is_type_of(object) then
-		return "partial"
-	elseif gmime.Part:is_type_of(object) then
+local function filter(object, types)
+	if types == nil or vim.tbl_isempty(types) then
+		return true
+	end
+	for _, v in ipairs(types) do
+		if gu.mime_type(object) == v then
+			return true
+		end
+	end
+	return false
+end
+
+local function show_tree(object, types)
+	if filter(object, types) then
 		return gu.mime_type(object)
-	elseif gmime.MultipartEncrypted:is_type_of(object) then
-		return "encrypted mulitpart"
-	elseif gmime.MultipartSigned:is_type_of(object) then
-		return "signed mulitpart"
-	elseif gmime.Multipart:is_type_of(object) then
-		return "mulitpart"
 	end
 end
 
-function Telescope.parts_browser(message, selected, opts)
+--- Being able to match encrypted files
+local encrypted = {
+	"application/x-pgp-signature",
+	"application/pgp-signature",
+	"application/x-pgp-encrypted",
+	"application/pgp-encrypted",
+	"application/pgp-keys",
+
+	"application/x-pkcs7-signature",
+	"application/pkcs7-signature",
+	"application/x-pkcs7-mime",
+	"application/pkcs7-mime",
+	"application/pkcs7-keys",
+}
+
+function Telescope.parts_browser(message, selected, types)
 	local state = {}
 	state.select = {}
 	state.part = {}
@@ -58,10 +75,13 @@ function Telescope.parts_browser(message, selected, opts)
 		for _ = 1, level-1 do
 			table.insert(strbuf, "\t")
 		end
-		table.insert(strbuf, show_tree(part, opts))
-		local str = table.concat(strbuf)
-		table.insert(state.select, str)
-		table.insert(state.part, part)
+		local entry = show_tree(part, types)
+		if entry then
+			table.insert(strbuf, entry)
+			local str = table.concat(strbuf)
+			table.insert(state.select, str)
+			table.insert(state.part, part)
+		end
 	end
 	-- message:foreach(browser_fun)
 	gu.message_foreach_level(message, browser_fun)
