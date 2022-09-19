@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "autocrypt.h"
+#include "galore-autocrypt.h"
 #include <gpgme.h>
 #include <gmime/gmime-filter-charset.h>
 #include <gmime/gmime-stream-filter.h>
@@ -35,6 +35,7 @@
 #include <gmime/gmime-stream-fs.h>
 #include <gmime/gmime-charset.h>
 #include <gmime/gmime-error.h>
+#include "galore-gpgme-utils.h"
 
 #ifdef ENABLE_DEBUG
 #define d(x) x
@@ -47,35 +48,35 @@
 
 /**
  * SECTION: gmime-gpg-context
- * @title: GMimeGpgContext
+ * @title: GaloreAutoCryptContext
  * @short_description: GnuPG crypto contexts
  * @see_also: #GMimeCryptoContext
  *
- * A #GMimeGpgContext is a #GMimeCryptoContext that uses GnuPG to do
+ * A #GaloreAutoCryptContext is a #GMimeCryptoContext that uses GnuPG to do
  * all of the encryption and digital signatures.
  **/
 
 
 /**
- * GMimeGpgContext:
+ * GaloreAutoCryptContext:
  *
  * A GnuPG crypto context.
  **/
-struct _GMimeGpgContext {
+struct _GaloreAutoCryptContext {
 	GMimeCryptoContext parent_object;
 	
 	gpgme_ctx_t ctx;
 };
 
-struct _GMimeGpgContextClass {
+struct _GaloreAutoCryptContextClass {
 	GMimeCryptoContextClass parent_class;
 	
 };
 
 
-static void g_mime_au_context_class_init (GMimeGpgContextClass *klass);
-static void g_mime_au_context_init (GMimeGpgContext *ctx, GMimeGpgContextClass *klass);
-static void g_mime_au_context_finalize (GObject *object);
+static void galore_au_context_class_init (GaloreAutoCryptContextClass *klass);
+static void galore_au_context_init (GaloreAutoCryptContext *ctx, GaloreAutoCryptContextClass *klass);
+static void galore_au_context_finalize (GObject *object);
 
 static GMimeDigestAlgo au_digest_id (GMimeCryptoContext *ctx, const char *name);
 static const char *au_digest_name (GMimeCryptoContext *ctx, GMimeDigestAlgo digest);
@@ -108,40 +109,39 @@ static char *path = NULL;
 
 
 GType
-g_mime_au_context_get_type (char *mypath)
+galore_au_context_get_type ()
 {
 	static GType type = 0;
 	
 	if (!type) {
 		static const GTypeInfo info = {
-			sizeof (GMimeGpgContextClass),
+			sizeof (GaloreAutoCryptContextClass),
 			NULL, /* base_class_init */
 			NULL, /* base_class_finalize */
-			(GClassInitFunc) g_mime_au_context_class_init,
+			(GClassInitFunc) galore_au_context_class_init,
 			NULL, /* class_finalize */
 			NULL, /* class_data */
-			sizeof (GMimeGpgContext),
+			sizeof (GaloreAutoCryptContext),
 			0,    /* n_preallocs */
-			(GInstanceInitFunc) g_mime_au_context_init,
+			(GInstanceInitFunc) galore_au_context_init,
 		};
 		
 		type = g_type_register_static (GMIME_TYPE_CRYPTO_CONTEXT, "GMimeAutoCryptContext", &info, 0);
 	}
-	path = strdup(mypath);
 	
 	return type;
 }
 
 
 static void
-g_mime_au_context_class_init (GMimeGpgContextClass *klass)
+galore_au_context_class_init (GaloreAutoCryptContextClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	GMimeCryptoContextClass *crypto_class = GMIME_CRYPTO_CONTEXT_CLASS (klass);
 	
 	parent_class = g_type_class_ref (G_TYPE_OBJECT);
 	
-	object_class->finalize = g_mime_au_context_finalize;
+	object_class->finalize = galore_au_context_finalize;
 	
 	crypto_class->digest_id = au_digest_id;
 	crypto_class->digest_name = au_digest_name;
@@ -157,15 +157,15 @@ g_mime_au_context_class_init (GMimeGpgContextClass *klass)
 }
 
 static void
-g_mime_au_context_init (GMimeGpgContext *gpg, GMimeGpgContextClass *klass)
+galore_au_context_init (GaloreAutoCryptContext *gpg, GaloreAutoCryptContextClass *klass)
 {
 	gpg->ctx = NULL;
 }
 
 static void
-g_mime_au_context_finalize (GObject *object)
+galore_au_context_finalize (GObject *object)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) object;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) object;
 	
 	if (gpg->ctx)
 		gpgme_release (gpg->ctx);
@@ -260,7 +260,7 @@ au_get_key_exchange_protocol (GMimeCryptoContext *ctx)
 static void
 set_passphrase_callback (GMimeCryptoContext *context)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	if (context->request_passwd)
 		gpgme_set_passphrase_cb (gpg->ctx, g_mime_gpgme_passphrase_callback, gpg);
@@ -273,7 +273,7 @@ au_sign (GMimeCryptoContext *context, gboolean detach, const char *userid,
 	  GMimeStream *istream, GMimeStream *ostream, GError **err)
 {
 	gpgme_sig_mode_t mode = detach ? GPGME_SIG_MODE_DETACH : GPGME_SIG_MODE_CLEAR;
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	set_passphrase_callback (context);
 	
@@ -286,7 +286,7 @@ static GMimeSignatureList *
 au_verify (GMimeCryptoContext *context, GMimeVerifyFlags flags, GMimeStream *istream, GMimeStream *sigstream,
 	    GMimeStream *ostream, GError **err)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	return g_mime_gpgme_verify (gpg->ctx, flags, istream, sigstream, ostream, err);
 }
@@ -295,7 +295,7 @@ static int
 au_encrypt (GMimeCryptoContext *context, gboolean sign, const char *userid, GMimeEncryptFlags flags,
 	     GPtrArray *recipients, GMimeStream *istream, GMimeStream *ostream, GError **err)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	if (sign)
 		set_passphrase_callback (context);
@@ -307,7 +307,7 @@ static GMimeDecryptResult *
 au_decrypt (GMimeCryptoContext *context, GMimeDecryptFlags flags, const char *session_key,
 	     GMimeStream *istream, GMimeStream *ostream, GError **err)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	set_passphrase_callback (context);
 	
@@ -317,7 +317,7 @@ au_decrypt (GMimeCryptoContext *context, GMimeDecryptFlags flags, const char *se
 static int
 au_import_keys (GMimeCryptoContext *context, GMimeStream *istream, GError **err)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	set_passphrase_callback (context);
 	
@@ -325,39 +325,14 @@ au_import_keys (GMimeCryptoContext *context, GMimeStream *istream, GError **err)
 }
 
 static int
-g_mime_au_export (gpgme_ctx_t ctx, const char *keys[], GMimeStream *ostream, GError **err)
-{
-	gpgme_data_t keydata;
-	gpgme_error_t error;
-	
-	if ((error = gpgme_data_new_from_cbs (&keydata, &gpg_stream_funcs, ostream)) != GPG_ERR_NO_ERROR) {
-		g_set_error (err, GMIME_GPGME_ERROR, error, _("Could not open output stream: %s"),
-			     gpgme_strerror (error));
-		return -1;
-	}
-	
-	/* export the key(s) */
-	error = gpgme_op_export_ext (ctx, keys, GPGME_EXPORT_MODE_MINIMAL, keydata);
-	gpgme_data_release (keydata);
-	
-	if (error != GPG_ERR_NO_ERROR) {
-		g_set_error (err, GMIME_GPGME_ERROR, error, _("Could not export key data: %s"),
-			     gpgme_strerror (error));
-		return -1;
-	}
-	
-	return 0;
-}
-
-
-static int
 au_export_keys (GMimeCryptoContext *context, const char *keys[], GMimeStream *ostream, GError **err)
 {
-	GMimeGpgContext *gpg = (GMimeGpgContext *) context;
+	GaloreAutoCryptContext *gpg = (GaloreAutoCryptContext *) context;
 	
 	set_passphrase_callback (context);
 	
-	return g_mime_au_export (gpg->ctx, keys, ostream, err);
+	// return g_mime_au_export (gpg->ctx, keys, ostream, err);
+	return g_mime_gpgme_import (gpg->ctx, ostream, err);
 }
 
 
@@ -369,9 +344,9 @@ au_export_keys (GMimeCryptoContext *context, const char *keys[], GMimeStream *os
  * Returns: (transfer full): a new gpg crypto context object.
  **/
 GMimeCryptoContext *
-g_mime_au_context_new (void)
+galore_au_context_new (void)
 {
-	GMimeGpgContext *gpg;
+	GaloreAutoCryptContext *gpg;
 	gpgme_ctx_t ctx;
 	
 	/* make sure GpgMe supports the OpenPGP protocols */
@@ -381,10 +356,10 @@ g_mime_au_context_new (void)
 	/* create the GpgMe context */
 	if (gpgme_new (&ctx) != GPG_ERR_NO_ERROR)
 		return NULL;
-	if (gpgme_ctx_set_engine_info(ctx, GPGME_PROTOCOL_OpenPGP, NULL, path) = GPG_ERR_NO_ERROR)
+	if (gpgme_ctx_set_engine_info(ctx, GPGME_PROTOCOL_OpenPGP, NULL, path) != GPG_ERR_NO_ERROR)
 		return NULL;
 	
-	gpg = g_object_new (GMIME_TYPE_GPG_CONTEXT, NULL);
+	gpg = g_object_new (GALORE_TYPE_AU_CONTEXT, NULL);
 	gpgme_set_protocol (ctx, GPGME_PROTOCOL_OpenPGP);
 	gpgme_set_armor (ctx, TRUE);
 	gpg->ctx = ctx;
