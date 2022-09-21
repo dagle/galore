@@ -1,8 +1,10 @@
 source_c = [
+  'galore.c',
   'galore-filter-reply.c',
   ]
 
 source_h = [
+  'galore.h',
   'galore-filter-reply.h',
   ]
 
