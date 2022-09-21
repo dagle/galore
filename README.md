@@ -59,7 +59,9 @@ use {'dagle/galore', run = 'make',
 		'nvim-telescope/telescope-file-browser.nvim',
 		'nvim-lua/popup.nvim',
 		'nvim-lua/plenary.nvim',
-		'hrsh7th/nvim-cmp',
+		'hrsh7th/nvim-cmp', -- optional
+		'dagle/cmp-notmuch', -- optional
+		'dagle/cmp-mates-, -- optional
 		rocks = {'lgi'}, -- or install lgi with your package manager
 	}
 }
@@ -166,6 +168,8 @@ write values to multiple places.
 For settings to change, look in lua/galore/config.lua
 for values to change with setup.
 They will be documented here in the future.
+
+For cmp support you need to install cmp completers (see install above) 
 
 For cmp support you need to add the following:
 		{ name = 'vcard_addr'},
