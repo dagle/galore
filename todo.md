@@ -36,6 +36,19 @@ Maybe use a sliding reader that loads messages when you scroll instead of loadin
 * 0.0.2
 Todo: Tests, (hooks, templates, compose), documentation, logging
 
+.ics support (then hand it off to provider?)
+- Being able to view an ics
+-- Parse an ics in lua
+-- Use calendar-vim to display?
+--- How to display multiple dates in different months/years etc?
+--- How to display the clocks?
+- Being able to import an ics (whole/partial)
+-- A generalized interface to 
+
+- Make the builder more like template/render?
+-- Being able to change builder at runtime?
+-- builders should be composable
+
 - Logging 
 -- logging (when should we use vim.notify and when to log?)
 -- let users set log-level in config to get more or less logging

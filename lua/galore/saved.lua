@@ -19,6 +19,15 @@ local function make_entry(self, db, box, search, name, exclude)
 	table.insert(box, { i, unread_i, name, search})
 end
 
+
+function Saved.manual(manual)
+	return function(self, searches)
+		for search in ipairs(manual) do
+			ordered.insert(searches, search.search, {search.search, search.name, false})
+		end
+	end
+end
+
 function Saved:gen_tags(searches)
 	runtime.with_db(function (db)
 		for tag in nm.db_get_all_tags(db) do
