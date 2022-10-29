@@ -1,4 +1,5 @@
-local nm = require("galore.notmuch")
+-- local nm = require("galore.notmuch")
+local nm = require("notmuch")
 local u = require("galore.util")
 
 local M = {}

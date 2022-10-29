@@ -1,4 +1,4 @@
-local nm = require("galore.notmuch")
+local nm = require("notmuch")
 local Buffer = require("galore.lib.buffer")
 local runtime = require("galore.runtime")
 local ordered = require("galore.lib.ordered")
@@ -10,7 +10,10 @@ local function make_entry(self, db, box, search, name, exclude)
 	local q = nm.create_query(db, search)
 	if exclude then
 		for _, ex in ipairs(self.opts.exclude_tags) do
-			nm.query_add_tag_exclude(q, ex)
+			-- we don't really care if the tags are removed or not, we want to do best effort
+			pcall(function ()
+				nm.query_add_tag_exclude(q, ex)
+			end)
 		end
 	end
 	local unread_q = nm.create_query(db, search .. " and tag:unread")

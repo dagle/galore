@@ -1,4 +1,4 @@
-local nm = require("galore.notmuch")
+local nm = require("notmuch")
 local runtime = require("galore.runtime")
 local Buffer = require("galore.lib.buffer")
 local gu = require("galore.gmime-util")

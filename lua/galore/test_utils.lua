@@ -1,5 +1,6 @@
+-- move this to tests
 local Job = require("plenary.job")
--- local nm = require("galore.notmuch")
+local nm = require("notmuch")
 local config = require("galore.config")
 local runtime = require("galore.runtime")
 local galore =  require("galore")

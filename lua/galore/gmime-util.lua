@@ -31,6 +31,52 @@ function M.parse_message(filename)
 	return message
 end
 
+--- tries to recorstruct a partial message,
+--- if the message isn't partial then just parse the
+--- message
+-- idx needs to be in bound
+function M.reconstruct(filenames, idx)
+	if #filenames == 1 then
+		return M.parse_message(filenames[idx])
+	end
+	local parts = {}
+
+	local main_message = M.parse_message(filenames[idx])
+	if main_message then
+		local is_partial = false
+		main_message:foreach(function (_, part)
+			if gmime.MessagePartial:is_type_of(part) then
+				is_partial = true
+				local id = part:get_id(part)
+				parts[id] = {}
+			end
+		end)
+		if not is_partial then
+			return main_message
+		end
+
+		for filename in ipairs(filenames) do
+			local message = M.parse_message(filename)
+			message:foreach(function (_, part)
+				if gmime.MessagePartial:is_type_of(part) then
+					local id = part:get_id(part)
+					table.insert(parts[id], part)
+				end
+			end)
+		end
+		--- TODO
+		--- we only return the first message of the partials
+		for _, partial in pairs(parts) do
+			if #partial == partial[1]:get_total() then
+				local message = gmime.MessagePartial.reconstruct_message(partial)
+				return message
+			end
+		end
+		-- fall back to original message
+		return main_message
+	end
+end
+
 function M.make_ref(message, opts)
 	local ref_str = message:get_header("References")
 	local ref

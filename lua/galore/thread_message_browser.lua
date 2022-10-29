@@ -7,10 +7,14 @@ local Tmb = Buffer:new()
 
 local function tmb_get(self)
 	local first = true
+  self.highlight = {}
 	return browser.get_entries(self, "show-tree", function (thread)
 		local i = 0
 		for _, message in ipairs(thread) do
 			table.insert(self.State, message.id)
+      if message.match then
+        table.insert(self.highlight, i)
+      end
 			-- if message.matched then
 			-- 	local diagnostics = {
 			-- 		bufnr = self.handle,
@@ -32,6 +36,8 @@ local function tmb_get(self)
 			end
 			i = i + 1
 		end
+        -- vim.api.nvim_buf_add_highlight(self.handle, self.dians, "Directory", i, 0, -1)
+      -- end
 		-- We need to api for folds etc and 
 		-- we don't want dump all off them like this
 		-- but otherwise this works
@@ -52,7 +58,6 @@ function Tmb:async_runner()
 	self.threads = {}
 	local func = async.void(function ()
 		self.runner = tmb_get(self)
-		-- self.runner = get_messages(self)
 		pcall(function ()
 			self.runner.resume(self.opts.limit)
 			self:lock()

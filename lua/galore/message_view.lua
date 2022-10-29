@@ -4,7 +4,7 @@ local Buffer = require("galore.lib.buffer")
 local views = require("galore.views")
 local ui = require("galore.ui")
 local nu = require("galore.notmuch-util")
-local nm = require("galore.notmuch")
+local nm = require("notmuch")
 local runtime = require("galore.runtime")
 local browser = require("galore.browser")
 local o = require("galore.opts")
@@ -29,11 +29,11 @@ function Message:select_attachment(cb)
 	end)
 end
 
-function Message:update2(line)
+function Message:update()
 	self:unlock()
 	self:clear()
 
-	local message = gu.parse_message(line.filenames[1])
+	local message = gu.parse_message(self.line.filenames[self.index])
 	-- au.process_au(message, line)
 	if message then
 		vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
@@ -44,7 +44,7 @@ function Message:update2(line)
 		local offset = vim.fn.line("$") - 1
 		self.state = r.render_message(r.default_render, message, buffer, {
 			offset = offset,
-			keys = line.keys
+			keys = self.line.keys
 		})
 		u.purge_empty(buffer)
 		self:set_lines(-1, -1, true, buffer)
@@ -62,9 +62,9 @@ function Message:update2(line)
 	self:lock()
 end
 
-function Message:redraw(line)
+function Message:redraw()
 	self:focus()
-	self:update(line)
+	self:update()
 end
 
 local function mark_read(self, pb, line, vline)
@@ -90,6 +90,16 @@ function Message:prev()
 		local mid, vline = browser.prev(self.parent, self.vline)
 		Message:create(mid, {kind="replace", parent=self.parent, vline=vline})
 	end
+end
+
+function Message:version_next()
+	self.index = math.max(#self.line.filenames, self.index + 1)
+	self:redraw()
+end
+
+function Message:version_prev()
+	self.index = math.min(1, self.index - 1)
+	self:redraw()
 end
 
 function Message:commands()
@@ -138,11 +148,12 @@ function Message:create(mid, opts)
 		init = function(buffer)
 			buffer.line = line
 			buffer.opts = opts
+			buffer.index = opts.index or 1
 			buffer.vline = opts.vline
 			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
 			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
 			mark_read(buffer, opts.parent, line, opts.vline)
-			buffer:update2(line)
+			buffer:update()
 			buffer:commands()
 			opts.init(buffer)
 		end,

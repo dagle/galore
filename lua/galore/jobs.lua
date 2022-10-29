@@ -1,6 +1,7 @@
 local config = require("galore.config")
 local runtime = require("galore.runtime")
 local Job = require("plenary.job")
+local log = require("galore.log")
 
 local lgi = require 'lgi'
 local gmime = lgi.require("GMime", "3.0")
@@ -109,7 +110,7 @@ local function raw_pipe(object, cmd, args, cb)
 		stderr:close()
 		vim.schedule(function()
 			if code ~= 0 then
-				vim.notify(cmd .. " exited with: ".. tostring(code), vim.log.levels.ERROR)
+				log.log(cmd .. " exited with: ".. tostring(code), vim.log.levels.ERROR)
 			else
 				if cb then
 					cb()

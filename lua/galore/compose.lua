@@ -9,6 +9,7 @@ local runtime = require("galore.runtime")
 local Path = require("plenary.path")
 local debug = require("galore.debug")
 local o = require("galore.opts")
+local log = require("galore.log")
 -- local hd = require("galore.header-diagnostics")
 
 local Compose = Buffer:new()
@@ -20,6 +21,8 @@ function Compose:add_attachment_path(file_path)
 		local mime_type = job.get_type(file_path)
 		table.insert(self.attachments,
 			{filename = filename, path = file_path, mime_type = mime_type})
+	else
+		log.log("Failed to add file", vim.log.levels.ERROR)
 	end
 end
 
@@ -73,7 +76,10 @@ local function get_headers(self)
 			headers[key] = value
 		else
 			if not last_key then
-				error("Bad formated headers, trying to add to value header above that doesn't exist")
+				-- this should be a log function
+				local str = "Bad formated headers, trying to add to value header above that doesn't exist"
+				log.log(str, vim.log.levels.ERROR)
+				error(str)
 			end
 			-- local value, prev = unpack(headers[last_key])
 			local key = headers[last_key]
@@ -122,7 +128,7 @@ function Compose:send()
 	--- from here we want to be async
 	local message = builder.create_message(buf, self.opts, self.attachments, self.extra_headers, builder.textbuilder)
 	if not message then
-		vim.notify("Couldn't create message for sending", vim.log.levels.ERROR)
+		log.log("Couldn't create message for sending", vim.log.levels.ERROR)
 		return
 	end
 	if self.opts.pre_sent_hooks then
@@ -130,8 +136,8 @@ function Compose:send()
 	end
 
 	job.send_mail(message, function ()
-		vim.notify("Mail sent", vim.log.levels.INFO)
-		local reply = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
+		log.log("Mail sent", vim.log.levels.INFO)
+		local reply = message:get_header("References")
 		if reply then
 			local mid = gu.unbracket(reply)
 			runtime.with_db_writer(function(db)
@@ -156,7 +162,7 @@ function Compose:save_draft(build_opts)
 	end
 	local message = builder.create_message(buf, build_opts, self.attachments, self.extra_headers, builder.textbuilder)
 	if not message then
-		vim.notify("Couldn't create message for sending", vim.log.levels.ERROR)
+		log.log("Couldn't create message for sending", vim.log.levels.ERROR)
 		return
 	end
 	--- TODO from here we want to be async

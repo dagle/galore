@@ -1,3 +1,6 @@
+local async_job = require "galore.pipe"
+local LinesPipe = async_job.LinesPipe
+local async = require("plenary.async")
 local Browser = {}
 
 --- Move to the next line in the browser
@@ -64,8 +67,6 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
 end
 
 function Browser.get_entries(self, mode, buffer_runner)
-	local async_job = require "telescope._"
-	local LinesPipe = require("telescope._").LinesPipe
 
 	local stdout = LinesPipe()
 	local writer = nil

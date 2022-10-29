@@ -32,8 +32,8 @@ function galore.connect()
 		local lgi = require 'lgi'
 		local gmime = lgi.require("GMime", "3.0")
 		gmime.init()
-		local galore = lgi.require("Galore", "0.1")
-		galore.init()
+		local galorelib = lgi.require("Galore", "0.1")
+		galorelib.init()
 		local runtime = require("galore.runtime")
 		if galore.user_config ~= nil then
 			config.values = vim.tbl_deep_extend("force", config.values, galore.user_config)

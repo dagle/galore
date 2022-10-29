@@ -12,7 +12,7 @@ local M = {}
 local function make_attach(attach)
 	local mime = u.collect(string.gmatch(attach.mime_type, "([^/]+)"))
 	if #mime ~= nil then
-		error("bad mime-type")
+		log.log_err("bad mime-type")
 	end
 	local attachment = gmime.Part.new_with_type(mime[1], mime[2])
 	attachment:set_filename(attach.filename)
@@ -75,7 +75,7 @@ function M.secure(part, opts, recipients)
 		end
 		if opts.encrypt == 2 then
 			local str = string.format("Couldn't encrypt message: %s", err)
-			error(str)
+			log.log_err(str)
 		end
 	end
 	if opts.sign then
@@ -84,7 +84,7 @@ function M.secure(part, opts, recipients)
 			return signed
 		else
 			local str = string.format("Could not sign message: %s", err)
-			error(str)
+			log.log_err(str)
 		end
 	end
 	-- if we don't want to sign and failed to encrypt
