@@ -8,7 +8,8 @@ local runtime = require("galore.runtime")
 local config = require("galore.config")
 local br = require("galore.browser")
 local tm = require("galore.templates")
-local nm = require("galore.notmuch")
+-- local nm = require("galore.notmuch")
+local nm = require("notmuch")
 
 local M = {}
 

@@ -92,7 +92,7 @@ function M.decrypt_and_verify(obj, flags, key)
 
 	-- if err ~= nil then
 	-- 	local str = string.format("Failed to decrypt message: %s", err)
-	-- 	vim.notify(str, vim.log.levels.ERROR)
+	-- 	log.log(str, vim.log.levels.ERROR)
 	-- 	return
 	-- end
 

@@ -1,6 +1,6 @@
 local config = require("galore.config")
 local u = require("galore.util")
-local nm = require("galore.notmuch")
+local nm = require("notmuch")
 local log = require("galore.log")
 
 local lgi = require 'lgi'
@@ -82,7 +82,7 @@ function runtime.with_db_writer(func)
 	local db = nm.db_open_with_config_raw(config.values.db_path, 1, config.values.nm_config, config.values.nm_profile)
 	local ok, err = pcall(func, db)
 	if not ok then
-		vim.notify(err, vim.log.levels.ERROR)
+		log.log(err, vim.log.levels.ERROR)
 	end
 	nm.db_close(db)
 end

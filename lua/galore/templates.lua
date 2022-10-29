@@ -7,6 +7,7 @@ local runtime = require("galore.runtime")
 local u = require("galore.util")
 local lgi = require 'lgi'
 local gmime = lgi.require("GMime", "3.0")
+local log = require("galore.log")
 
 local M = {}
 
@@ -97,6 +98,8 @@ function M.compose_new(opts)
 	opts.headers = headers
 end
 
+--- this is wrong because we don't want to add a key as an attachments
+--- TODO make some default builders
 function M.mailkey(opts, gpg_id)
 	local attachments = opts.attachments or {}
 	gpg_id = gpg_id or config.values.gpg_id
@@ -281,7 +284,7 @@ end
 function M.subscribe(old_message, opts)
 	local unsub = old_message:get_header("List-Subscribe")
 	if unsub == nil then
-		error("Subscribe header not found")
+		log.log_err("Subscribe header not found")
 		return
 	end
 	local addr = au.get_our_email(old_message)
@@ -295,7 +298,7 @@ end
 function M.unsubscribe(old_message, opts)
 	local unsub = old_message:get_header("List-Unsubscribe")
 	if unsub == nil then
-		error("Unsubscribe header not found")
+		log.log_err("Subscribe header not found")
 		return
 	end
 	local addr = au.get_our_email(old_message)

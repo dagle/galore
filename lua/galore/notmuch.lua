@@ -1,3 +1,4 @@
+--- XXX REMOVE all of this! Notmuch has it's own repo now
 ---@diagnostic disable: undefined-field
 -- This is a raw ffi layer on top of notmuch
 --

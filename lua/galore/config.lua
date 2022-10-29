@@ -418,6 +418,13 @@ config.values = {
 				["<C-p>"] = { rhs = function (message_view)
 					message_view:prev()
 				end, desc = "Go to previous message"},
+				-- come up with better defaults
+				-- ["<C-->"] = { rhs = function (message_view)
+				-- 	message_view:version_prev()
+				-- end, desc = "Goto prev version of message"},
+				-- ["<C-+>"] = { rhs = function (message_view)
+				-- 	message_view:version_next()
+				-- end, desc = "Goto next version of message"},
 				["O"] = { rhs = function (message_view)
 					local tele = require("galore.telescope")
 					local lgi = require 'lgi'
