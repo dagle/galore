@@ -442,7 +442,7 @@ config.values = {
 						end
 					end
 					-- message_view:select_attachment(cb)
-					tele.parts_browser(message_view.message, cb)
+					tele.parts_browser(message_view.message, cb, {})
 				end, desc = "Import key from part in message"},
 				["mw"] = { rhs = function (message_view)
 					--- view the part in a webbrowser

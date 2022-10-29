@@ -9,6 +9,9 @@ local runtime = require("galore.runtime")
 local Path = require("plenary.path")
 local debug = require("galore.debug")
 local o = require("galore.opts")
+local lgi = require 'lgi'
+local gmime = lgi.require("GMime", "3.0")
+
 -- local hd = require("galore.header-diagnostics")
 
 local Compose = Buffer:new()
@@ -131,7 +134,7 @@ function Compose:send()
 
 	job.send_mail(message, function ()
 		vim.notify("Mail sent", vim.log.levels.INFO)
-		local reply = go.object_get_header(ffi.cast("GMimeObject *", message), "References")
+		local reply = message.get_header("References")
 		if reply then
 			local mid = gu.unbracket(reply)
 			runtime.with_db_writer(function(db)

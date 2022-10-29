@@ -29,7 +29,7 @@ function Message:select_attachment(cb)
 	end)
 end
 
-function Message:update2(line)
+function Message:update(line)
 	self:unlock()
 	self:clear()
 
@@ -142,7 +142,7 @@ function Message:create(mid, opts)
 			buffer.ns = vim.api.nvim_create_namespace("galore-message-view")
 			buffer.dians = vim.api.nvim_create_namespace("galore-dia")
 			mark_read(buffer, opts.parent, line, opts.vline)
-			buffer:update2(line)
+			buffer:update(line)
 			buffer:commands()
 			opts.init(buffer)
 		end,
