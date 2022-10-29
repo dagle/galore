@@ -30,7 +30,6 @@ if true
     nsversion: '0.1',
     symbol_prefix: ['galore'],
     includes: [ 'GObject-2.0', 'Gio-2.0', 'GMime-3.0'],
-    header: 'gmime/gmime-filter.h',
     dependencies: deps,
     extra_args: gir_args,
     fatal_warnings: true,
