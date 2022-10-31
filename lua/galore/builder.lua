@@ -104,7 +104,7 @@ end
 
 function M.textbuilder(text)
 	local body = gmime.TextPart.new_with_subtype("plain")
-	body:set_text(table.concat, table.concat(text, "\n"))
+	body:set_text(table.concat(text, "\n"))
 	return body
 end
 
@@ -133,7 +133,8 @@ function M.create_message(buf, opts, attachments, extra_headers, builder)
 	local address_headers = {at.FROM, at.TO, at.CC, at.BCC, at.REPLY_TO} -- etc
 
 	for k, v in pairs(extra_headers) do
-		message:set_header(k,v, nil)
+    -- is "" == null and we use default charset?
+		message:set_header(k,v, "")
 	end
 
 	for k, v in pairs(buf.headers) do
@@ -151,7 +152,7 @@ function M.create_message(buf, opts, attachments, extra_headers, builder)
 			end
 			address:append(list)
 		else
-			message:set_header(k,v,nil)
+			message:set_header(k,v, "")
 		end
 	end
 
@@ -159,12 +160,12 @@ function M.create_message(buf, opts, attachments, extra_headers, builder)
 		message:set_message_id(message, opts.mid)
 	else
 		local id = gu.make_id(buf.headers.from)
-		message:set_message_id(message, id)
+		message:set_message_id(id)
 	end
 
 	gu.insert_current_date(message)
 
-	message:set_subject(buf.headers.subject, nil)
+	message:set_subject(buf.headers.subject, "")
 
 	if not required_headers(message) then
 		log.error("Missing non-optinal headers")
@@ -206,7 +207,7 @@ function M.create_message(buf, opts, attachments, extra_headers, builder)
 		end
 	end
 
-	message:set_mime_part(message, current)
+	message:set_mime_part(current)
 
 	return message
 end

@@ -145,8 +145,6 @@ local function raw_pipe(object, cmd, args, cb)
 
 	stream:flush()
 	stream:close()
-	-- gs.stream_flush(stream)
-	-- gs.stream_close(stream)
 
 	uv.read_start(stdout, function(err, data)
 		assert(not err, err)

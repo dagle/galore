@@ -1,12 +1,19 @@
 local config = require("galore.config")
 local lgi = require 'lgi'
 local gmime = lgi.require("GMime", "3.0")
+local glib = lgi.require("GLib", "2.0")
 
 local M = {}
 
 function M.get_domainname(mail_str)
 	local fqdn = mail_str:gsub(".*@(%w*)%.(%w*).*", "%1.%2")
 	return fqdn
+end
+
+function M.insert_current_date(message)
+	local time = os.time()
+  local gtime = glib.DateTime.new_from_unix_local(time)
+	message:set_date(gtime)
 end
 
 function M.make_id(from)

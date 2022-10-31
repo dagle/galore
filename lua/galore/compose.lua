@@ -136,7 +136,7 @@ function Compose:send()
 	end
 
 	job.send_mail(message, function ()
-		log.log("Mail sent", vim.log.levels.INFO)
+    log.log("Email sent", vim.log.levels.INFO)
 		local reply = message:get_header("References")
 		if reply then
 			local mid = gu.unbracket(reply)
@@ -205,17 +205,27 @@ local function make_seperator(buffer, lines)
 end
 
 function Compose:commands()
-	vim.api.nvim_buf_create_user_command(self.handle, "GaloreAddAttachment", function (args)
-		if args.fargs then
-			for _, value in ipairs(args.fargs) do
-				self:add_attachment(value)
-			end
-			self:update_attachments()
-		end
-	end, {
-	nargs = "*",
-	complete = "file"
+  vim.api.nvim_buf_create_user_command(self.handle, "GaloreAddAttachment", function (args)
+    if args.fargs then
+      for _, value in ipairs(args.fargs) do
+        self:add_attachment(value)
+      end
+      self:update_attachments()
+    end
+  end, {
+  nargs = "*",
+  complete = "file"
 })
+  vim.api.nvim_buf_create_user_command(self.handle, "GalorePreview", function ()
+    self:preview()
+  end, {
+  nargs = 0,
+  })
+  vim.api.nvim_buf_create_user_command(self.handle, "GaloreSend", function ()
+    self:send()
+  end, {
+  nargs = 0,
+  })
 end
 
 local function consume_headers(buffer)
@@ -296,6 +306,7 @@ function Compose:create(kind, opts)
 
 			buffer:update_attachments()
 			opts.init(buffer)
+      buffer:commands()
 		end,
 	}, Compose)
 end
