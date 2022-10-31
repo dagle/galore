@@ -5,6 +5,14 @@ local gmime = lgi.require("GMime", "3.0")
 
 local M = {}
 
+local function unwild(ia)
+	-- TODO 
+	-- remove + and - from the local part of the email
+	-- so xyz+spam@domain.com => xyz@domain.com
+	return ia
+end
+
+-- TODO expose
 local function normalize(ia1)
 	if gmime.InternetAddressMailbox:is_type_of(ia1) then
 		return ia1:get_idn_addr()
@@ -12,11 +20,16 @@ local function normalize(ia1)
 	return ia1:to_string()
 end
 
+-- TODO expose
+local function removetags(emailstr)
+	return emailstr.gsub("[+-].-@", "@")
+end
+
 function M.address_equal(ia1, ia2)
 	-- we don't support groups for now
 	local e1 = normalize(ia1)
 	local e2 = normalize(ia2)
-	return e1 == e2
+	return unwild(e1) == unwild(e2)
 end
 
 --- TODO move all compare functions to it's own file
@@ -76,9 +89,7 @@ function M.get_our_email(message)
 	local at = gmime.AddressType
 	local emails = {}
 	table.insert(emails, config.values.primary_email)
-	for _, m in ipairs(config.values.other_email) do
-		table.insert(emails, m)
-	end
+	vim.list_extend(emails, config.values.other_email)
 	local str = table.concat(emails, ", ")
 	local ourlist = gmime.InternetAddressList.parse(nil, str)
 	local normal = {
@@ -98,7 +109,7 @@ function M.get_our_email(message)
 		end
 		for ia1 in gu.internet_address_list_iter(addr) do
 			if M.ialist_contains(ia1, ourlist) then
-				return normalize(ia1)
+				return ia1
 			end
 		end
 		::continue::
@@ -111,7 +122,7 @@ function M.get_our_email(message)
 
 		for ia1 in gu.internet_address_list_iter_str(header, nil) do
 			if M.ialist_contains(ia1, ourlist) then
-				return normalize(ia1)
+				return ia1
 			end
 		end
 		::continue::
