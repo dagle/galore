@@ -53,19 +53,19 @@ Then using your favorite plugin-manager install galore.
 
 With packer:
 ``` lua
-use {'dagle/galore', run = 'install_local.sh', 
-	rocks = {'lgi'}, -- or install lgi with your package manager, doesn't seem to work with packer atm
-	requires = {
-		'nvim-telescope/telescope.nvim',
-		'nvim-telescope/telescope-file-browser.nvim',
-		'nvim-lua/popup.nvim',
-		'nvim-lua/plenary.nvim',
-		'dagle/notmuch-lua',
-		'hrsh7th/nvim-cmp', -- optional
-		'dagle/cmp-notmuch', -- optional
-		'dagle/cmp-mates', -- optional
-	}
-}
+  use {'dagle/galore', run = 'bash install_local.sh',
+    rocks = {'lgi'}, -- or install lgi with your package manager, doesn't seem to work with packer atm
+    requires = {
+      'nvim-telescope/telescope.nvim',
+      'nvim-telescope/telescope-file-browser.nvim',
+      'nvim-lua/popup.nvim',
+      'nvim-lua/plenary.nvim',
+      'dagle/notmuch-lua',
+      'hrsh7th/nvim-cmp', -- optional
+      'dagle/cmp-notmuch', -- optional
+      'dagle/cmp-mates', -- optional
+    }
+  }
 ```
 You need to install **telescope** and **cmp** if you want support for that
 
