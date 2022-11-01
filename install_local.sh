@@ -3,7 +3,9 @@
 
 BASEDIR=$(realpath $(dirname "$0"))
 
-rm -r ${BASEDIR}/build
+if [ -d "${BASEDIR}/build" ]; then
+	rm -r ${BASEDIR}/build
+fi
 meson ${BASEDIR}/build
 meson install -C ${BASEDIR}/build
 sed -i "s|libgalore.so|${BASEDIR}/build/src/libgalore.so|" ${BASEDIR}/build/src/Galore-0.1.gir
