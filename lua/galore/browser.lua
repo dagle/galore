@@ -1,4 +1,4 @@
-local async_job = require "galore.pipe"
+local async_job = require "telescope._"
 local LinesPipe = async_job.LinesPipe
 local async = require("plenary.async")
 local Browser = {}
