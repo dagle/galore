@@ -84,11 +84,16 @@ function M.verify_signed(object)
 end
 
 function M.decrypt_and_verify(obj, flags, key)
-	--- do we get err also from this email?
-	local decrypted, result = obj:decrypt(
+  -- we don't get a result or do we get either a result or an error?
+	local decrypted, err = obj:decrypt(
 		flags,
 		key
 	)
+
+  if not decrypted then
+    -- log error
+    return nil, nil, nil
+  end
 
 	-- if err ~= nil then
 	-- 	local str = string.format("Failed to decrypt message: %s", err)

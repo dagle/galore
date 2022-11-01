@@ -384,16 +384,16 @@ M.default_render = {
 	encrypted = function (self, mp, buf, opts, state)
 		local de_part, verified, new_keys
 		opts.keys = opts.keys or {}
-		for _, key in pairs(opts.keys) do
-			de_part, verified, new_keys =
-				gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, key)
-			if de_part ~= nil then
-				return de_part, verified, new_keys
-			end
-		end
+		-- for _, key in pairs(opts.keys) do
+		-- 	de_part, verified, new_keys =
+		-- 		gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, key)
+		-- 	if de_part ~= nil then
+		-- 		return de_part, verified, new_keys
+		-- 	end
+		-- end
 		--- none of the keys worked
 		de_part, verified, new_keys =
-			gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, "")
+			gcu.decrypt_and_verify(mp, gmime.DecryptFlags.ENABLE_KEYSERVER_LOOKUPS, "")
 		return de_part, verified, new_keys
 	end,
 }
