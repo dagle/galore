@@ -8,36 +8,24 @@ local Tmb = Buffer:new()
 local function tmb_get(self)
 	local first = true
   self.highlight = {}
-	return browser.get_entries(self, "show-tree", function (thread)
+	return browser.get_entries(self, "show-tree", function (thread, n)
 		local i = 0
 		for _, message in ipairs(thread) do
 			table.insert(self.State, message.id)
-      if message.match then
-        table.insert(self.highlight, i)
-      end
-			-- if message.matched then
-			-- 	local diagnostics = {
-			-- 		bufnr = self.handle,
-			-- 		lnum = num-1,
-			-- 		end_lnum = num-1,
-			-- 		col = 0,
-			-- 		end_col = 100,
-			-- 		severity = vim.diagnostic.severity.INFO,
-			-- 		message = "matched!",
-			-- 		source = "galore",
-			-- 	}
-			-- 	table.insert(self.dias, diagnostics)
-			-- end
 			if first then
 				vim.api.nvim_buf_set_lines(self.handle, 0, -1, false, {message.entry})
 				first = false
 			else
 				vim.api.nvim_buf_set_lines(self.handle, -1, -1, false, {message.entry})
 			end
+      if message.highlight then
+        local idx = i+n-1
+        table.insert(self.highlight, idx)
+        vim.api.nvim_buf_add_highlight(self.handle, self.dians, "GaloreHighlight", idx, 0, -1)
+      end
 			i = i + 1
 		end
-        -- vim.api.nvim_buf_add_highlight(self.handle, self.dians, "Directory", i, 0, -1)
-      -- end
+    -- end
 		-- We need to api for folds etc and 
 		-- we don't want dump all off them like this
 		-- but otherwise this works

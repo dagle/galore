@@ -7,28 +7,20 @@ local Threads = Buffer:new()
 
 local function threads_get(self)
 	local first = true
-	return browser.get_entries(self, "show-thread", function (thread)
+  self.highlight = {}
+	return browser.get_entries(self, "show-thread", function (thread, n)
 		if thread then
 			table.insert(self.State, thread.id)
-			-- if message.matched then
-			-- 	local diagnostics = {
-			-- 		bufnr = self.handle,
-			-- 		lnum = num-1,
-			-- 		end_lnum = num-1,
-			-- 		col = 0,
-			-- 		end_col = 100,
-			-- 		severity = vim.diagnostic.severity.INFO,
-			-- 		message = "matched!",
-			-- 		source = "galore",
-			-- 	}
-			-- 	table.insert(dias, diagnostics)
-			-- end
 			if first then
 				vim.api.nvim_buf_set_lines(self.handle, 0, -1, false, {thread.entry})
 				first = false
 			else
 				vim.api.nvim_buf_set_lines(self.handle, -1, -1, false, {thread.entry})
 			end
+      if thread.highlight then
+        table.insert(self.highlight, n)
+        vim.api.nvim_buf_add_highlight(self.handle, self.dians, "GaloreHighlight", n, 0, -1)
+      end
 			return 1
 		end
 	end)
