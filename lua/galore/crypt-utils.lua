@@ -21,6 +21,20 @@ local function verify_list(siglist)
 	return sigs
 end
 
+local decrypt_flags = {
+  none = gmime.DecryptFlags.None,
+  export = gmime.DecryptFlags.EXPORT_SESSION_KEY,
+  noverify = gmime.DecryptFlags.NO_VERIFY,
+	keyserver = gmime.DecryptFlags.ENABLE_KEYSERVER_LOOKUPS,
+	online = gmime.DecryptFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
+}
+
+local verify_flags = {
+	none = gmime.VerifyFlags.NONE,
+	keyserver = gmime.VerifyFlags.ENABLE_KEYSERVER_LOOKUPS,
+	online = gmime.VerifyFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
+}
+
 local function get_decrypt_flag(flags)
 	if type(flags) == "table" then
 		local flag = gmime.VerifyFlags.NONE
@@ -31,21 +45,7 @@ local function get_decrypt_flag(flags)
 	end
 	if type(flags) == "string" then
 		flags = flags:lower()
-		if flags == "none" then
-			return gmime.DecryptFlags.NONE
-		end
-		if flags == "export" then
-			return gmime.DecryptFlags.EXPORT_SESSION_KEY
-		end
-		if flags == "noverify" then
-			return gmime.DecryptFlags.NO_VERIFY
-		end
-		if flags == "keyserver" then
-			return gmime.DecryptFlags.ENABLE_KEYSERVER_LOOKUPS
-		end
-		if flags == "online" then
-			return gmime.DecryptFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
-		end
+    return decrypt_flags[flags] or gmime.DecryptFlags.None
 	end
 	return gmime.VerifyFlags.NONE
 end
@@ -60,15 +60,7 @@ local function get_verify_flag(flags)
 	end
 	if type(flags) == "string" then
 		flags = flags:lower()
-		if flags == "none" then
-			return gmime.VerifyFlags.NONE
-		end
-		if flags == "keyserver" then
-			return gmime.VerifyFlags.ENABLE_KEYSERVER_LOOKUPS
-		end
-		if flags == "online" then
-			return gmime.VerifyFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
-		end
+    return verify_flags[flags] or gmime.DecryptFlags.None
 	end
 	return gmime.VerifyFlags.NONE
 end
