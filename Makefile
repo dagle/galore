@@ -1,19 +1,4 @@
-INC =`pkg-config --cflags gmime-3.0`
-LD =-lgmime-3.0 -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lgpgme
-
-CFLAGS = -Wall -Werror -fpic -std=gnu99
-COVERAGE ?=
-
-MKD = mkdir -p
-RM = rm -rf
-TARGET := libgalore.so
-SRC = src/galore.c src/filter-reply.c src/autocrypt.c
-OBJ = build/galore.o build/filter-reply.o #build/autocrypt.o
-
-all: mkbuild build/$(TARGET) install
-
-build/$(TARGET): $(OBJ)
-	${CC} -shared $(LD) $^ -o build/$(TARGET)
+THIS_DIR := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 
 install:
 	# do xdg etc
@@ -21,30 +6,42 @@ install:
 	install galore.desktop ${HOME}/.local/share/applications/
 	install res/galore.svg ${HOME}/.local/share/icons/scalable/apps/
 	update-desktop-database ~/.local/share/applications
-
-build/%.o: src/%.c
-	${CC} -c ${CFLAGS} $(INC) $< -o $@
-
-mkbuild:
-	$(MKD) build
+#	xdg-mime default galore.desktop x-scheme-handler/mailto
 
 lint:
 	luacheck lua
+	# add linting to src/ for C
+
+stylua:
+	stylua lua/
 
 format:
 	clang-format --style=file --dry-run -Werror src/.c src/.h
 
-debug:
-	$(MKD) build
-	$(CC) -Og -ggdb3 $(CFLAGS) $(COVERAGE) -shared src/libgalore.c -o build/$(TARGET)
+# TODO finnish this
+# gdi: 
+# 	gir-to-vimdoc
 
-test:
-	@LD_LIBRARY_PATH=${PWD}/build:${LD_LIBRARY_PATH} luajit test/test.lua
+test/testdir:
+	test/init.sh
 
-clangdhappy:
-	compiledb make
+# this will kinda ruin your install if you run ready-pod
+# Fix this later
+test: test/testdir
+	./install_local.sh
+	LUA_PATH="/usr/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?.lua" nvim --headless --clean \
+	-u test/minimal.vim \
+	-c "PlenaryBustedDirectory test/test {minimal_init = 'test/minimal.vim'}"
+
+pod-build:
+	podman build . -t galore
+	# podman build --no-cache . -t galore
+
+ready-pod:
+	podman run -v $(shell pwd):/code/galore -t galore
 
 clean:
-	$(RM) build
+	$(RM) -r build
+	$(RM) -r test/testdir
 
-.PHONY: lint format clangdhappy clean test debug 
+.PHONY: lint format stylua clean test debug 

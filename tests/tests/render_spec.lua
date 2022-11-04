@@ -1,8 +1,0 @@
-describe("Rendering emails", function ()
-	it("Parsed should render", function ()
-	end)
-	it("No illegal characters", function ()
-	end)
-	it("Right amount of attachments", function ()
-	end)
-end)
