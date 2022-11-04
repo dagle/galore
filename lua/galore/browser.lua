@@ -59,6 +59,9 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
 				vim.api.nvim_buf_set_option(bufnr, "readonly", false)
 				vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
 				vim.api.nvim_buf_set_lines(bufnr, line_nr-1, line_nr, false, {message.entry})
+        if message.highlight then
+          vim.api.nvim_buf_add_highlight(bufnr, self.dians, "GaloreHighlight", line_nr, 0, -1)
+        end
 				vim.api.nvim_buf_set_option(bufnr, "readonly", true)
 				vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
 			end
@@ -106,7 +109,7 @@ function Browser.get_entries(self, mode, buffer_runner)
 
 				for line in iter do
 					local entry = vim.json.decode(line)
-					i = i + buffer_runner(entry)
+					i = i + buffer_runner(entry, i)
 					if numlocal and  i > numlocal then
 						return
 					end
@@ -148,6 +151,82 @@ function Browser.scroll(self)
 			end
 		end,
 	})
+end
+
+local function find_highlight_helper(highlight, start, stop, pos)
+  local mid = math.floor((start + stop) / 2)
+  local item = highlight[mid]
+  if pos == item then
+    return mid
+  elseif start == stop then
+    if pos < item then
+      return start-1
+    else
+      return start
+    end
+  elseif pos > item  then
+    return find_highlight_helper(highlight, math.min(mid+1, stop), stop, pos)
+  else
+    return find_highlight_helper(highlight, start, math.max(mid-1, start), pos)
+  end
+end
+
+local function insert_highlight(highlight, pos)
+  if pos < highlight[1] then
+    table.insert(highlight, pos)
+    return
+  elseif pos > highlight[#highlight] then
+    table.insert(highlight, #highlight, pos)
+    return
+  end
+  local i = find_highlight_helper(highlight, 1, #highlight, pos, false)
+  table.insert(highlight, i, pos)
+end
+
+local function find_highlight(highlight, pos)
+  if pos < highlight[1] or pos > highlight[#highlight] then
+    return nil
+  end
+
+  local index = find_highlight_helper(highlight, 1, #highlight, pos)
+  if highlight[index] ~= pos then
+    return nil
+  end
+  return index
+end
+
+local function highlight_move(highlight, win_id, pos, forward)
+  local vert_pos = pos[1] - 1
+  if not highlight or vim.tbl_isempty(highlight) then
+    return
+  end
+
+  -- if vert_pos < highlight[1] or vert_pos > highlight[#highlight] then
+  --   return nil
+  -- end
+
+  local index = find_highlight_helper(highlight, 1, #highlight, vert_pos)
+
+  if not forward and index > 1 then
+    vim.api.nvim_win_set_cursor(win_id, {highlight[index-1]+1, pos[2]})
+  elseif forward and index < #highlight then
+    vim.api.nvim_win_set_cursor(win_id, {highlight[index+1]+1, pos[2]})
+  end
+end
+
+function Browser.prev_highlight(browser)
+  local win_id = vim.api.nvim_get_current_win()
+  local pos = vim.api.nvim_win_get_cursor(win_id)
+
+  highlight_move(browser.highlight, win_id, pos, false)
+end
+
+function Browser.next_highlight(browser)
+  local win_id = vim.api.nvim_get_current_win()
+  -- local bufnr = vim.api.nvim_win_get_buf(win_id)
+  local pos = vim.api.nvim_win_get_cursor(win_id)
+
+  highlight_move(browser.highlight, win_id, pos, true)
 end
 
 return Browser
