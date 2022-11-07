@@ -1,111 +1,118 @@
-local lgi = require 'lgi'
-local gmime = lgi.require("GMime", "3.0")
+local lgi = require('lgi')
+local gmime = lgi.require('GMime', '3.0')
 
-local gu = require("galore.gmime-util")
-local gcu = require("galore.crypt-utils")
-local u = require("galore.util")
-local runtime = require("galore.runtime")
-local log = require("galore.log")
+local gu = require('galore.gmime-util')
+local gcu = require('galore.crypt-utils')
+local u = require('galore.util')
+local runtime = require('galore.runtime')
+local log = require('galore.log')
 
 local M = {}
 
 local function make_attach(attach)
-	local mime = u.collect(string.gmatch(attach.mime_type, "([^/]+)"))
-	if #mime ~= nil then
-		log.log_err("bad mime-type")
-	end
-	local attachment = gmime.Part.new_with_type(mime[1], mime[2])
-	attachment:set_filename(attach.filename)
-	return attachment
+  local mime = u.collect(string.gmatch(attach.mime_type, '([^/]+)'))
+  if #mime ~= nil then
+    log.log_err('bad mime-type')
+  end
+  local attachment = gmime.Part.new_with_type(mime[1], mime[2])
+  attachment:set_filename(attach.filename)
+  return attachment
 end
 
 local function create_path_attachment(attach)
-	local attachment = make_attach(attach)
+  local attachment = make_attach(attach)
 
-	local fd = assert(vim.loop.fs_open(attach.path, "r", 0644))
-	local stream = gmime.StreamFs.new(fd)
+  local fd = assert(vim.loop.fs_open(attach.path, 'r', 0644))
+  local stream = gmime.StreamFs.new(fd)
 
-	local content = gmime.DataWrapper.new_with_stream(stream, gmime.ContentEncoding.DEFAULT)
-	attachment:set_content(content)
-	return attachment
+  local content = gmime.DataWrapper.new_with_stream(stream, gmime.ContentEncoding.DEFAULT)
+  attachment:set_content(content)
+  return attachment
 end
 
 local function create_part_attachment(attach)
-	local attachment = make_attach(attach)
+  local attachment = make_attach(attach)
 
-	local content = attach.part:get_content()
-	attachment:set_content(content)
-	return attachment
+  local content = attach.part:get_content()
+  attachment:set_content(content)
+  return attachment
 end
 
 local function create_data_attachment(attach)
-	local attachment = make_attach(attach)
+  local attachment = make_attach(attach)
 
-	local stream = gmime.StreamMem.new()
+  local stream = gmime.StreamMem.new()
 
-	local content = gmime.DataWrapper.new_with_stream(stream, gmime.ContentEncoding.DEFAULT)
-	attachment:set_content(content)
-	stream:write(stream, attach.data)
-	stream:flush()
-	return attachment
+  local content = gmime.DataWrapper.new_with_stream(stream, gmime.ContentEncoding.DEFAULT)
+  attachment:set_content(content)
+  stream:write(stream, attach.data)
+  stream:flush()
+  return attachment
 end
 
 -- @param attach attachment
 -- @return A MimePart object containing an attachment
 -- Support encryption?
 local function create_attachment(attach)
-	if attach.data then
-		return create_data_attachment(attach)
-	elseif attach.part then
-		return create_part_attachment(attach)
-	elseif attach.path then
-		return create_path_attachment(attach)
-	else
-		return nil
-	end
+  if attach.data then
+    return create_data_attachment(attach)
+  elseif attach.part then
+    return create_part_attachment(attach)
+  elseif attach.path then
+    return create_path_attachment(attach)
+  else
+    return nil
+  end
 end
 
 -- encrypt a part and return the multipart
 function M.secure(part, opts, recipients)
-	local ctx = gmime.GpgContext.new()
-	if opts.encrypt then
-		local encrypt, err = gmime.MultipartEncrypted.encrypt(ctx, part, opts.sign, opts.gpg_id, opts.encrypt_flags, recipients)
-		if encrypt ~= nil then
-			return encrypt
-		end
-		if opts.encrypt == 2 then
-			local str = string.format("Couldn't encrypt message: %s", err)
-			log.log_err(str)
-		end
-	end
-	if opts.sign then
-		local signed, err = gcu.sign(ctx, part)
-		if signed ~= nil then
-			return signed
-		else
-			local str = string.format("Could not sign message: %s", err)
-			log.log_err(str)
-		end
-	end
-	-- if we don't want to sign and failed to encrypt
-	-- we just return the part as is
-	return part
+  local ctx = gmime.GpgContext.new()
+  if opts.encrypt then
+    local encrypt, err = gmime.MultipartEncrypted.encrypt(
+      ctx,
+      part,
+      opts.sign,
+      opts.gpg_id,
+      opts.encrypt_flags,
+      recipients
+    )
+    if encrypt ~= nil then
+      return encrypt
+    end
+    if opts.encrypt == 2 then
+      local str = string.format("Couldn't encrypt message: %s", err)
+      log.log_err(str)
+    end
+  end
+  if opts.sign then
+    local signed, err = gcu.sign(ctx, part)
+    if signed ~= nil then
+      return signed
+    else
+      local str = string.format('Could not sign message: %s', err)
+      log.log_err(str)
+    end
+  end
+  -- if we don't want to sign and failed to encrypt
+  -- we just return the part as is
+  return part
 end
 
 local function required_headers(message)
-	local function l(list)
-		return list:length(list) > 0
-	end
-	local from = message:get_from()
-	local to = message:get_to()
-	local sub = message:get_subject()
-	return l(from) and l(to) and sub and sub ~= ""
+  local function l(list)
+    return list:length(list) > 0
+  end
+  local from = message:get_from()
+  local to = message:get_to()
+  local sub = message:get_subject()
+  return l(from) and l(to) and sub and sub ~= ''
 end
 
 function M.textbuilder(text)
-	local body = gmime.TextPart.new_with_subtype("plain")
-	body:set_text(table.concat(text, "\n"))
-	return body
+  local body = gmime.TextPart.new_with_subtype('plain')
+  body:set_text(table.concat(text, '\n'))
+  return body
 end
 
 -- create a message from strings
@@ -123,93 +130,91 @@ end
 -- @param bodybuilder function(any) string
 -- @return a gmime message
 function M.create_message(buf, opts, attachments, extra_headers, builder)
-	local at = gmime.AddressType
-	extra_headers = extra_headers or {}
-	opts = opts or {}
-	attachments = attachments or {}
-	local current -- our current position in the mime tree
+  local at = gmime.AddressType
+  extra_headers = extra_headers or {}
+  opts = opts or {}
+  attachments = attachments or {}
+  local current -- our current position in the mime tree
 
-	local message = gmime.Message.new(true)
-	local address_headers = {at.FROM, at.TO, at.CC, at.BCC, at.REPLY_TO} -- etc
+  local message = gmime.Message.new(true)
+  local address_headers = { at.FROM, at.TO, at.CC, at.BCC, at.REPLY_TO } -- etc
 
-	for k, v in pairs(extra_headers) do
+  for k, v in pairs(extra_headers) do
     -- is "" == null and we use default charset?
-		message:set_header(k,v, "")
-	end
+    message:set_header(k, v, '')
+  end
 
-	for k, v in pairs(buf.headers) do
-		k = k:lower()
-		if vim.tbl_contains(address_headers, k) then
-			local list = gmime.InternetAddress.parse(nil, v)
-			-- TODO change k to enum
-			local address = message:get_addresses(k)
-			if not list then
-				local err = string.format(
-					"Failed to parse %s-address:\n%s", v, buf.headers[v]
-				)
-				log.error(err)
-				return
-			end
-			address:append(list)
-		else
-			message:set_header(k,v, "")
-		end
-	end
+  for k, v in pairs(buf.headers) do
+    k = k:lower()
+    if vim.tbl_contains(address_headers, k) then
+      local list = gmime.InternetAddress.parse(nil, v)
+      -- TODO change k to enum
+      local address = message:get_addresses(k)
+      if not list then
+        local err = string.format('Failed to parse %s-address:\n%s', v, buf.headers[v])
+        log.error(err)
+        return
+      end
+      address:append(list)
+    else
+      message:set_header(k, v, '')
+    end
+  end
 
-	if opts.mid then
-		message:set_message_id(message, opts.mid)
-	else
-		local id = gu.make_id(buf.headers.from)
-		message:set_message_id(id)
-	end
+  if opts.mid then
+    message:set_message_id(message, opts.mid)
+  else
+    local id = gu.make_id(buf.headers.from)
+    message:set_message_id(id)
+  end
 
-	gu.insert_current_date(message)
+  gu.insert_current_date(message)
 
-	message:set_subject(buf.headers.subject, "")
+  message:set_subject(buf.headers.subject, '')
 
-	if not required_headers(message) then
-		log.error("Missing non-optinal headers")
-		return
-	end
-	-- done with headers
+  if not required_headers(message) then
+    log.error('Missing non-optinal headers')
+    return
+  end
+  -- done with headers
 
-	-- make a body
-	current = builder(buf.body)
+  -- make a body
+  current = builder(buf.body)
 
-	if not vim.tbl_isempty(attachments) then
-		local multipart = gmime.Multipart.new_with_subtype("mixed")
-		multipart:add(current)
-		current = multipart
-		for _, attach in pairs(attachments) do
-			local attachment = create_attachment(attach)
-			if attachment then
-				multipart:add(attachment)
-			end
-		end
-	end
+  if not vim.tbl_isempty(attachments) then
+    local multipart = gmime.Multipart.new_with_subtype('mixed')
+    multipart:add(current)
+    current = multipart
+    for _, attach in pairs(attachments) do
+      local attachment = create_attachment(attach)
+      if attachment then
+        multipart:add(attachment)
+      end
+    end
+  end
 
-	if opts.encrypt or opts.sign then
-		local function normalize(ia1)
-			if gmime.InternetAddress:is_type_of(ia1) then
-				return ia1:get_addr()
-			end
-			return ia1:get_name()
-		end
-		local recipients = {}
-		local rec = message:get_all_recipients()
-		for ia in gu.internet_address_list_iter(rec) do
-			local norm = normalize(ia)
-			table.insert(recipients, norm)
-		end
-		local secure = M.secure(current, opts, recipients)
-		if secure then
-			current = secure
-		end
-	end
+  if opts.encrypt or opts.sign then
+    local function normalize(ia1)
+      if gmime.InternetAddress:is_type_of(ia1) then
+        return ia1:get_addr()
+      end
+      return ia1:get_name()
+    end
+    local recipients = {}
+    local rec = message:get_all_recipients()
+    for ia in gu.internet_address_list_iter(rec) do
+      local norm = normalize(ia)
+      table.insert(recipients, norm)
+    end
+    local secure = M.secure(current, opts, recipients)
+    if secure then
+      current = secure
+    end
+  end
 
-	message:set_mime_part(current)
+  message:set_mime_part(current)
 
-	return message
+  return message
 end
 
 return M
