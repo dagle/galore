@@ -28,14 +28,6 @@ are destructive atm
 
 Maybe use a sliding reader that loads messages when you scroll instead of loading all messages
 
-* 0.0.1
-  - [ ] Cleanup code
-  - [ ] Clunky stuff, setup etc
-
-
-* 0.0.2
-Todo: Tests, (hooks, templates, compose), documentation, logging
-
 .ics support (then hand it off to provider?)
 - Being able to view an ics
 -- Parse an ics in lua
@@ -45,14 +37,44 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 - Being able to import an ics (whole/partial)
 -- A generalized interface to 
 
-- Make the builder more like template/render?
--- Being able to change builder at runtime?
--- builders should be composable
+- [ ] Create a body-builder that can build a message from a template
+-- [ ] Then make compose create such a template to create messages
+
+* 0.0.1
+  - [ ] Cleanup code
+  - [ ] Clunky stuff, setup etc
+
+* 0.0.2
+Todo: Tests, (hooks, templates, compose), documentation, logging
+
+- [x] being able to read different versions of a message
+
+- [ ] tag undo
+-- [ ] Should it be local to browser or global? Lets assume local
+-- [ ] Save a history of {ids, "changes"}
+- [ ] excluded tags when showing a thread and in tmb
+- [ ] resend?
+- [ ] Refresh all buffers
+- [ ] Fold long headers
 
 - Logging 
--- logging (when should we use vim.notify and when to log?)
--- let users set log-level in config to get more or less logging
--- look into print and util.notify
+- [ ] Todo, log more stuff?
+
+- Make the test framework actually work
+- [ ] Test all util functions
+- [ ] Test sign/crypt in builder
+- [ ] Templates
+- [ ] Add test for (integration tests):
+-- [ ] Autocrypt tests
+-- [ ] Buffer specific tests: saved, tmb, mb, tb, mv, tv, compose
+--- [ ] Saved create a view with all generators and make sure the output and state is correct
+--- [ ] Test sending email to a dummy inbox (with an attachment), checkoutput
+--- [ ] Test draft
+--- [ ] Testing that sending is async and doesn't use more mem then the pipe.
+(--- [ ] Create a browser and make sure it creates the correct folds)
+-- [ ] Buffer generic
+--- [ ] Push all default keybindings making sure that it doesn't crash
+- [ ] Profiling, cpu and memory
 
 - Wrap functions? Config is a bit long atm 
 
@@ -63,7 +85,8 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 
 - [ ] Callbacks for checking signatures: Can we do this in another thread or something
 - [ ] add options for buffer-stuff: buffer should be listed, hidden etc?
--- Mostly for floating terms
+-- Mostly for floating terms?
+-- Should this be configuerable?
 
 - [ ] documentation
 -- [ ] Read the Emmy page!
@@ -74,17 +97,6 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 - [ ] A nicer way to do buffer commands? How do we avoid adding 100 commands?
 -- [ ] Can we collect the arguments?
 
-- Make the test framework actually work
-- [ ] Add test for (integration tests):
--- [ ] Autocrypt tests
--- [ ] Buffer specific tests: saved, tmb, mb, tb, mv, tv, compose
---- [ ] Saved create a view with all generators 
---- [ ] Create a browser and make sure it creates the correct folds
---- [ ] A view should render email correctly and return correct state
--- [ ] Buffer generic
---- [ ] Push all default keybindings making sure that it doesn't crash
-- [ ] Profiling, cpu and memory
-
 (
 - [ ] Decouple notmuch.lua
 - [ ] ref-pointers and if we are using dangling pointers/leaking memory
@@ -93,6 +105,12 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 --- [x] Finish OO bindings
 --- [ ] Tests
 )
+
+- Async handling
+- [ ] Register all async runners (so we can cancel them)
+- [ ] Create a register function
+-- [ ] What info do we neeed on the runners? Just a name and a handle
+- [ ] Make a ui to be able to cancel jobs / timers
 
 - [ ] Cleanup
 -- [ ] Cleanup util, it's horrible
@@ -119,6 +137,10 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 -- [ ] Cleanup (esp encryption and signing), better failing
 -- [ ] Testing
 -- [ ] Document what should/could be in each variable
+
+- Make the builder more like template/render?
+-- Being able to change builder at runtime?
+-- builders should be composable
 
 - [ ] Compose
 -- [ ] Headers should be able to do multiline fields
