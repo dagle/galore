@@ -1,5 +1,6 @@
 local config = require("galore.config")
 local lgi = require 'lgi'
+local log = require("galore.log")
 local gmime = lgi.require("GMime", "3.0")
 
 local M = {}
@@ -21,53 +22,8 @@ local function verify_list(siglist)
 	return sigs
 end
 
-local decrypt_flags = {
-  none = gmime.DecryptFlags.None,
-  export = gmime.DecryptFlags.EXPORT_SESSION_KEY,
-  noverify = gmime.DecryptFlags.NO_VERIFY,
-	keyserver = gmime.DecryptFlags.ENABLE_KEYSERVER_LOOKUPS,
-	online = gmime.DecryptFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
-}
-
-local verify_flags = {
-	none = gmime.VerifyFlags.NONE,
-	keyserver = gmime.VerifyFlags.ENABLE_KEYSERVER_LOOKUPS,
-	online = gmime.VerifyFlags.ENABLE_ONLINE_CERTIFICATE_CHECKS
-}
-
-local function get_decrypt_flag(flags)
-	if type(flags) == "table" then
-		local flag = gmime.VerifyFlags.NONE
-		for _, v in ipairs(flags) do
-			flag = bit.bor(flag, get_decrypt_flag(v))
-		end
-		return flag
-	end
-	if type(flags) == "string" then
-		flags = flags:lower()
-    return decrypt_flags[flags] or gmime.DecryptFlags.None
-	end
-	return gmime.VerifyFlags.NONE
-end
-
-local function get_verify_flag(flags)
-	if type(flags) == "table" then
-		local flag = gmime.VerifyFlags.NONE
-		for _, v in ipairs(flags) do
-			flag = bit.bor(flag, get_verify_flag(v))
-		end
-		return flag
-	end
-	if type(flags) == "string" then
-		flags = flags:lower()
-    return verify_flags[flags] or gmime.DecryptFlags.None
-	end
-	return gmime.VerifyFlags.NONE
-end
-
 function M.verify_signed(object)
-	local keyflag = get_verify_flag(config.values.verify_flags)
-	local signatures, error = object:verify(keyflag)
+	local signatures, error = object:verify(gmime.VerifyFlags(config.values.verify_flags))
 	if not signatures and error then
 		return false
 	else
@@ -77,21 +33,16 @@ end
 
 function M.decrypt_and_verify(obj, flags, key)
   -- we don't get a result or do we get either a result or an error?
-	local decrypted, err = obj:decrypt(
+	local decrypted, result, err = obj:decrypt(
 		flags,
 		key
 	)
 
-  if not decrypted then
-    -- log error
-    return nil, nil, nil
-  end
-
-	-- if err ~= nil then
-	-- 	local str = string.format("Failed to decrypt message: %s", err)
-	-- 	log.log(str, vim.log.levels.ERROR)
-	-- 	return
-	-- end
+	if not decrypted or err ~= nil then
+		local str = string.format("Failed to decrypt message: %s", err)
+		log.log(str, vim.log.levels.ERROR)
+		return
+	end
 
 	local sign
 	if result then
