@@ -170,6 +170,7 @@ function M.compose_options(opts)
   opts.post_sent_hooks = vim.F.if_nil(opts.post_sent_hooks, config.values.post_sent_hooks)
   opts.compose_headers = vim.F.if_nil(opts.compose_headers, config.values.compose_headers)
   opts.draft_dir = vim.F.if_nil(opts.draft_dir, config.values.draft_dir)
+  opts.draft_tag = vim.F.if_nil(opts.draft_tag, config.values.draft_tag)
   opts.sent_dir = vim.F.if_nil(opts.sent_dir, config.values.sent_dir)
 
   opts.extra_headers = vim.F.if_nil(opts.extra_headers, config.values.extra_headers)

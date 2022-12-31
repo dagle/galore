@@ -396,7 +396,7 @@ M.default_render = {
     -- end
     --- none of the keys worked
     de_part, verified, new_keys =
-      gcu.decrypt_and_verify(mp, gmime.DecryptFlags.ENABLE_KEYSERVER_LOOKUPS, '')
+      gcu.decrypt_and_verify(mp, gmime.DecryptFlags(config.values.decrypt_flags), '')
     return de_part, verified, new_keys
   end,
 }

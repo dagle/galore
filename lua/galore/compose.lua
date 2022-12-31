@@ -177,7 +177,7 @@ function Compose:save_draft(build_opts)
     return
   end
   --- TODO from here we want to be async
-  job.insert_mail(message, self.opts.draft_dir, '+draft')
+  job.insert_mail(message, self.opts.draft_dir, self.opts.draft_tag)
 end
 
 function Compose:update_attachments()

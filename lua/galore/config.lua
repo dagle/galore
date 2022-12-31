@@ -17,6 +17,7 @@ config.values = {
     return ''
   end,
   draft_dir = 'Draft', -- directory is relative to the nm root
+  draft_tag = '+draft',
   sent_dir = 'Sent', -- String|function(from)
   key_writeback = false, --- should we write back keys we got from decryption
   draft_encrypt = false, -- TODO
@@ -88,8 +89,8 @@ config.values = {
     end
     return false
   end,
-  verify_flags = 'keyserver', -- "none"|"keyserver"|"online", use {} for multiple
-  decrypt_flags = 'keyserver', -- "none"|"export"|"noverify"|"keyserver"|"online", use {} for multiple
+  verify_flags = {'ENABLE_KEYSERVER_LOOKUPS'},
+  decrypt_flags = {'ENABLE_KEYSERVER_LOOKUPS'},
   sign = false, -- Should we crypto sign the email?
   encrypt = false, -- Should we encrypt the email by default? false, 1 or 2. 1 = try to encrypt
   -- create message anyways. 2 = always encrypt and failing is an error
