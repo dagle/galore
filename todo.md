@@ -49,6 +49,9 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 
 - [x] being able to read different versions of a message
 
+- [ ] Missing decrypt and verify for message part
+- [ ] Parts could be keys, are they attachments?
+
 - [ ] tag undo
 -- [ ] Should it be local to browser or global? Lets assume local
 -- [ ] Save a history of {ids, "changes"}
@@ -143,6 +146,8 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 -- builders should be composable
 
 - [ ] Compose
+-- [ ] Make compose work on table in and tables out and then for builder to use that table
+--- Makes it easier to chain composes and should have the same interface as builder
 -- [ ] Headers should be able to do multiline fields
 --- [ ] Can we make cmp modules work correctly with multiline?
 -- [ ] Concat multiple Adresses instead of overwriting them

@@ -21,9 +21,10 @@ syntax match GaloreFromEnd		"│"						        contained nextgroup=GaloreSubject
 syntax match GaloreSubject		/.\{0,}\(([^()]\+)$\)\@=/				contained nextgroup=GaloreTags
 syntax match GaloreTags		"(.*)$"							contained
 
-highlight GaloreFrom		ctermfg=224 guifg=Orange
-highlight GaloreFromConc	ctermfg=224 guifg=Green
-highlight GaloreFromEnd		ctermfg=224 guifg=Red
+highlight GaloreFrom		guifg=Orange
+highlight GaloreFromConc	guifg=Green
+highlight GaloreFromEnd		guifg=Red
+highlight GaloreHighlight	cterm=bold gui=underline
 highlight link GaloreDate		String
 highlight link GaloreThreadCount	Comment
 highlight link GaloreSubject	Statement
