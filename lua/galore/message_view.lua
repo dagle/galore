@@ -47,6 +47,7 @@ function Message:update()
       keys = self.line.keys,
     })
     u.purge_empty(buffer)
+    self:set_lines(-1, -1, true, {""})
     self:set_lines(-1, -1, true, buffer)
     local ns_line = vim.fn.line('$') - 1
     if not vim.tbl_isempty(self.state.attachments) then

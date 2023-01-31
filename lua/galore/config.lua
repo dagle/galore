@@ -33,10 +33,8 @@ config.values = {
   -- when you scroll to the bottom, we resume the printer
 
   -- Order dependant, true means always show (with "" if no value), false means only show if we added a value to it and not in the list = hidden header, if it exists
-  compose_headers = { { 'From', true }, { 'To', true }, { 'Cc', false }, { 'Bcc', false }, {
-    'Subject',
-    true,
-  } },
+  compose_headers = { { 'From', true }, { 'To', true }, { 'Cc', false }, { 'Bcc', false },
+    { 'Subject', true } },
   extra_headres = {}, -- table with key value of headers to insert if missing
   idn = true, -- TODO
   sort = 'newest', -- "newest" | "oldest" | "message-id" | "unsort"

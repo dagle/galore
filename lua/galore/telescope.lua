@@ -272,6 +272,7 @@ local function mime_preview(buf, winid, entry)
     local buffer = {}
     local state = r.render_message(telerender, message, buffer, {})
     u.purge_empty(buffer)
+    vim.api.nvim_buf_set_lines(buf, -1, -1, true, {""})
     vim.api.nvim_buf_set_lines(buf, -1, -1, true, buffer)
     vim.api.nvim_buf_set_lines(buf, -2, -1, true, {})
 
