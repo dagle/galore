@@ -1,0 +1,25 @@
+{
+  "neodev": {
+    "library": {
+      "enabled": true,
+      "plugins": [
+        "notmuch-lua",
+		"plenary.nvim",
+		"telescope.nvim",
+		"telescope-file-browser.nvim",
+      ]
+    }
+  },
+  "neoconf": {
+    "plugins": {
+      "sumneko_lua": {
+        "enabled": true
+      },
+    }
+  },
+  "lspconfig": {
+    "sumneko_lua": {
+      "Lua.completion.callSnippet": "Replace",
+    },
+  }
+}
