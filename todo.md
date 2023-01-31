@@ -28,18 +28,6 @@ are destructive atm
 
 Maybe use a sliding reader that loads messages when you scroll instead of loading all messages
 
-.ics support (then hand it off to provider?)
-- Being able to view an ics
--- Parse an ics in lua
--- Use calendar-vim to display?
---- How to display multiple dates in different months/years etc?
---- How to display the clocks?
-- Being able to import an ics (whole/partial)
--- A generalized interface to 
-
-- [ ] Create a body-builder that can build a message from a template
--- [ ] Then make compose create such a template to create messages
-
 * 0.0.1
   - [ ] Cleanup code
   - [ ] Clunky stuff, setup etc
@@ -48,6 +36,12 @@ Maybe use a sliding reader that loads messages when you scroll instead of loadin
 Todo: Tests, (hooks, templates, compose), documentation, logging
 
 - [x] being able to read different versions of a message
+
+- [ ] make the view function general so both both telescope and message_view uses the same
+	function-ish (will take a render and one won't try to gpg)
+
+- [ ] Create a body-builder that can build a message from a template
+-- [ ] Then make compose create such a template to create messages
 
 - [ ] Missing decrypt and verify for message part
 - [ ] Parts could be keys, are they attachments?
@@ -145,9 +139,11 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 -- Being able to change builder at runtime?
 -- builders should be composable
 
+
 - [ ] Compose
 -- [ ] Make compose work on table in and tables out and then for builder to use that table
 --- Makes it easier to chain composes and should have the same interface as builder
+--- A user can the supply their builder to the output, like doing encryption etc
 -- [ ] Headers should be able to do multiline fields
 --- [ ] Can we make cmp modules work correctly with multiline?
 -- [ ] Concat multiple Adresses instead of overwriting them
