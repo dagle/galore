@@ -79,8 +79,7 @@ config.values = {
     def.init(opts, searches)
   end,
   validate_key = function(status) --- what level of security we should accept?
-    local lgi = require('lgi')
-    local gmime = lgi.require('GMime', '3.0')
+    local gmime = require("galore.gmime")
     if type(status) == 'number' then
       return bit.band(status, gmime.SignatureStatus.VALID)
         or bit.band(status, gmime.SignatureStatus.GREEN)
@@ -589,8 +588,7 @@ config.values = {
         ['O'] = {
           rhs = function(message_view)
             local tele = require('galore.telescope')
-            local lgi = require('lgi')
-            local gmime = lgi.require('GMime', '3.0')
+            local gmime = require("galore.gmime")
             local function cb(part)
               -- we should only allow this if type is
               -- "application/pgp-keys"?

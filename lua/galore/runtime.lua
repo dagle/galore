@@ -3,8 +3,7 @@ local u = require('galore.util')
 local nm = require('notmuch')
 local log = require('galore.log')
 
-local lgi = require('lgi')
-local gmime = lgi.require('GMime', '3.0')
+local gmime = require("galore.gmime")
 
 local runtime_dir = vim.fn.stdpath('data') .. '/galore'
 if os.getenv('GALOREPATH') ~= nil then

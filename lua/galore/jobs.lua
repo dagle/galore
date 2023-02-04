@@ -3,8 +3,7 @@ local runtime = require('galore.runtime')
 local Job = require('plenary.job')
 local log = require('galore.log')
 
-local lgi = require('lgi')
-local gmime = lgi.require('GMime', '3.0')
+local gmime = require("galore.gmime")
 
 local uv = vim.loop
 

@@ -1,5 +1,4 @@
-local lgi = require('lgi')
-local gmime = lgi.require('GMime', '3.0')
+local gmime = require("galore.gmime")
 
 local gu = require('galore.gmime-util')
 local gcu = require('galore.crypt-utils')
@@ -162,7 +161,7 @@ function M.create_message(buf, opts, attachments, extra_headers, builder)
   end
 
   if opts.mid then
-    message:set_message_id(message, opts.mid)
+    message:set_message_id(opts.mid)
   else
     local id = gu.make_id(buf.headers.from)
     message:set_message_id(id)

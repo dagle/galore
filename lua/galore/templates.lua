@@ -5,8 +5,7 @@ local r = require('galore.render')
 local config = require('galore.config')
 local runtime = require('galore.runtime')
 local u = require('galore.util')
-local lgi = require('lgi')
-local gmime = lgi.require('GMime', '3.0')
+local gmime = require("galore.gmime")
 local log = require('galore.log')
 
 local M = {}

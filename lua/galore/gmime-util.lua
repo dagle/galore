@@ -1,7 +1,7 @@
 local config = require('galore.config')
 local lgi = require('lgi')
-local gmime = lgi.require('GMime', '3.0')
 local glib = lgi.require('GLib', '2.0')
+local gmime = require("galore.gmime")
 
 local M = {}
 

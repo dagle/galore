@@ -30,7 +30,7 @@ function galore.connect()
   if not galore.connected then
     env('GI_TYPELIB_PATH')
     local lgi = require('lgi')
-    local gmime = lgi.require('GMime', '3.0')
+    local gmime = require("galore.gmime")
     gmime.init()
     local galorelib = lgi.require('Galore', '0.1')
     galorelib.init()

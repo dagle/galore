@@ -4,8 +4,7 @@ local Buffer = require('galore.lib.buffer')
 local gu = require('galore.gmime-util')
 local uv = vim.loop
 
-local lgi = require('lgi')
-local gmime = lgi.require('GMime', '3.0')
+local gmime = require("galore.gmime")
 
 local debug = {}
 
