@@ -10,18 +10,24 @@ function Browser.next(browser, line)
   return line_info, line
 end
 
---- Move to the next line in the browser
+--- Move to the prev line in the browser
 function Browser.prev(browser, line)
   line = math.max(line - 1, 1)
   local line_info = browser.State[line]
   return line_info, line
 end
 
---- Move to the prev line in the browser
 function Browser.select(browser)
   local line = vim.api.nvim_win_get_cursor(0)[1]
   return line, browser.State[line]
 end
+
+-- function Browser.select_thread(browser, mode)
+--   local thread_view = require('galore.thread_view')
+--   local vline, line_info = Browser.select(browser)
+--   thread_view:create(line_info, { kind = mode, parent = browser, vline = vline })
+-- end
+
 
 --- Commit the line to the browser
 --- Moving to the next line doesn't really move to the next line
@@ -35,6 +41,7 @@ function Browser.set_line(browser, line)
   end
 end
 
+-- TODO: run this in lua with vim.schedule
 function Browser.update_lines_helper(self, mode, search, line_nr)
   local bufnr = self.handle
   local args = { 'nm-livesearch', '-d', self.opts.runtime.db_path, mode, search }
@@ -185,10 +192,13 @@ local function insert_highlight(highlight, pos)
     table.insert(highlight, #highlight, pos)
     return
   end
-  local i = find_highlight_helper(highlight, 1, #highlight, pos, false)
+  local i = find_highlight_helper(highlight, 1, #highlight, pos)
   table.insert(highlight, i, pos)
 end
 
+
+-- TODO: Remove this and write examples on how to do it
+-- with synIDattr
 local function find_highlight(highlight, pos)
   if pos < highlight[1] or pos > highlight[#highlight] then
     return nil
@@ -233,6 +243,14 @@ function Browser.next_highlight(browser)
   local pos = vim.api.nvim_win_get_cursor(win_id)
 
   highlight_move(browser.highlight, win_id, pos, true)
+end
+
+-- move to browser 
+--- Yank the current line using the selector
+--- @param browser any
+function Browser.yank_browser(browser)
+  local _, id = Browser.select(browser)
+  vim.fn.setreg('', id)
 end
 
 return Browser

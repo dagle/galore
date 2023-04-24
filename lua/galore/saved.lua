@@ -6,6 +6,9 @@ local o = require('galore.opts')
 
 local Saved = Buffer:new()
 
+Saved.Commands = {
+}
+
 local function make_entry(self, db, box, search, name, exclude)
   local q = nm.create_query(db, search)
   if exclude then
@@ -89,6 +92,32 @@ end
 function Saved:select()
   local line = vim.fn.line('.')
   return self.State[line]
+end
+
+--- @param browser any
+--- @param mode any
+function Saved:select_search(browser, mode)
+  local search = self:select()[4]
+  browser:create(search, { kind = mode, parent = self })
+end
+
+function Saved:default_browser()
+  local default_browser = self.opts.default_browser or 'tmb'
+  if default_browser == 'tmb' then
+    return require('galore.thread_message_browser')
+  elseif default_browser == 'message' then
+    return require('galore.message_browser')
+  elseif default_browser == 'thread' then
+    return require('galore.thread_browser')
+  else
+    error("Unknown browser")
+  end
+end
+
+--- @param mode any
+function Saved:select_search_default(mode)
+  local browser = self:default_browser()
+  self:select_search(browser, mode)
 end
 
 --- Create a new window for saved searches

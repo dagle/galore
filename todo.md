@@ -24,6 +24,7 @@ are destructive atm
 --- vim.api.nvim_buf_create_fold(buf, start, stop)
 ---- we can update a buffer in the background etc
 --- Syntax highlighting in folds
+--- Highligtning in view for matched
 --- Being able to run code on open
 
 Maybe use a sliding reader that loads messages when you scroll instead of loading all messages
@@ -35,15 +36,27 @@ Maybe use a sliding reader that loads messages when you scroll instead of loadin
 * 0.0.2
 Todo: Tests, (hooks, templates, compose), documentation, logging
 
+- [ ] Packageing
+-- upstream reply filter?
+-- up
+
+- [ ] Textobjects in views (we should almost get this for free from ts?) and 
+-- views
+
+- [x] Make the builder take a template
+- [ ] Addresses in msg should be either a string or InternetAddressList (userdata)
 - [x] being able to read different versions of a message
 
-- [ ] make the view function general so both both telescope and message_view uses the same
-	function-ish (will take a render and one won't try to gpg)
+- [ ] encryption UI and callbacks/checks. Being able to tell or something during composition 
+    if a mail can be encrypted
 
-- [ ] Create a body-builder that can build a message from a template
--- [ ] Then make compose create such a template to create messages
+- [ ] decrypt/signed parts
 
-- [ ] Missing decrypt and verify for message part
+- [?] Being able to diff between the whole message being signed or a part of the message.
+-- (you currently can but maybe better?)
+
+- [ ] Display relative dates (nm-livesearch)
+
 - [ ] Parts could be keys, are they attachments?
 
 - [ ] tag undo
@@ -75,11 +88,6 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 
 - Wrap functions? Config is a bit long atm 
 
-(
--- [ ] Can we add/delete dias the future?
--- [ ] Being able to select the whole line instead of 100 atm.
-)
-
 - [ ] Callbacks for checking signatures: Can we do this in another thread or something
 - [ ] add options for buffer-stuff: buffer should be listed, hidden etc?
 -- Mostly for floating terms?
@@ -93,15 +101,6 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 
 - [ ] A nicer way to do buffer commands? How do we avoid adding 100 commands?
 -- [ ] Can we collect the arguments?
-
-(
-- [ ] Decouple notmuch.lua
-- [ ] ref-pointers and if we are using dangling pointers/leaking memory
-
--- [ ] Notmuch
---- [x] Finish OO bindings
---- [ ] Tests
-)
 
 - Async handling
 - [ ] Register all async runners (so we can cancel them)
@@ -125,9 +124,10 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 - [ ] Templates 
 -- [x] How to deal with the body of a message
 -- [x] How to add the -- Forward Message --- part? Or not?
--- [ ] Being able to send a template without doing a compose
--- [ ] Clean up and test (then done)
+-- [?] Being able to send a template without doing a compose
+-- [?] Clean up and test (then done)
 -- [ ] A way to interact with the templates and set values (through opts)
+--- 
 
 
 - [ ] Builder
@@ -141,9 +141,6 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 
 
 - [ ] Compose
--- [ ] Make compose work on table in and tables out and then for builder to use that table
---- Makes it easier to chain composes and should have the same interface as builder
---- A user can the supply their builder to the output, like doing encryption etc
 -- [ ] Headers should be able to do multiline fields
 --- [ ] Can we make cmp modules work correctly with multiline?
 -- [ ] Concat multiple Adresses instead of overwriting them
@@ -234,7 +231,6 @@ Use fs_poll from vim.loop to update wins?
 
 - [ ] Error handling in notmuch/Make a status handler for notmuch
 - [ ] Multiselect?
-- [ ] Revise diagnostics
 - [ ] Use an opt based system instead of a static config
 -- [ ] Fix diagnostics for update 
 
@@ -259,8 +255,6 @@ Use fs_poll from vim.loop to update wins?
 - [ ] Managed windows, a way to update windows and 
 -- [ ] Re-implement the mutt-ui.
 
-- [ ] Rewrite notmuch-rs, the state of the lib is meh, maybe
-
 - [ ] Don't assume utf8 but convert from and to the charset in vim?
 
 - [ ] Doing GaloreNew should be able to update UI?
@@ -274,10 +268,6 @@ Use fs_poll from vim.loop to update wins?
 -- [ ] Make fcc automatically detect if it should insert or not, abs path vs relative
 
 - [ ] Add limit and offset to searches.
-- [ ] Make Gmime iterator stateless
-
-- [ ] Add support other encryption methoods
-- [ ] Add support for sq to gmime?
 
 - [ ] Modular design: 
 -- [ ] cmp
@@ -301,8 +291,6 @@ Use fs_poll from vim.loop to update wins?
   -- Easy to use
   -- Easy to write rules
   -- Reply, reply-all, compose to sender, compose, forward, unsubsribe
-
-  - [ ] Is it worth doing your own gpg functions instead of adding the keys into a autocrypt keyring?
 
 lsp for emails?!
 -- hover?

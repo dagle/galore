@@ -2,8 +2,24 @@ local Buffer = require('galore.lib.buffer')
 local o = require('galore.opts')
 local async = require('plenary.async')
 local browser = require('galore.browser')
+local message_view = require('galore.message_view')
+local thread_view = require('galore.thread_view')
+local message_action = require('galore.message_action')
 
 local Tmb = Buffer:new()
+
+Tmb.Commands = {
+  change_tag = { fun = function(buffer, line)
+    local cb = require('galore.callback')
+    cb.change_tag(buffer, line.fargs[2])
+  end}
+  -- Reply = { fun = function (buffer, line)
+  --   local mid = buffer.line.id
+  --   local kind = get_kind(line.smods)
+  --   ma.mid_reply(kind, mid, 'reply', { parent = buffer })
+  -- end
+  -- },
+}
 
 local function tmb_get(self)
   local first = true
@@ -87,7 +103,34 @@ function Tmb:commands()
   })
 end
 
--- function Tmb:autocmd()
+function Tmb:thread()
+  local _, mid = browser.select(self)
+  local tid = message_action.get_tid(mid)
+  return nil, tid
+end
+
+function Tmb:thread_next(line)
+  --- get to the next toplevel fold
+end
+
+function Tmb:thread_prev(line)
+  --- get to the prev toplevel fold
+end
+
+--- Open the selected mail in the browser for viewing
+--- @param mode any
+function Tmb:select_message(mode)
+  local vline, mid = browser.select(self)
+  message_view:create(mid, { kind = mode, parent = self, vline = vline })
+end
+
+--- Open the selected thread in the browser for viewing
+--- @param mode any
+function Tmb:select_thread(mode)
+  local vline, mid = browser.select()
+  local tid = message_action.get_tid(mid)
+  thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid})
+end
 
 --- Create a browser grouped by threads
 --- @param search string a notmuch search string

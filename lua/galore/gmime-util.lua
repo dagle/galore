@@ -30,11 +30,18 @@ function M.mime_type(object)
 end
 
 function M.parse_message(filename)
-  local stream = gmime.StreamFile.open(filename, 'r')
+  local stream = assert(gmime.StreamFile.open(filename, 'r'))
   local parser = gmime.Parser.new_with_stream(stream)
   local opts = gmime.ParserOptions.new()
   local message = parser:construct_message(opts)
   return message
+end
+
+function M.save_part(part, filename)
+  local stream = assert(gmime.StreamFile.open(filename, "w"))
+  local dw = part:get_content()
+  dw:write_to_stream(stream)
+  stream:flush()
 end
 
 --- tries to recorstruct a partial message,

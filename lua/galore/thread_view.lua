@@ -2,22 +2,45 @@ local r = require('galore.render')
 local u = require('galore.util')
 local Buffer = require('galore.lib.buffer')
 local nu = require('galore.notmuch-util')
--- local nm = require("galore.notmuch")
 local nm = require('notmuch')
 local ui = require('galore.ui')
 local runtime = require('galore.runtime')
 local o = require('galore.opts')
 local gu = require('galore.gmime-util')
+local ma = require('galore.message_action')
 
 local Thread = Buffer:new()
+
+Thread.Commands = {
+  reply = { fun = function (buffer, line)
+    local mid = buffer:get_selected()
+    local kind = u.get_kind(line.smods)
+    ma.mid_reply(kind, mid, 'reply', { parent = buffer })
+  end },
+  reply_all = { fun = function (buffer, line)
+    local mid = buffer:get_selected()
+    local kind = u.get_kind(line.smods)
+    ma.mid_reply(kind, mid, 'reply_all', { parent = buffer })
+  end },
+  web_view = { fun = function (buffer, line)
+    local _, i = buffer:get_selected()
+    local message = buffer.messages[i]
+
+    local tele = require('galore.telescope')
+    tele.parts_pipe(message, { 'browser-pipe'})
+  end,
+  },
+}
 
 function Thread:update(tid)
   self:unlock()
   self:clear()
+  self.messages = {}
   self.thread_parts = {}
   self.states = {}
   self.lines = {}
 
+  --- this should be able to take a message offset
   runtime.with_db(function(db)
     local query = nm.create_query(db, 'thread:' .. tid)
     nm.query_set_sort(query, self.opts.sort)
@@ -31,6 +54,7 @@ function Thread:update(tid)
       line.index = i
 
       local message = gu.parse_message(line.filenames[1])
+      table.insert(self.messages, message)
 
       local buffer = {}
       r.show_headers(message, self.handle, { ns = self.ns }, line, message_start)
@@ -133,6 +157,20 @@ function Thread:prev()
       vim.api.nvim_win_set_cursor(0, { m.start, col })
       return
     end
+  end
+end
+
+function Thread:thread_next()
+  if self.vline and self.parent and self.parent.thread_next then
+    local tid, vline = self.parent:thread_next()
+    Thread:create(tid, {parent = self.parent, vline = vline})
+  end
+end
+--
+function Thread:thread_prev()
+  if self.vline and self.parent and self.parent.thread_next then
+    local tid, vline = self.parent:thread_prev()
+    Thread:create(tid, {parent = self.parent, vline = vline})
   end
 end
 

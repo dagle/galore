@@ -2,8 +2,16 @@ local o = require('galore.opts')
 local async = require('plenary.async')
 local Buffer = require('galore.lib.buffer')
 local browser = require('galore.browser')
+local thread_view = require('galore.thread_view')
 
 local Threads = Buffer:new()
+
+Threads.Commands = {
+  change_tag = { fun = function(buffer, line)
+    local cb = require('galore.callback')
+    cb.change_tags_threads(buffer, line.fargs[2])
+  end},
+}
 
 local function threads_get(self)
   local first = true
@@ -56,9 +64,14 @@ end
 
 function Threads:commands() end
 
-function Threads:select_thread()
+function Threads:thread()
   local line = vim.api.nvim_win_get_cursor(0)[1]
   return line, self.State[line]
+end
+
+function Threads:select_thread(mode)
+  local vline, tid = self:thread()
+  thread_view:create(tid, { kind = mode, parent = self, vline = vline})
 end
 
 function Threads:create(search, opts)

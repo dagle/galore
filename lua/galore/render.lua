@@ -8,7 +8,7 @@ local gu = require('galore.gmime-util')
 local M = {}
 
 local function format(str)
-  return vim.split(str, '\n', false)
+  return vim.split(str, '\n', {})
 end
 
 local function mime_type(object)

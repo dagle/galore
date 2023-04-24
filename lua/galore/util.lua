@@ -143,4 +143,17 @@ function M.unmailto(addr)
   return addr:gsub('<mailto:(.*)>', '%1')
 end
 
+function M.get_kind(smods)
+  local kind
+  if smods.vertical then
+    kind = "vertical"
+  elseif smods.horizontal then
+    kind = "horizontal"
+  else
+    kind = smods.split
+  end
+  return kind
+end
+
+
 return M

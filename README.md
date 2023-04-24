@@ -60,7 +60,7 @@ With packer:
       'nvim-telescope/telescope-file-browser.nvim',
       'nvim-lua/popup.nvim',
       'nvim-lua/plenary.nvim',
-      'dagle/notmuch-lua',
+      'dagle/notmuch-luajit',
       'hrsh7th/nvim-cmp', -- optional
       'dagle/cmp-notmuch', -- optional
       'dagle/cmp-mates', -- optional

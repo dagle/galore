@@ -136,6 +136,7 @@ function M.thread_view_options(opts)
     return 'galore-tid:' .. tid
   end)
   opts.tag_unread = vim.F.if_nil(opts.tag_unread, config.values.tag_unread)
+  opts.thread_reverse = vim.F.if_nil(opts.thread_reverse, config.values.thread_reverse)
   opts.empty_tag = vim.F.if_nil(opts.empty_tag, config.values.empty_tag)
   opts.key_bindings = keybindings(opts.key_bindings, config.values.key_bindings.thread_view)
   opts.key_writeback = vim.F.if_nil(opts.key_writeback, config.values.key_writeback)
@@ -174,11 +175,14 @@ function M.compose_options(opts)
   opts.sent_dir = vim.F.if_nil(opts.sent_dir, config.values.sent_dir)
 
   opts.extra_headers = vim.F.if_nil(opts.extra_headers, config.values.extra_headers)
-  --- these are builder options?
-  opts.gpg_id = vim.F.if_nil(opts.gpg_id, config.values.gpg_id)
+  opts.crypto_context = vim.F.if_nil(opts.crypto_context, config.values.crypto_context)
+  opts.pgp_id = vim.F.if_nil(opts.pgp_id, config.values.pgp_id)
   opts.draft_encrypt = vim.F.if_nil(opts.draft_encrypt, config.values.draft_encrypt)
 
+  -- opts.encrypt = vim.F.if_nil(opts.encrypt, config.values.encrypt)
+
   opts.bodybuilder = vim.F.if_nil(opts.bodybuilder, builder.textbuilder)
+  -- opts.bodybuilder = fallbacks(opts.bodybuilder, config.values.bodybuilder, builder.textbuilder)
   ---
   opts.init = vim.F.if_nil(opts.init, config.values.bufinit.compose)
 end

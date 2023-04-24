@@ -259,39 +259,22 @@ end
 function Buffer.create(config, class)
   config = config or {}
 
-  local kind = config.kind or 'replace'
+  --- kind should be mods!
+  -- local kind = config.kind or 'replace'
+  local kind = "default"
+
+  if config.kind and config.kind ~= "" then
+    kind = config.kind
+  end
+
   local buffer = nil
   class = class or Buffer
 
-  if kind == 'replace' then
+  if kind == 'default' then
     if make_new(config.name) then
       return
     end
     vim.cmd('enew')
-    buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
-  elseif kind == 'tab' then
-    vim.cmd('tabnew')
-    if make_new(config.name) then
-      return
-    end
-    buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
-  elseif kind == 'split' then
-    vim.cmd('below new')
-    if make_new(config.name) then
-      return
-    end
-    buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
-  elseif kind == 'split_above' then
-    vim.cmd('top new')
-    if make_new(config.name) then
-      return
-    end
-    buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
-  elseif kind == 'vsplit' then
-    vim.cmd('bot vnew')
-    if make_new(config.name) then
-      return
-    end
     buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
   elseif kind == 'floating' then
     -- Creates the border window
@@ -310,6 +293,11 @@ function Buffer.create(config, class)
       content_buffer = vim.fn.bufnr(config.name)
       inited = true
     else
+    vim.cmd('tabnew')
+    if make_new(config.name) then
+      return
+    end
+    buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
       content_buffer = vim.api.nvim_create_buf(true, true)
     end
 
@@ -331,7 +319,12 @@ function Buffer.create(config, class)
     vim.wo.winhl = 'Normal:Normal'
     vim.api.nvim_win_set_cursor(content_window, { 1, 0 })
   else
-    assert('Wrong buffer mode!')
+    local split = string.format("%s new", kind)
+    vim.cmd(split)
+    if make_new(config.name) then
+      return
+    end
+    buffer = class:new({ handle = vim.api.nvim_get_current_buf() })
   end
 
   buffer.kind = kind
@@ -346,6 +339,7 @@ function Buffer.create(config, class)
     buffer:set_name(config.name)
   end
 
+  --- this should be configurable?
   buffer:set_option('buflisted', config.buflisted or false)
   buffer:set_option('bufhidden', config.bufhidden or 'hide')
   buffer:set_option('buftype', config.buftype or 'nofile')
@@ -395,6 +389,51 @@ function Buffer.create(config, class)
   if config.cursor == 'top' then
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
   end
+  -- vim.print(buffer.Commands)
+
+  vim.api.nvim_buf_create_user_command(buffer.handle, "Galore",
+    function (line)
+      local cmd = buffer.Commands[line.fargs[1]]
+
+      if cmd then
+        cmd.fun(buffer, line)
+      end
+
+    end, {
+      nargs = "*",
+      complete = function(_, line, _)
+        if buffer.Commands then
+          local l = vim.split(line, "%s+")
+          local i
+          local n
+
+          for j, v in ipairs(l) do
+            if v == "Galore" then
+              n = #l - j - 1
+              i = j
+              break
+            end
+          end
+
+          if n == 0 then
+            local keys = vim.tbl_keys(buffer.Commands)
+            return vim.tbl_filter(function(val)
+              return vim.startswith(val, l[i+1])
+            end, keys)
+          end
+          if n > 0 then
+            local cmd = buffer.Commands[l[i+1]]
+
+            if cmd.cmp and cmd.cmp[n] then
+              local comp = cmd.cmp[n](buffer)
+              return vim.tbl_filter(function(val)
+                return vim.startswith(val, l[#l])
+              end, comp)
+            end
+          end
+        end
+      end
+  })
 
   -- if config.autocmds then
   -- 	-- vim.api.nvim_create_augroup("") -- unique id?

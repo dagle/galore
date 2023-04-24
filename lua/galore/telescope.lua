@@ -82,7 +82,6 @@ function Telescope.parts_browser(message, selected, types)
       table.insert(state.part, part)
     end
   end
-  -- message:foreach(browser_fun)
   gu.message_foreach_level(message, browser_fun)
   vim.ui.select(state.select, {}, function(_, idx)
     if selected and idx then
@@ -91,18 +90,18 @@ function Telescope.parts_browser(message, selected, types)
   end)
 end
 
-local function type_to_kind(type)
-  local mode
-  if type == 'default' then
-    mode = 'replace'
-  elseif type == 'horizontal' then
-    mode = 'split'
-  elseif type == 'vertical' then
-    mode = 'vsplit'
-  elseif type == 'tabedit' then
-    mode = 'tab'
-  end
-  return mode
+function Telescope.parts_pipe(message, cmd)
+    local jobs = require('galore.jobs')
+    local callback = function(object)
+      local content = object:get_content_type()
+      if content:is_type('text', '*') then
+        local opts = {}
+        --- this is safe because the object has to be a part
+        local str = r.part_to_string(object, opts)
+        jobs.pipe_str(cmd, str)
+      end
+    end
+    Telescope.parts_browser(message, callback)
 end
 
 local function list_to_table(list)
@@ -121,12 +120,11 @@ local function open_path(bufnr, type, fun)
   local entry = action_state.get_selected_entry()
   local message = gu.parse_message(entry.value.filename)
   actions.close(bufnr)
-  local mode = type_to_kind(type)
   local opts = {
     keys = list_to_table(entry.value.keys),
   }
 
-  fun(mode, message, opts)
+  fun(type, message, opts)
 end
 
 local function load_draft(kind, message, opts)
@@ -158,15 +156,14 @@ local function open_search(bufnr, type)
   local entry = action_state.get_selected_entry()
   entry.value.keys = list_to_table(entry.value.keys)
   actions.close(bufnr)
-  local mode = type_to_kind(type)
-  message_view:create(entry.value.id, { kind = mode })
+  message_view:create(entry.value.id, { kind = type })
 end
 
 function Telescope.create_search(browser, bufnr, type, parent)
   local search = action_state.get_current_line()
   actions.close(bufnr)
   local opts = {
-    kind = type_to_kind(type) or 'split',
+    kind = type,
     parent = parent,
   }
   browser:create(search, opts)
@@ -453,12 +450,7 @@ Telescope.attach_file = function(comp, opts)
 end
 
 --- set file-ending/filename as a hint somehow?
-
--- TODO
---- We need a binding:
---- To get the current line, even if we have a match
---- A binding to select the current directory
-Telescope.save_file = function(attachment, opts)
+Telescope.browser = function(callback, fallback, opts)
   opts = opts or {}
   opts.prompt_title = opts.prompt_title or 'Save file'
   opts.attach_mappings = function(prompt_bufnr, _)
@@ -492,18 +484,36 @@ Telescope.save_file = function(attachment, opts)
       else
         actions.close(prompt_bufnr)
         local file
-        if entry then
-          file = entry.path
-        else
-          local text = action_state.get_current_line()
-          file = (not opts.only_navigation and text) or attachment.filename
+        if opts.only_navigation then
+          return
         end
-        gu.save_part(attachment.part, file)
+
+        if opts.strict_line or not entry then
+          local text = action_state.get_current_line()
+          file = text or fallback
+        else
+          file = entry.path
+        end
+        if file then
+          callback(file)
+        end
       end
     end)
     return true
   end
   require('telescope').extensions.file_browser.file_browser(opts)
+end
+
+Telescope.save_attachment = function(attachment, opts)
+  Telescope.browser(function (file)
+    gu.save_part(attachment.part, file)
+  end, attachment.filename, opts)
+end
+
+Telescope.add_attachment = function(compose, opts)
+  Telescope.browser(function(file)
+    compose:add_attachment_path(file)
+  end, nil, opts)
 end
 
 return Telescope

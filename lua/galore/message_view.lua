@@ -9,8 +9,53 @@ local runtime = require('galore.runtime')
 local browser = require('galore.browser')
 local o = require('galore.opts')
 local gu = require('galore.gmime-util')
+local ma = require('galore.message_action')
 
 local Message = Buffer:new()
+
+Message.Commands = {
+  reply = { fun = function (buffer, line)
+    local mid = buffer.line.id
+    local kind = u.get_kind(line.smods)
+    ma.mid_reply(kind, mid, 'reply', { parent = buffer })
+  end
+  },
+  reply_all = { fun = function (buffer, line)
+    local mid = buffer.line.id
+    local kind = u.get_kind(line.smods)
+    ma.mid_reply(kind, mid, 'reply_all', { parent = buffer })
+  end
+  },
+  save = { fun = function(buffer, line)
+    --- if browser is set we should do another function
+    if line.smods.browse then
+      Message:select_attachment(function (attach)
+        views.save_attachment(attach, ".", line.smods.confirm)
+        end)
+      return
+    end
+    local attachment = line.fargs[2]
+    if not attachment then
+      error("No attachment selected")
+    end
+    local save_path = line.fargs[3] or "."
+    views.save_attachment(buffer.state.attachments, attachment, save_path, line.smods.confirm)
+  end, cmp = {
+    function(buffer)
+      local files = {}
+      for _, v in ipairs(buffer.state.attachments) do
+        table.insert(files, v.filename)
+      end
+      return files
+    end,
+    }
+  },
+  web_view = { fun = function (buffer, line)
+    local tele = require('galore.telescope')
+    tele.parts_pipe(buffer.message, { 'browser-pipe'})
+  end,
+  },
+}
 
 --- add opts
 function Message:select_attachment(cb)
@@ -23,6 +68,7 @@ function Message:select_attachment(cb)
   }, function(item, idx)
     if item then
       cb(self.state.attachments[idx])
+      -- function M.save_attachment_index(attachments, index, save_path, overwrite)
     else
       error('No file selected')
     end
@@ -34,7 +80,26 @@ function Message:update()
   self:clear()
 
   local message = gu.parse_message(self.line.filenames[self.index])
-  -- au.process_au(message, line)
+
+  -- update_private_key (no, notmuch)
+  -- update_last_seen (no, notmuch)
+  -- update_peer (no, notmuch)
+
+  -- galore should do this, maybe sq could do this?
+  -- multi-recommend (yes)
+  -- header (yes)
+  -- gossip_header (yes)
+  -- setup_message (yes)
+  -- install_message (yes)
+
+  -- these should should be standalone and in gmime-sq?
+  -- encrypt (no)
+  -- decrypt (no)
+  -- verify (no)
+
+  -- notmuch should have picked up the key
+  -- decrypt like normal
+  -- ui-recommendation?
   if message then
     vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
     self.message = message
@@ -85,7 +150,7 @@ function Message:next()
     Message:create(mid, { kind = 'replace', parent = self.parent, vline = vline })
   end
 end
---
+
 function Message:prev()
   if self.vline and self.parent then
     local mid, vline = browser.prev(self.parent, self.vline)
@@ -101,27 +166,6 @@ end
 function Message:version_prev()
   self.index = math.min(1, self.index - 1)
   self:redraw()
-end
-
-function Message:commands()
-  vim.api.nvim_buf_create_user_command(self.handle, 'GaloreSaveAttachment', function(args)
-    if args.fargs then
-      local save_path = '.'
-      if #args.fargs > 2 then
-        save_path = args.fargs[2]
-      end
-      views.save_attachment(self.state.attachments, args.fargs[1], save_path)
-    end
-  end, {
-    nargs = '*',
-    complete = function()
-      local files = {}
-      for _, v in ipairs(self.state.attachments) do
-        table.insert(files, v.filename)
-      end
-      return files
-    end,
-  })
 end
 
 function Message:thread_view()
@@ -155,7 +199,7 @@ function Message:create(mid, opts)
       buffer.dians = vim.api.nvim_create_namespace('galore-dia')
       mark_read(buffer, opts.parent, line, opts.vline)
       buffer:update()
-      buffer:commands()
+      -- buffer:commands()
       opts.init(buffer)
     end,
   }, Message)

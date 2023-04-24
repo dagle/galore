@@ -27,7 +27,8 @@ config.values = {
   default_browser = 'tmb', -- default browser to use in default_bindings, also for telescope
   default_view = 'context', -- default view to use in default_bindings, also for telescope, also allows "context"
   thread_expand = true,
-  thread_reverse = false,
+  thread_reverse = false, -- when viewing a thread, what should be at top, the newest or oldest message
+  thread_select = "oldest", -- "newest" | "oldest", should we scroll to the top or botton opening a thread
   browser_grouped = true,
   browser_limit = false, -- nil|number, how many browsers entries should we fetch before we stop?
   -- when you scroll to the bottom, we resume the printer
@@ -35,6 +36,9 @@ config.values = {
   -- Order dependant, true means always show (with "" if no value), false means only show if we added a value to it and not in the list = hidden header, if it exists
   compose_headers = { { 'From', true }, { 'To', true }, { 'Cc', false }, { 'Bcc', false },
     { 'Subject', true } },
+  -- compose_headers = {
+  --   ['From'] = true , ['To'] = true, ['Cc'] = false, ['Bcc'] = false , ['Subject'] = true
+  -- },
   extra_headres = {}, -- table with key value of headers to insert if missing
   idn = true, -- TODO
   sort = 'newest', -- "newest" | "oldest" | "message-id" | "unsort"
@@ -72,7 +76,7 @@ config.values = {
     local saved = require('galore.saved')
     local tmb = require('galore.thread_message_browser')
     if opts.search then
-      tmb:create(opts.search, { kind = 'replace' })
+      tmb:create(opts.search, { kind = 'default' })
       return
     end
     local searches = { saved.gen_tags } -- , saved.gen_internal, saved.gen_excluded}
@@ -91,7 +95,7 @@ config.values = {
   sign = false, -- Should we crypto sign the email?
   encrypt = false, -- Should we encrypt the email by default? false, 1 or 2. 1 = try to encrypt
   -- create message anyways. 2 = always encrypt and failing is an error
-  gpg_id = nil, --- what gpg id to use, string or {email = string}[]
+  pgp_id = nil, --- what gpg id to use, string or {email = string}[]
   autocrypt = true, -- insert the gpg_id in our emails
   autocrypt_reply = true, -- use autocrypt in replys if their header includes one.
   custom_headers = {}, -- a list of headers/producers to be inserted into the header
@@ -144,24 +148,21 @@ config.values = {
       n = {
         ['<CR>'] = {
           rhs = function(saved)
-            local cb = require('galore.callback')
-            cb.select_search_default(saved, 'replace')
+            saved:select_search_default('default')
           end,
           desc = 'Open selected',
         },
         ['b'] = {
           rhs = function(saved)
-            local cb = require('galore.callback')
             local mb = require('galore.message_browser')
-            cb.select_search(saved, mb, 'replace')
+            saved:select_search(mb, 'default')
           end,
           desc = 'Open message browser',
         },
         ['t'] = {
           rhs = function(saved)
-            local cb = require('galore.callback')
             local tm = require('galore.thread_browser')
-            cb.select_search(saved, tm, 'replace')
+            saved:select_search(tm, 'default')
           end,
           desc = 'Open thread browser',
         },
@@ -173,15 +174,13 @@ config.values = {
         },
         ['<C-v>'] = {
           rhs = function(saved)
-            local cb = require('galore.callback')
-            cb.select_search_default(saved, 'vsplit')
+            saved:select_search_default('vertical')
           end,
           desc = 'Open in a vertical split',
         },
         ['<C-x>'] = {
           rhs = function(saved)
-            local cb = require('galore.callback')
-            cb.select_search_default(saved, 'split')
+            saved:select_search_default('horizontal')
           end,
           desc = 'Open in a split',
         },
@@ -193,7 +192,6 @@ config.values = {
         },
         ['s'] = {
           rhs = function(saved)
-            local tmb = require('galore.thread_message_browser')
             local search = saved:select()[4]
             local opts = {
               prompt = 'Search: ',
@@ -201,7 +199,8 @@ config.values = {
             }
             vim.ui.input(opts, function(input)
               if input then
-                tmb:create(input, { kind = 'replace', parent = saved })
+                local browser = saved:default_browser()
+                browser:create(input, { kind = 'default', parent = saved })
               end
             end)
           end,
@@ -237,24 +236,28 @@ config.values = {
           end,
           desc = 'Change tag',
         },
-        ['<CR>'] = {
+        ['t'] = {
           rhs = function(tmb)
             local cb = require('galore.callback')
-            cb.select_message(tmb, 'replace')
+            cb.change_tag_threads_ask(tmb)
+          end,
+          desc = 'Change tag',
+        },
+        ['<CR>'] = {
+          rhs = function(tmb)
+            tmb:select_message('default')
           end,
           desc = 'Open message',
         },
         ['<C-v>'] = {
           rhs = function(tmb)
-            local cb = require('galore.callback')
-            cb.select_message(tmb, 'vsplit')
+            tmb:select_message('vertical')
           end,
           desc = 'Open message in vsplit',
         },
         ['<C-x>'] = {
           rhs = function(tmb)
-            local cb = require('galore.callback')
-            cb.select_message(tmb, 'split')
+            tmb:select_message('horizontal')
           end,
           desc = 'Open message in split',
         },
@@ -339,22 +342,19 @@ config.values = {
         },
         ['<CR>'] = {
           rhs = function(mb)
-            local cb = require('galore.callback')
-            cb.select_message(mb, 'replace')
+            mb:select_message('default')
           end,
           desc = 'Open message',
         },
         ['<C-v>'] = {
           rhs = function(mb)
-            local cb = require('galore.callback')
-            cb.select_message(mb, 'vsplit')
+            mb:select_message('vertical')
           end,
           desc = 'Open message in vsplit',
         },
         ['<C-x>'] = {
           rhs = function(mb)
-            local cb = require('galore.callback')
-            cb.select_message(mb, 'split')
+            mb:select_message('horizontal')
           end,
           desc = 'Open message in split',
         },
@@ -433,22 +433,19 @@ config.values = {
         },
         ['<CR>'] = {
           rhs = function(tb)
-            local cb = require('galore.callback')
-            cb.select_thread(tb, 'replace')
+            tb:select_thread('default')
           end,
           desc = 'Open message',
         },
         ['<C-v>'] = {
           rhs = function(tb)
-            local cb = require('galore.callback')
-            cb.select_thread(tb, 'vsplit')
+            tb:select_thread('vertical')
           end,
           desc = 'Open message in vsplit',
         },
         ['<C-x>'] = {
           rhs = function(tb)
-            local cb = require('galore.callback')
-            cb.select_thread(tb, 'split')
+            tb:select_thread('horizontal')
           end,
           desc = 'Open message in split',
         },
@@ -522,7 +519,7 @@ config.values = {
           rhs = function(message_view)
             local cb = require('galore.callback')
             local mid = message_view.line.id
-            cb.mid_reply('replace', mid, 'reply', { parent = message_view })
+            cb.mid_reply('default', mid, 'reply', { parent = message_view })
           end,
           desc = 'reply',
         },
@@ -530,7 +527,7 @@ config.values = {
           rhs = function(message_view)
             local cb = require('galore.callback')
             local mid = message_view.line.id
-            cb.mid_reply('replace', mid, 'reply_all', { parent = message_view })
+            cb.mid_reply('default', mid, 'reply_all', { parent = message_view })
           end,
           desc = 'reply_all',
         },
@@ -685,7 +682,7 @@ config.values = {
           rhs = function(thread_view)
             local cb = require('galore.callback')
             local mid = thread_view:get_selected()
-            cb.mid_reply('replace', mid, 'reply', { parent = thread_view })
+            cb.mid_reply('default', mid, 'reply', { parent = thread_view })
           end,
           desc = 'reply',
         },
@@ -693,7 +690,7 @@ config.values = {
           rhs = function(thread_view)
             local cb = require('galore.callback')
             local mid = thread_view:get_selected()
-            cb.mid_reply('replace', mid, 'reply_all', { parent = thread_view })
+            cb.mid_reply('default', mid, 'reply_all', { parent = thread_view })
           end,
           desc = 'reply all',
         },

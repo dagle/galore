@@ -2,8 +2,18 @@ local Buffer = require('galore.lib.buffer')
 local o = require('galore.opts')
 local async = require('plenary.async')
 local browser = require('galore.browser')
+local message_view = require('galore.message_view')
+local thread_view = require('galore.thread_view')
+local message_action = require('galore.message_action')
 
 local Mb = Buffer:new()
+
+Mb.Commands = {
+  change_tag = { fun = function(buffer, line)
+    local cb = require('galore.callback')
+    cb.change_tag(buffer, line.fargs[2])
+  end},
+}
 
 local function mb_get(self)
   local first = true
@@ -63,6 +73,27 @@ function Mb:commands()
   end, {
     nargs = '*',
   })
+end
+
+function Mb:thread()
+  local _, mid = browser.select(self)
+  local tid = message_action.get_tid(mid)
+  return nil, tid
+end
+
+--- Open the selected mail in the browser for viewing
+--- @param mode any
+function Mb:select_message(mode)
+  local vline, mid = browser.select(self)
+  message_view:create(mid, { kind = mode, parent = self, vline = vline })
+end
+
+--- Open the selected thread in the browser for viewing
+--- @param mode any
+function Mb:select_thread(mode)
+  local vline, mid = browser.select()
+  local tid = message_action(mid)
+  thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid})
 end
 
 -- create a browser class

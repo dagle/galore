@@ -54,8 +54,8 @@ function M.decrypt_and_verify(obj, flags, key)
 end
 
 -- maybe not do these
-function M.sign(ctx, obj)
-	local ret, err = gmime.MultipartSigned.sign(ctx, obj, config.gpg_id)
+function M.sign(ctx, obj, pgp_id)
+	local ret, err = gmime.MultipartSigned.sign(ctx, obj, pgp_id)
 	return ret, err
 end
 
