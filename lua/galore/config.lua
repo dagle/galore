@@ -74,8 +74,8 @@ config.values = {
   init = function(opts)
     local def = require('galore.default')
     local saved = require('galore.saved')
-    local tmb = require('galore.thread_message_browser')
     if opts.search then
+      local tmb = require('galore.thread_message_browser')
       tmb:create(opts.search, { kind = 'default' })
       return
     end
@@ -174,6 +174,9 @@ config.values = {
         },
         ['<C-v>'] = {
           rhs = function(saved)
+            -- local width = vim.fn.winwidth(0) * 0.8
+            -- local mode = string.format('vertical %d', width)
+            -- saved:select_search_default(mode)
             saved:select_search_default('vertical')
           end,
           desc = 'Open in a vertical split',
@@ -660,8 +663,8 @@ config.values = {
         ['gr'] = {
           rhs = function(message_view)
             local telescope = require('galore.telescope')
-            local refs = telescope.get_header(message_view.message, 'References')
-            telescope.goto_reference(refs)
+            -- local refs = telescope.get_header(message_view.message, 'References')
+            telescope.goto_reference(message_view.message:get_message_id())
           end,
           desc = 'goto References',
         },

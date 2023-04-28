@@ -1,12 +1,22 @@
-local function firstToUpper(str)
-  return (str:gsub('^%l', string.upper))
-end
-
 local function decode(str)
   local function hex_to_char(hex)
     return string.char(tonumber(hex, 16))
   end
   return str:gsub('%%([a-fA-F0-9][a-fA-F0-9])', hex_to_char)
+end
+
+-- We only trust these fields.
+local function to_template(values)
+  local tmpl = {}
+
+  tmpl.headers = {}
+
+  for _, v in ipairs({'to', 'cc', 'bcc', 'subject'}) do
+    tmpl.headers[v] = values[v]
+  end
+
+  tmpl.body = values.body
+  tmpl.attachments = values.attach
 end
 
 local function parse_mailto(str)
@@ -16,31 +26,32 @@ local function parse_mailto(str)
   end
   local values = {}
 
-  str = str:gsub('mailto:', '')
+  if not string.sub(str, 1, 7) == "mailto:" then
+    return
+  end
+
+  str = str:sub('mailto:', 1, 7)
+
   if string.gmatch(str, '?') then
     local lp = str:gsub('.*?', '')
     for k, v in string.gmatch(lp, '([^&=?]+)=([^&=?]+)') do
-      k = firstToUpper(k)
+      k = k:lower()
       values[k] = decode(v)
     end
   end
+
   local to = decode(str:gsub('?.*', ''))
-  --- dunno if we should concat these
   if to and to ~= '' then
-    if values['To'] then
-      values['To'] = to .. ', ' .. values['To']
+    if values['to'] then
+      values['to'] = to .. ', ' .. values['To']
     else
-      values['To'] = to
+      values['to'] = to
     end
   end
-  return values
-end
 
-local function normalize(tbl)
-  return { To = tbl.To, Cc = tbl.Cc, Subject = tbl.Subject, Attach = tbl.Attach, Body = tbl.Body }
+  return to_template(values)
 end
 
 return {
   parse_mailto,
-  normalize,
 }

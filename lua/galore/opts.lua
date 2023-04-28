@@ -53,6 +53,10 @@ local function runtime(opts)
     vim.F.if_nil(opts.runtime.synchronize_flags, config.values.synchronize_flags)
 end
 
+--- common values for all buffers
+function M.buffer(opts)
+end
+
 function M.saved_options(opts)
   opts.bufname = vim.F.if_nil(opts.bufname, 'galore-saved')
   opts.key_bindings = keybindings(opts.key_bindings, config.values.key_bindings.saved)

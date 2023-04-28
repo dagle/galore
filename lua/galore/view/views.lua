@@ -83,4 +83,32 @@ local function mark_read(self, pb, line, vline)
   end)
 end
 
+local function make_tag(message)
+  local subject = message:get_header('Subject') or ''
+  local from = { vim.fn.bufnr('%'), vim.fn.line('.'), vim.fn.col('.'), 0 }
+  return { { tagname = subject, from = from } }
+end
+
+local function goto_message(message, id, parent)
+  local message_view = require('galore.message_view')
+  local items = make_tag(message)
+  vim.fn.settagstack(vim.fn.win_getid(), { items = items }, 't')
+  message_view:create(id, { kind = 'default', parent = parent })
+end
+
+function M.goto_message(message, parent)
+  local mid = message:get_message_id()
+  goto_message(message, mid, parent)
+end
+
+function M.goto_parent(message, parent)
+  local ref = message:get_header('In-Reply-To')
+  if ref == nil then
+    vim.notify('No parent')
+    return
+  end
+  local mid = gmime.utils_decode_message_id(ref)
+  goto_message(message, mid, parent)
+end
+
 return M

@@ -15,6 +15,18 @@ local function addrlist_parse(str)
   return ialist
 end
 
+--- A class to describe an email template.
+--- A template is like a mime email but much simplified.
+--- It represents the what an email would look like on the screen.
+--- This doesn't mean that we can't construct more interesting emails.
+--- Galore allows you to specify a builder that can do all mime stuff
+
+--- @class template
+--- @field headers table|nil
+--- @field body string|nil
+--- @field attachments table|nil
+
+
 -- TODO, make things more composable
 -- Atm we overwrite all the headers instead of merging them
 -- Maybe we should reparse the message before we pass,

@@ -300,7 +300,6 @@ Telescope.notmuch_search = function(opts)
     local group = opts.search_group or 'messages'
 
     -- TODO use the values from opts and not config!
-
     local ret = vim.tbl_flatten({ 'nm-livesearch', '-d', config.values.db_path, group, prompt })
     return ret
   end, entry_maker(), opts.max_results, opts.cwd)
@@ -356,7 +355,7 @@ local function make_tag(message)
 end
 
 function Telescope.get_header(message, header)
-  local ref = message:get_header(header)
+  local refs = message:get_header(header)
   if refs == nil then
     vim.notify('No ' .. header)
     return
@@ -379,18 +378,9 @@ function Telescope.goto_tree(message_id, opts)
 end
 
 --- go to all emails before this one
-function Telescope.goto_reference(refs, opts)
-  if refs == nil then
-    vim.notify('No reference')
-    return
-  end
+function Telescope.goto_reference(message_id, opts)
   opts = opts or {}
-  local search = opts.search or ''
-  local buf = {}
-  for ref in gu.reference_iter_str(refs) do
-    table.insert(buf, 'mid:' .. ref)
-  end
-  opts.presearch = search .. table.concat(buf, ' or ')
+  opts.presearch = message_id
   opts.search_group = 'messages-before'
   opts.prompt_title = 'Load Reference'
   opts.results_title = 'Message'
@@ -412,7 +402,7 @@ end
 local function goto_message(message, id, parent)
   local items = make_tag(message)
   vim.fn.settagstack(vim.fn.win_getid(), { items = items }, 't')
-  message_view:create(id, { kind = 'replace', parent = parent })
+  message_view:create(id, { kind = 'default', parent = parent })
 end
 
 function Telescope.goto_message(message, parent)

@@ -147,14 +147,14 @@ end
 function Message:next()
   if self.vline and self.parent then
     local mid, vline = browser.next(self.parent, self.vline)
-    Message:create(mid, { kind = 'replace', parent = self.parent, vline = vline })
+    Message:create(mid, { kind = 'default', parent = self.parent, vline = vline })
   end
 end
 
 function Message:prev()
   if self.vline and self.parent then
     local mid, vline = browser.prev(self.parent, self.vline)
-    Message:create(mid, { kind = 'replace', parent = self.parent, vline = vline })
+    Message:create(mid, { kind = 'default', parent = self.parent, vline = vline })
   end
 end
 

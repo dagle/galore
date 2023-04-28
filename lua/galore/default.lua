@@ -1,5 +1,6 @@
-local config = require('galore.config')
-local grouped = config.values.browser_grouped
+-- Default settings for galore. These are auxiliary
+-- functions that doesn't fit anywhere else but the user might wants
+-- to reuse.
 local M = {}
 
 function M.init(opts, searches)

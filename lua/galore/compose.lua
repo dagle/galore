@@ -9,7 +9,9 @@ local Path = require('plenary.path')
 local debug = require('galore.debug')
 local o = require('galore.opts')
 local log = require('galore.log')
-local tele = require('galore.telescope')
+
+-- we need to split up the telescope functions, this is redicolus
+-- local tele = require('galore.telescope')
 -- local hd = require("galore.header-diagnostics")
 
 local Compose = Buffer:new()

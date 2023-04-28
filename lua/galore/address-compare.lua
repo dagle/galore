@@ -5,10 +5,15 @@ local gmime = require("galore.gmime")
 local M = {}
 
 local function unwild(ia)
-  -- TODO
-  -- remove + and - from the local part of the email
-  -- so xyz+spam@domain.com => xyz@domain.com
-  return ia
+  -- local myString = "some+text+here"
+  local addr = ia:get_addr()
+  local index, _ = string.find(addr, "+") -- Find the index of the first '+' character
+  local at, _ = string.find(addr, "@") -- Find the index of the first '+' character
+  if index and at < index then
+    addr = string.sub(addr, index + 1) -- Extract the substring starting from the character after the first '+'
+  end
+  -- print(myString) -- Output: "text+here"
+  return addr
 end
 
 -- TODO expose

@@ -174,7 +174,7 @@ end
 --- @param opts gmime.ParserOptions|nil
 --- @return function
 function M.reference_iter_str(str, opts)
-  local refs = gmime.Reference.parse(opts, str)
+  local refs = gmime.References.parse(opts, str)
   if refs == nil then
     return function()
       return nil

@@ -1,3 +1,5 @@
+-- UI functions that works in multiple kinds browsers.
+
 local M = {}
 
 --- Adds the attachments in the bottom of the buffer
