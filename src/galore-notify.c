@@ -1,21 +1,81 @@
 #include "galore-notify.h"
+#include "gmime/gmime-message.h"
+#include "gmime/gmime-object.h"
 #include <gmime/internet-address.h>
+#include <gmime/gmime-multipart.h>
+#include <gmime/gmime-utils.h>
+#include <gmime/gmime-part.h>
+#include <gmime/gmime-message-part.h>
 
 GMimeMessage *g_mime_message_make_notification_response(GMimeMessage *message,
-	InternetAddressMailbox *mbox) {
-	InternetAddressList *addrlist;
-
+	InternetAddressMailbox *from, InternetAddressMailbox *to) {
 	GMimeMessage *notification;
+	GMimeMultipart *mp;
+	GString *prologe;
+	GMimePart *part;
+	GMimeMessagePart *msg_part;
 
 	g_return_val_if_fail(GMIME_IS_MESSAGE(message), NULL);
-	g_return_val_if_fail(INTERNET_ADDRESS_IS_MAILBOX(mbox), NULL);
+	g_return_val_if_fail(INTERNET_ADDRESS_IS_MAILBOX(to), NULL);
+
+	notification = g_mime_message_new(TRUE);
+
+	g_mime_message_add_mailbox(notification, GMIME_ADDRESS_TYPE_FROM,
+			INTERNET_ADDRESS(from)->name, to->addr);
+	g_mime_message_add_mailbox(notification, GMIME_ADDRESS_TYPE_TO,
+			INTERNET_ADDRESS(to)->name, to->addr);
+
+	char *from_str = internet_address_to_string(INTERNET_ADDRESS(from), NULL, 0);
+	GDateTime *date = g_mime_message_get_date(message);
+	char *date_str = g_mime_utils_header_format_date(date);
+
+	// generate mid
+	prologe = g_string_new("");
+
+	g_string_printf(prologe, 
+			"The message sent on %s to %s with subject"
+			"\"%s\" has been displayed."
+			"This is no guarantee that the message has been read or understood.",
+			date_str, from_str, g_mime_message_get_subject(message));
 	
-	// char *str = internet_address_to_string(INTERNET_ADDRESS(mbox), NULL, FALSE);
+	g_free(from_str);
+	g_free(date_str);
 
-	notification = g_mime_message_new(FALSE);
+	mp = g_mime_multipart_new_with_subtype("report");
+
+	g_mime_object_set_content_type_parameter(GMIME_OBJECT(mp),
+			"report-type", "disposition-notification");
+
+	g_mime_multipart_set_prologue(mp, prologe->str);
+	g_string_free(prologe, TRUE);
+
+	part = g_mime_part_new_with_type ("message", "disposition-notification");
+	// g_mime_object_set_header(GMIME_OBJECT(part), "Reporting-UA",
+	// 		"joes-pc.cs.example.com; Galore 0.1", NULL);
+	g_mime_object_set_header(GMIME_OBJECT(part), "Original-Recipient",
+	// TODO:add rfc822;
+			from->addr, NULL);
+	g_mime_object_set_header(GMIME_OBJECT(part), "Final-Recipient",
+	// TODO:add rfc822;
+			from->addr, NULL);
+	g_mime_object_set_header(GMIME_OBJECT(part), "Original-Message-ID",
+			// should we dup this?
+			g_mime_message_get_message_id(message), NULL);
+	g_mime_object_set_header(GMIME_OBJECT(part), "Disposition",
+			"manual-action/MDN-sent-manually; displayed", NULL);
+
+	// Reporting-UA: joes-pc.cs.example.com; Foomail 97.1
+	// Original-Recipient: rfc822;Joe_Recipient@example.com
+	// Final-Recipient: rfc822;Joe_Recipient@example.com
+	// Original-Message-ID: <199509192301.23456@example.org>
+	// Disposition: manual-action/MDN-sent-manually; displayed
+	g_mime_multipart_add(mp, GMIME_OBJECT(part));
+	g_object_unref(part);
+
+	msg_part = g_mime_message_part_new_with_message("rfc822", message);
+	g_mime_multipart_add(mp, GMIME_OBJECT(msg_part));
 
 
-	// g_free(str);
 
 	return notification;
 }
@@ -32,9 +92,6 @@ void g_mime_message_request_notification(GMimeMessage *message,
 
 	g_mime_object_set_header(GMIME_OBJECT(message), 
 			"Return-Path", str, NULL);
-
-	g_mime_object_set_header(GMIME_OBJECT(message), 
-			"Original-Recipient", str, NULL);
 
 	g_free(str);
 }
@@ -61,38 +118,43 @@ gboolean g_mime_message_has_request_notification(GMimeMessage *message) {
 	return TRUE;
 }
 
-gboolean g_mime_message_is_notification(GMimeMessage *message) {
+GMimeObject *g_mime_message_notification_object(GMimeMessage *message) {
 	g_return_val_if_fail(GMIME_IS_MESSAGE(message), FALSE);
-	GMimeObject *root;
+
+	GMimeObject *root, *part;
 	GMimeMultipart *report;
-	GMimeContentType *type;
+	GMimeContentType *ct;
+	const char *report_type;
 
 	root = g_mime_message_get_mime_part(message);
-	if (!root) {
+	g_return_val_if_fail(GMIME_IS_MULTIPART(root), NULL);
+
+	report = GMIME_MULTIPART(root);
+
+	ct = g_mime_object_get_content_type (root);
+	g_return_val_if_fail(ct, NULL);
+
+	if (strcmp(ct->type, "multipart") || strcmp(ct->subtype, "report")) {
 		return FALSE;
 	}
 
-	g_return_if_fail(GMIME_IS_MULTIPART(root), FALSE);
-	
-	type = g_mime_object_get_content_type (root);
-	
-	g_return_val_if_fail(type, FALSE);
+	report_type = g_mime_object_get_content_type_parameter(root, "report-type");
+	g_return_val_if_fail(report_type, NULL);
 
-	if (strcmp(type->type, "multipart") || strcmp(type->subtype, "report")) {
+	if (strcmp(report_type, "disposition-notification")) {
 		return FALSE;
 	}
 
-	// report-type = disposition-notification
+	part = g_mime_multipart_get_part(report, 1);
+	g_return_val_if_fail(part, NULL);
 
-	// try to find one child with the original and a 
-	// Content-Type: message/disposition-notification stuff
+	ct = g_mime_object_get_content_type (part);
+	g_return_val_if_fail(ct, NULL);
 
-}
-
-const char *g_mime_message_notification_id(GMimeMessage *message) {
-
-	// the same as the function above but get the Original-Message-ID
-	return NULL;
+	if (strcmp(ct->type, "message") || strcmp(ct->subtype, "disposition-notification")) {
+		return NULL;
+	}
+	return part;
 }
 
 gboolean g_mime_message_notification_compare(GMimeMessage *message, GMimeMessage *notification) {

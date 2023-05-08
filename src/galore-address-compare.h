@@ -16,20 +16,18 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
  */
 
-#ifndef _GALORE_ADDRESS_CONVERTION_H
-#define _GALORE_ADDRESS_CONVERTION_H
+#ifndef _GALORE_ADDRESS_COMPARE_H_
+#define _GALORE_ADDRESS_COMPARE_H_
 
 #include <gmime/internet-address.h>
 
 G_BEGIN_DECLS
 
 typedef enum {
-	// GOLARE_COMPARE_PLUS_ADDRESSING_LOCAL,
 	GALORE_COMPARE_INSENSITIVE_LOCAL,
 } GaloreCompareLocal;
 
 typedef enum {
-	// GALORE_COMPARE_SUB_DOMAIN,
 	GALORE_COMPARE_INSENSITIVE_DOMAIN,
 	GALORE_COMPARE_DOMAIN_IDN,
 } GaloreCompareDomain;
@@ -45,5 +43,4 @@ gboolean galore_address_compare_local(InternetAddressMailbox *mb1,
 
 G_END_DECLS
 
-
-#endif /* _GALORE_FILTER_REPLY_H_ */
+#endif /* _GALORE_ADDRESS_COMPARE_H_ */

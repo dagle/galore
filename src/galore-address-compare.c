@@ -1,4 +1,4 @@
-#include "galore-address-convert.h"
+#include "galore-address-compare.h"
 #include <string.h>
 
 static gint galore_utf8_strncmp(const char *str1, gssize len1, const char *str2, gssize len2) {
@@ -148,6 +148,8 @@ InternetAddress *galore_address_plus_to_sub(InternetAddressMailbox *mb) {
 	prefixlen = s1 - mb->addr;
 	sublen = mb->at - prefixlen;
 	prefix = mb->addr;
+
+	str = g_string_new_len(NULL, strlen(mb->addr));
 
 	g_string_printf(str, "%.*s@%.*s.%s", prefixlen, prefix, sublen, sub, domain);
 
