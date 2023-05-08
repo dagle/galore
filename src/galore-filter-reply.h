@@ -21,8 +21,6 @@
 
 #include <gmime/gmime-filter.h>
 
-void galore_filter_reply_module_init (void);
-
 G_BEGIN_DECLS
 
 #define GALORE_TYPE_FILTER_REPLY            (galore_filter_reply_get_type ())
