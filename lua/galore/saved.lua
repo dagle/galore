@@ -7,6 +7,7 @@ local o = require('galore.opts')
 local Saved = Buffer:new()
 
 Saved.Commands = {
+  --- create a new search
 }
 
 local function make_entry(self, db, box, search, name, exclude)
@@ -104,11 +105,11 @@ end
 function Saved:default_browser()
   local default_browser = self.opts.default_browser or 'tmb'
   if default_browser == 'tmb' then
-    return require('galore.thread_message_browser')
+    return require('galore.browser.thread_messages')
   elseif default_browser == 'message' then
-    return require('galore.message_browser')
+    return require('galore.browser.messages')
   elseif default_browser == 'thread' then
-    return require('galore.thread_browser')
+    return require('galore.browser.threads')
   else
     error("Unknown browser")
   end

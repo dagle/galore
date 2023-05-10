@@ -155,5 +155,4 @@ function M.get_kind(smods)
   return kind
 end
 
-
 return M

@@ -2,7 +2,7 @@ local o = require('galore.opts')
 local async = require('plenary.async')
 local Buffer = require('galore.lib.buffer')
 local browser = require('galore.browser')
-local thread_view = require('galore.thread_view')
+local thread_view = require('galore.view.thread')
 
 local Threads = Buffer:new()
 

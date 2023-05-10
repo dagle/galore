@@ -29,6 +29,16 @@ function M.mime_type(object)
   end
 end
 
+function M.addr_type(str)
+  str = str:upper()
+  return gmime.AddressType[str]
+end
+
+function M.show_addr(id)
+  local str = gmime.AddressType[id]
+  return str:gsub("^%l", string.upper)
+end
+
 function M.parse_message(filename)
   local stream = assert(gmime.StreamFile.open(filename, 'r'))
   local parser = gmime.Parser.new_with_stream(stream)
@@ -90,7 +100,7 @@ function M.reconstruct(filenames, idx)
   end
 end
 
-function M.make_ref(message, opts)
+function M.make_ref(message, msg)
   local ref_str = message:get_header('References')
   local ref
   if ref_str then
@@ -101,9 +111,8 @@ function M.make_ref(message, opts)
   local mid = message:get_message_id()
   local reply = gmime.References.parse(nil, mid)
   ref:append(mid)
-  opts.headers = opts.headers or {}
-  opts.headers.References = M.references_format(ref)
-  opts.headers['In-Reply-To'] = M.references_format(reply)
+  msg.headers.References = M.references_format(ref)
+  msg.headers['In-Reply-To'] = M.references_format(reply)
 end
 
 function M.references_format(refs)

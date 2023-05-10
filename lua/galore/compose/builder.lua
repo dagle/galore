@@ -152,55 +152,31 @@ end
 --- in-reply-to
 --- references
 
-function M.create_message(msg, opts, builder)
-  local at = gmime.AddressType
+function M.create_message(msg, opts)
   opts = opts or {}
-
   local current -- our current position in the mime tree
-
   local message = gmime.Message.new(true)
-  local address_headers = { at.SENDER, at.FROM, at.TO, at.CC, at.BCC, at.REPLY_TO } -- etc
 
-  for k, v in pairs(msg.extra_headers) do
+  for k, v in pairs(msg.headers) do
     message:set_header(k, v, opts.charset)
   end
 
-  -- add address fields
-  for _, v in ipairs(address_headers) do
-    -- stringify v
-    local header = msg.headers[v]
-    if header then
-      local list = gmime.InternetAddress.parse(nil, header)
-      local address = message:get_addresses(v)
-      if not list then
-        local err = string.format('Failed to parse %s-address:\n%s', v, header)
-        log.error(err)
-      end
-      address:append(list)
-    end
+  for k, v in pairs(msg.addresses) do
+      local address = message:get_addresses(k)
+      address:append(v)
   end
 
-  if msg.mid then
-    message:set_message_id(msg.mid)
-  else
+  if not msg.headers["Message-Id"] then
     local id = gu.make_id(msg.headers.from)
     message:set_message_id(id)
   end
 
-  gu.insert_current_date(message)
-
-  message:set_subject(msg.headers.Subject, opts.charset)
-
-  if msg.headers['In-Reply-To'] then
-    message:set_header('In-Reply-To', msg.headers['In-Reply-To'], opts.charset)
-  end
-
-  if msg.headers['References'] then
-    message:set_header('References', msg.headers['References'], opts.charset)
+  if not msg.date then
+    gu.insert_current_date(message)
   end
 
   if not required_headers(message) then
-    log.error('Missing non-optinal headers')
+    log.error('Missing non-optional headers')
     return
   end
 
@@ -222,20 +198,9 @@ function M.create_message(msg, opts, builder)
 
   -- encryt the message
   if opts.encrypt or opts.sign then
-    --- this is wrong, very wrong
-    --- should we even do anything with the address?
-    --- or is that up to the crypto engine?
-    --- should we remove apa+bepa@xyz.com => bepa@xyz.com
-    local function normalize(ia1)
-      if gmime.InternetAddressMailbox:is_type_of(ia1) then
-        return ia1:get_addr()
-      end
-      return ia1:get_name()
-    end
     local recipients = {}
     local rec = message:get_all_recipients()
     for ia in gu.internet_address_list_iter(rec) do
-      -- local norm = normalize(ia)
       table.insert(recipients, ia:to_string())
     end
 

@@ -389,8 +389,8 @@ function Buffer.create(config, class)
   if config.cursor == 'top' then
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
   end
-  -- vim.print(buffer.Commands)
 
+  --- add globals
   vim.api.nvim_buf_create_user_command(buffer.handle, "Galore",
     function (line)
       local cmd = buffer.Commands[line.fargs[1]]

@@ -2,7 +2,7 @@ local u = require('galore.util')
 local ui = require('galore.ui')
 local Buffer = require('galore.lib.buffer')
 local job = require('galore.jobs')
-local builder = require('galore.builder')
+local builder = require('galore.compose.builder')
 local nu = require('galore.notmuch-util')
 local runtime = require('galore.runtime')
 local Path = require('plenary.path')
@@ -37,6 +37,12 @@ Compose.Commands = {
   save_draft = { fun = function (buffer, _)
     buffer:save_draft()
   end },
+  show_headers = { fun = function(buffer, _)
+    vim.print(buffer.extra_headers)
+  end },
+  push_header = { fun = function(buffer, _)
+    buffer:push_heder()
+  end},
 }
 
 function Compose:add_attachment_path(file_path)
@@ -63,16 +69,33 @@ function Compose:set_header_option(key, value)
   self.extra_headers[key] = value
 end
 
-function Compose:unset_option()
+function Compose:unset_header()
   local list = vim.tbl_keys(self.extra_headers)
   vim.ui.select(list, {
-    prompt = 'Option to unset',
+    prompt = 'header',
     format_item = function(item)
       return string.format('%s = %s', item, self.extra_headers[item])
     end,
   }, function(item, _)
     if item then
       self.extra_headers[item] = nil
+    end
+  end)
+end
+
+function Compose:push_header()
+  local list = vim.tbl_keys(self.extra_headers)
+  vim.ui.select(list, {
+    prompt = 'head',
+    format_item = function(item)
+      return string.format('%s = %s', item, self.extra_headers[item])
+    end,
+  }, function(item, _)
+    if item then
+      local value = string.format('%s = %s', item, self.extra_headers[item])
+      self.extra_headers[item] = nil
+      local body_line = vim.api.nvim_buf_get_extmark_by_id(self.handle, self.compose, self.marks, {})[1]
+      self:set_lines(body_line, body_line, false, {value})
     end
   end)
 end
@@ -118,18 +141,16 @@ end
 
 --- should return a msg
 function Compose:parse_buffer()
-  local msg = {}
   local headers, body_line = get_headers(self)
   local body = vim.api.nvim_buf_get_lines(self.handle, body_line + 1, -1, false)
 
-  headers = vim.tbl_extend('keep', headers, self.extra_headers)
+  local msg = templ.buffer(headers, self.extra_headers)
 
-  if headers.subject == nil then
-    headers.subject = self.opts.empty_topic
+  if msg.headers.Subject == nil then
+    headers.Subject = self.opts.empty_topic
   end
 
   msg.body = body
-  msg.headers = headers
   msg.attachments = self.attachments
   return msg
 end
@@ -235,10 +256,11 @@ local function firstToUpper(str)
 end
 -- this function is overly messy because we want to print the headers in a
 -- defined order.
-function Compose:consume_headers(headers)
+function Compose:consume_headers(msg)
+  local headers = msg:dump_headers()
   local rendered = {}
   local extra_headers = {}
-  headers = headers or {}
+  -- local headers = msg.headers or {}
 
   for _, v in ipairs(headers) do
     extra_headers[v[1]] = v[2]
@@ -270,7 +292,7 @@ end
 function Compose:populate(msg)
   self:clear()
 
-  self:consume_headers(msg.headers)
+  self:consume_headers(msg)
   local after = vim.fn.line('$') - 1
   self:render_body(msg.body)
 

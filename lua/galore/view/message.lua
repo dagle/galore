@@ -1,7 +1,7 @@
 local r = require('galore.render')
 local u = require('galore.util')
 local Buffer = require('galore.lib.buffer')
-local views = require('galore.views')
+local views = require('galore.view')
 local ui = require('galore.ui')
 local nu = require('galore.notmuch-util')
 local nm = require('notmuch')
@@ -100,6 +100,9 @@ function Message:update()
   -- notmuch should have picked up the key
   -- decrypt like normal
   -- ui-recommendation?
+  -- TODO: attachments should be a list and not a map.
+  -- Storing based on filenames is a bad idea.
+
   if message then
     vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
     self.message = message

@@ -154,14 +154,14 @@ config.values = {
         },
         ['b'] = {
           rhs = function(saved)
-            local mb = require('galore.message_browser')
+            local mb = require('galore.browser.messages')
             saved:select_search(mb, 'default')
           end,
           desc = 'Open message browser',
         },
         ['t'] = {
           rhs = function(saved)
-            local tm = require('galore.thread_browser')
+            local tm = require('galore.browser.threads')
             saved:select_search(tm, 'default')
           end,
           desc = 'Open thread browser',
@@ -520,17 +520,17 @@ config.values = {
       n = {
         ['r'] = {
           rhs = function(message_view)
-            local cb = require('galore.callback')
+            local ma = require('galore.message_action')
             local mid = message_view.line.id
-            cb.mid_reply('default', mid, 'reply', { parent = message_view })
+            ma.mid_reply('default', mid, 'reply', { parent = message_view })
           end,
           desc = 'reply',
         },
         ['R'] = {
           rhs = function(message_view)
-            local cb = require('galore.callback')
+            local ma = require('galore.message_action')
             local mid = message_view.line.id
-            cb.mid_reply('default', mid, 'reply_all', { parent = message_view })
+            ma.mid_reply('default', mid, 'reply_all', { parent = message_view })
           end,
           desc = 'reply_all',
         },

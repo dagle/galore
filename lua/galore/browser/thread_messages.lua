@@ -2,24 +2,31 @@ local Buffer = require('galore.lib.buffer')
 local o = require('galore.opts')
 local async = require('plenary.async')
 local browser = require('galore.browser')
-local message_view = require('galore.message_view')
-local thread_view = require('galore.thread_view')
+local message_view = require('galore.view.message')
+local thread_view = require('galore.view.thread')
 local message_action = require('galore.message_action')
 
-local Mb = Buffer:new()
+local Tmb = Buffer:new()
 
-Mb.Commands = {
+Tmb.Commands = {
   change_tag = { fun = function(buffer, line)
     local cb = require('galore.callback')
     cb.change_tag(buffer, line.fargs[2])
-  end},
+  end}
+  -- Reply = { fun = function (buffer, line)
+  --   local mid = buffer.line.id
+  --   local kind = get_kind(line.smods)
+  --   ma.mid_reply(kind, mid, 'reply', { parent = buffer })
+  -- end
+  -- },
 }
 
-local function mb_get(self)
+local function tmb_get(self)
   local first = true
   self.highlight = {}
-  return browser.get_entries(self, 'show-message', function(message, n)
-    if message then
+  return browser.get_entries(self, 'show-tree', function(thread, n)
+    local i = 0
+    for _, message in ipairs(thread) do
       table.insert(self.State, message.id)
       if first then
         vim.api.nvim_buf_set_lines(self.handle, 0, -1, false, { message.entry })
@@ -28,20 +35,35 @@ local function mb_get(self)
         vim.api.nvim_buf_set_lines(self.handle, -1, -1, false, { message.entry })
       end
       if message.highlight then
-        table.insert(self.highlight, n)
-        vim.api.nvim_buf_add_highlight(self.handle, self.dians, 'GaloreHighlight', n, 0, -1)
+        local idx = i + n - 1
+        table.insert(self.highlight, idx)
+        vim.api.nvim_buf_add_highlight(self.handle, self.dians, 'GaloreHighlight', idx, 0, -1)
       end
-      return 1
+      i = i + 1
     end
+    -- end
+    -- We need to api for folds etc and
+    -- we don't want dump all off them like this
+    -- but otherwise this works
+    -- if #thread > 1 then
+    -- 	local threadinfo = {
+    -- 		stop = i-1,
+    -- 		start = linenr,
+    -- 	}
+    -- 	table.insert(self.threads, threadinfo)
+    -- end
+    return i
   end)
 end
 
-function Mb:async_runner()
+function Tmb:async_runner()
   self.updating = true
+  self.dias = {}
+  self.threads = {}
   local func = async.void(function()
-    self.runner = mb_get(self)
+    self.runner = tmb_get(self)
     pcall(function()
-      self.runner.resume()
+      self.runner.resume(self.opts.limit)
       self:lock()
       self.updating = false
     end)
@@ -49,7 +71,8 @@ function Mb:async_runner()
   func()
 end
 
-function Mb:refresh()
+--- Redraw the whole window
+function Tmb:refresh()
   if self.runner then
     self.runner.close()
     self.runner = nil
@@ -59,12 +82,17 @@ function Mb:refresh()
   self:async_runner()
 end
 
-function Mb:update(line_nr)
-  local id = self.State[line_nr]
-  browser.update_lines_helper(self, 'show-message', 'id:' .. id, line_nr)
+-- have an autocmd for refresh?
+function Tmb:trigger_refresh()
+  -- trigger an refresh in autocmd
 end
 
-function Mb:commands()
+function Tmb:update(line_nr)
+  local id = self.State[line_nr]
+  browser.update_lines_helper(self, 'show-single-tree', 'id:' .. id, line_nr)
+end
+
+function Tmb:commands()
   vim.api.nvim_buf_create_user_command(self.handle, 'GaloreChangetag', function(args)
     if args.args then
       local callback = require('galore.callback')
@@ -75,31 +103,42 @@ function Mb:commands()
   })
 end
 
-function Mb:thread()
+function Tmb:thread()
   local _, mid = browser.select(self)
   local tid = message_action.get_tid(mid)
   return nil, tid
 end
 
+function Tmb:thread_next(line)
+  --- get to the next toplevel fold
+end
+
+function Tmb:thread_prev(line)
+  --- get to the prev toplevel fold
+end
+
 --- Open the selected mail in the browser for viewing
 --- @param mode any
-function Mb:select_message(mode)
+function Tmb:select_message(mode)
   local vline, mid = browser.select(self)
   message_view:create(mid, { kind = mode, parent = self, vline = vline })
 end
 
 --- Open the selected thread in the browser for viewing
 --- @param mode any
-function Mb:select_thread(mode)
+function Tmb:select_thread(mode)
   local vline, mid = browser.select()
-  local tid = message_action(mid)
+  local tid = message_action.get_tid(mid)
   thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid})
 end
 
--- create a browser class
-function Mb:create(search, opts)
-  o.mb_options(opts)
-  Buffer.create({
+--- Create a browser grouped by threads
+--- @param search string a notmuch search string
+--- @param opts table
+--- @return any
+function Tmb:create(search, opts)
+  o.tmb_options(opts)
+  return Buffer.create({
     name = opts.bufname(search),
     ft = 'galore-browser',
     kind = opts.kind,
@@ -107,17 +146,18 @@ function Mb:create(search, opts)
     parent = opts.parent,
     mappings = opts.key_bindings,
     init = function(buffer)
-      buffer.opts = opts
       buffer.search = search
+      buffer.opts = opts
+      buffer.diagnostics = {}
       buffer.dians = vim.api.nvim_create_namespace('galore-dia')
-      buffer:refresh()
+      buffer:refresh(search)
       buffer:commands()
       if opts.limit then
         browser.scroll(buffer)
       end
       opts.init(buffer)
     end,
-  }, Mb)
+  }, Tmb)
 end
 
-return Mb
+return Tmb

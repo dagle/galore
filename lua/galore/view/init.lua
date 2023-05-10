@@ -4,8 +4,6 @@ local runtime = require('galore.runtime')
 local nu = require('galore.notmuch-util')
 local M = {}
 
---- TODO
-
 local function save_attachment(attachment, save_path, confirm)
   if not attachment then
     -- log.error("No attachment with that name")

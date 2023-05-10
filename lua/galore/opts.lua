@@ -1,6 +1,5 @@
 -- Populate default options from the config file
 local config = require('galore.config')
-local builder = require('galore.builder')
 
 local M = {}
 
@@ -166,6 +165,7 @@ function M.render_options(opts)
 end
 
 function M.compose_options(opts)
+  local builder = require('galore.compose.builder')
   opts.bufname = parse_bufname(opts.bufname, function()
     return vim.fn.tempname()
   end)

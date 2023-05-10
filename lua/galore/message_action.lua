@@ -1,4 +1,4 @@
--- these are functions that work on message ids
+-- these are functions that work on messages
 -- these should functions work on views (thread and message-view), browsers (tmb and message)
 -- and telescope.
 
@@ -6,8 +6,8 @@ local nm = require('notmuch')
 local nu = require('galore.notmuch-util')
 local runtime = require('galore.runtime')
 local gu = require('galore.gmime-util')
-local tm = require('galore.templates')
-local compose = require('galore.compose')
+local tm = require('galore.compose.templates')
+local compose = require('galore.compose.compose')
 
 local M = {}
 
@@ -20,16 +20,14 @@ function M.message_reply(kind, message, mode, opts)
   opts.reply = true
   mode = mode or 'reply'
 
+  local msg = tm.response_message(message, opts, mode)
   --- create a msg
-  tm.load_body(message, opts)
-  opts.Attach = nil
-  tm.response_message(message, opts, mode)
-
-  -- create a msg 
+  msg:load_body(message, opts)
+  msg.attachments = nil
 
   -- tm.response_message(message, opts, mode)
-  gu.make_ref(message, opts)
-  compose:create(kind, opts)
+  gu.make_ref(message, msg)
+  compose:create(kind, msg, opts)
 end
 
 --- Create a reply compose from a message view
