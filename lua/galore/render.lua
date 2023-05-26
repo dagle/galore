@@ -92,8 +92,9 @@ function M.show_headers(message, buffer, opts, line, start)
   end
 
   local date = message:get_date()
-  local num = date:to_unix()
-  local date_str = os.date('%c', num)
+  -- local num = date:to_unix()
+  -- local date_str = os.date('%c', num)
+  local date_str = gmime.utils_header_format_date(date)
   i = show_header(buffer, 'Date', date_str, opts.ns, i, line)
   local subject = message:get_subject()
   i = show_header(buffer, 'Subject', subject, opts.ns, i, line)
