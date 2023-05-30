@@ -1,10 +1,5 @@
 local config = require('galore.config')
 
-local galore_build_root = (function()
-  local dirname = string.sub(debug.getinfo(1).source, 2, #'/init.lua' * -1)
-  return dirname .. '../../build/src/'
-end)()
-
 local galore = {}
 
 galore.connected = false
@@ -16,24 +11,11 @@ function galore.open(opts)
   end)
 end
 
-local function env(var)
-  local value = vim.fn.getenv(var)
-  if value ~= vim.NIL then
-    value = galore_build_root .. ':' .. value
-  else
-    value = galore_build_root
-  end
-  vim.fn.setenv(var, value)
-end
-
 function galore.connect()
   if not galore.connected then
-    -- env('GI_TYPELIB_PATH')
-    -- local lgi = require('lgi')
     local gmime = require("galore.gmime")
     local galorelib = require("galore.gmime-extra")
     gmime.init()
-    -- local galorelib = lgi.require('Galore', '0.1')
     galorelib.init()
     local runtime = require('galore.runtime')
     if galore.user_config ~= nil then
