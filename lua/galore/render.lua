@@ -385,9 +385,13 @@ M.default_render = {
   verify = function(self, bufnr, ns, list, before, after, names)
     config.values.annotate_signature(bufnr, ns, list, before, after, names)
   end,
-  encrypted = function(self, mp, buf, opts, state)
+  encrypted = function(self, object, buf, opts, state)
     local de_part, verified, new_keys
     opts.keys = opts.keys or {}
+
+    if gmime.MultipartSigned:is_type_of(object) then
+    end
+
     -- for _, key in pairs(opts.keys) do
     -- 	de_part, verified, new_keys =
     -- 		gcu.decrypt_and_verify(mp, gmime.DecryptFlags.NONE, key)
@@ -396,8 +400,9 @@ M.default_render = {
     -- 	end
     -- end
     --- none of the keys worked
+
     de_part, verified, new_keys =
-      gcu.decrypt_and_verify(mp, gmime.DecryptFlags(config.values.decrypt_flags), '')
+      gcu.decrypt_and_verify(object, gmime.DecryptFlags(config.values.decrypt_flags), '')
     return de_part, verified, new_keys
   end,
 }
@@ -416,7 +421,29 @@ function M.walker(render, object, buf, opts, state)
       end
     else
       if render.part then
-        render:part(object, buf, opts, state)
+        if render.encrypted and encrypted then
+          local de_part, verify_list, new_keys = render:encrypted(object, buf, opts, state)
+
+          render:part(object, buf, opts, state)
+
+          table.insert(state.keys, new_keys)
+
+          if verify_list then
+            table.insert(state.callbacks, function(bufnr, ns)
+              render:verify(bufnr, ns, verify_list, before, after, nil)
+            end)
+          end
+        elseif render.verify and signed then
+          local verify_list = gcu.verify_signed(object)
+
+          render:part(object, buf, opts, state)
+
+          table.insert(state.callbacks, function(bufnr, ns)
+            render:verify(buf, ns, verify_list, before, after, nil)
+          end)
+        else
+          render:part(object, buf, opts, state)
+        end
       end
     end
   elseif gmime.Multipart:is_type_of(object) then
@@ -433,9 +460,8 @@ function M.walker(render, object, buf, opts, state)
       M.walker(render, de_part, buf, opts, state)
       -- local after = #buf + opts.offset - 1
 
-      if render.verify then
+      if render.verify and verify_list then
         table.insert(state.callbacks, function(bufnr, ns)
-          -- what is names?
           render:verify(bufnr, ns, verify_list, before, after, nil)
         end)
       end

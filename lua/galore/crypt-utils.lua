@@ -32,6 +32,7 @@ end
 
 function M.decrypt_and_verify(obj, flags, key)
   -- we don't get a result or do we get either a result or an error?
+  -- TODO: object can be either a Part or MultipartEncrypted
 	local decrypted, result, err = obj:decrypt(
 		flags,
 		key
@@ -44,6 +45,7 @@ function M.decrypt_and_verify(obj, flags, key)
 	end
 
 	local sign
+  -- check the flag has GMIME_DECRYPT_NO_VERIFY
 	if result then
 		sign = verify_list(result:get_signatures())
 	end
