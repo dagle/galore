@@ -28,11 +28,12 @@ end
 
 function galore.connect()
   if not galore.connected then
-    env('GI_TYPELIB_PATH')
-    local lgi = require('lgi')
+    -- env('GI_TYPELIB_PATH')
+    -- local lgi = require('lgi')
     local gmime = require("galore.gmime")
+    local galorelib = require("galore.gmime-extra")
     gmime.init()
-    local galorelib = lgi.require('Galore', '0.1')
+    -- local galorelib = lgi.require('Galore', '0.1')
     galorelib.init()
     local runtime = require('galore.runtime')
     if galore.user_config ~= nil then

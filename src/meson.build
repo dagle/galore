@@ -14,7 +14,7 @@ deps = [
   dependency('gobject-2.0'),
   dependency('gio-2.0'),
 ]
-filter_lib = library('galore', source_c, dependencies : deps)
+galore_lib = library('galore', source_c, dependencies : deps, install: true)
 gnome = import('gnome')
 
 if true
@@ -24,7 +24,7 @@ if true
     ]
 
   filter_glib_gir = gnome.generate_gir(
-    filter_lib,
+    galore_lib,
     sources: source_c + source_h,
     namespace: 'Galore',
     nsversion: '0.1',
@@ -33,6 +33,7 @@ if true
     dependencies: deps,
     extra_args: gir_args,
     fatal_warnings: true,
+    install: true,
     )
 else
   # Just warn and quit
