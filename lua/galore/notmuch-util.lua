@@ -1,6 +1,7 @@
 -- local nm = require("galore.notmuch")
 local nm = require('notmuch')
 local u = require('galore.util')
+local hi = require('galore.history')
 
 local M = {}
 
@@ -66,42 +67,154 @@ function M.line_populate(db, line)
   end
 end
 
-local function update_tags(message, changes)
+--- Wrapper around message_add_tag that adds the inversion
+--- to a history buffer if it's not null.
+--- If the tag is found this function doesn't do anything
+--- and history isn't updated.
+local function add_tag(message, tag, history)
+  if history then
+    for have in nm.get_tags(message) do
+      if have == tag then
+        return
+      end
+    end
+  end
+
+  local status = nm.message_add_tag(message, tag)
+  if status then
+    -- TODO: status here
+    return status
+  end
+  if history then
+    -- insert the inverse into history
+    table.insert(history, "-" .. tag)
+  end
+end
+
+--- Wrapper around message_remove_tag that adds the inversion
+--- to a history buffer if it's not null.
+--- If the tag is not found this function doesn't do anything
+--- and history isn't updated.
+local function del_tag(message, tag, history)
+  local found = false
+  if history then
+    for have in nm.get_tags(message) do
+      if have == tag then
+        found = true
+      end
+    end
+
+    if not found then
+      return
+    end
+  end
+
+  local status = nm.message_remove_tag(message, tag)
+  if status then
+    -- TODO: status here
+    return status
+  end
+  if history then
+    -- insert the inverse into history
+    table.insert(history, "+" .. tag)
+  end
+end
+
+local function verify_changes(changes)
+  for change in ipairs(changes) do
+    local op = string.sub(change, 1, 1)
+    if op ~= '+' and op ~= '-' then
+      return false
+    end
+  end
+end
+
+-- Update stuff
+local function update_tags(message, changes, history)
   nm.message_freeze(message)
   for _, change in ipairs(changes) do
-    local status
     local op = string.sub(change, 1, 1)
     local tag = string.sub(change, 2)
     if op == '-' then
-      status = nm.message_remove_tag(message, tag)
+      del_tag(message, tag, history)
     elseif op == '+' then
-      status = nm.message_add_tag(message, tag)
-    end
-    if status ~= nil then
-      -- print error
+      add_tag(message, tag, history)
     end
   end
   nm.message_thaw(message)
   nm.message_tags_to_maildir_flags(message)
 end
 
-function M.change_tag(db, id, str)
+function M.change_tag(db, id, str, bufnr)
+  local history
+  if bufnr then
+    history = {}
+  end
+
   local changes = vim.split(str, ' ')
+  if not verify_changes(changes) then
+    vim.notify("The tag changing string is of the wrong format", vim.log.levels.ERROR)
+    return
+  end
   local message = nm.db_find_message(db, id)
   if message == nil then
     vim.notify("Can't change tag, message not found", vim.log.levels.ERROR)
     return
   end
   nm.db_atomic_begin(db)
-  update_tags(message, changes)
+  update_tags(message, changes, history)
   nm.db_atomic_end(db)
+  hi.push_local(bufnr, history)
 end
 
+function M.change_tag_query(db, query, str, bufnr)
+  local history
+  if bufnr then
+    history = {}
+  end
+
+  local changes = vim.split(str, ' ')
+  if not verify_changes(changes) then
+    vim.notify("The tag changing string is of the wrong format", vim.log.levels.ERROR)
+    return
+  end
+  local q = nm.create_query(db, query)
+  if not q then
+    vim.notify("Can't change tag, bad query not found", vim.log.levels.ERROR)
+    return
+  end
+  for message in nm.query_get_messages(q) do
+    nm.db_atomic_begin(db)
+    update_tags(message, changes, history)
+    nm.db_atomic_end(db)
+  end
+  hi.push_local(bufnr, history)
+end
+
+-- TODO: change this to a hook
 function M.tag_if_nil(db, id, tag)
   local message = nm.db_find_message(db, id)
   local tags = u.collect(nm.message_get_tags(message))
   if vim.tbl_isempty(tags) and tag then
     M.change_tag(db, id, tag)
+  end
+end
+
+function M.undo(db, bufnr, fun)
+  local bufchanges = hi.pop_local(bufnr)
+  if not bufchanges then
+    return
+  end
+
+  -- should we add a redo?
+  for action in ipairs(bufchanges) do
+    local message = nm.db_find_message(db, action.mid)
+    -- if we don't find the message, we just ignore it.
+    if message then
+      nm.db_atomic_begin(db)
+      update_tags(message, action.changes)
+      nm.db_atomic_end(db)
+    end
   end
 end
 
