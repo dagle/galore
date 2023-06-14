@@ -6,9 +6,6 @@ local log = require('galore.log')
 local gmime = require("galore.gmime")
 
 local runtime_dir = vim.fn.stdpath('data') .. '/galore'
-if os.getenv('GALOREPATH') ~= nil then
-  runtime_dir = os.getenv('GALOREPATH')
-end
 
 local save_file = runtime_dir .. '/nm_saved.txt'
 
