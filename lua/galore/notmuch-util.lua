@@ -56,6 +56,8 @@ local function pop_helper(line, iter, i)
   return i
 end
 
+--- @param db ffi.cdata* a notmuch message
+--- @param line number 
 function M.line_populate(db, line)
   local id = line.id
   local query = nm.create_query(db, 'mid:' .. id)
@@ -67,13 +69,16 @@ function M.line_populate(db, line)
   end
 end
 
+--- @param message ffi.cdata* a notmuch message
+--- @param tag string tag to delete
+--- @param history table?
 --- Wrapper around message_add_tag that adds the inversion
 --- to a history buffer if it's not null.
 --- If the tag is found this function doesn't do anything
 --- and history isn't updated.
 local function add_tag(message, tag, history)
   if history then
-    for have in nm.get_tags(message) do
+    for have in nm.message_get_tags(message) do
       if have == tag then
         return
       end
@@ -91,6 +96,9 @@ local function add_tag(message, tag, history)
   end
 end
 
+--- @param message ffi.cdata* a notmuch message
+--- @param tag string tag to delete
+--- @param history table?
 --- Wrapper around message_remove_tag that adds the inversion
 --- to a history buffer if it's not null.
 --- If the tag is not found this function doesn't do anything
@@ -98,7 +106,7 @@ end
 local function del_tag(message, tag, history)
   local found = false
   if history then
-    for have in nm.get_tags(message) do
+    for have in nm.message_get_tags(message) do
       if have == tag then
         found = true
       end
@@ -120,16 +128,26 @@ local function del_tag(message, tag, history)
   end
 end
 
+--- @param changes string[] 
+--- @return boolean
+--- Check if all changes follows the format
+--- "+|-name" etc
 local function verify_changes(changes)
-  for change in ipairs(changes) do
+  for _, change in ipairs(changes) do
     local op = string.sub(change, 1, 1)
-    if op ~= '+' and op ~= '-' then
+    if not (op == '+' or op == '-') then
       return false
     end
   end
+  return true
 end
 
--- Update stuff
+--- @param message ffi.cdata* a notmuch message
+--- @param changes string[]
+--- @param history table?
+--- changes tags for message, adds it to the history if it made a change.
+--- if the tag already had the tag (for +tag) or didn't have the tag (for -tag),
+--- this becomes a nop and history isn't updated.
 local function update_tags(message, changes, history)
   nm.message_freeze(message)
   for _, change in ipairs(changes) do
@@ -145,13 +163,17 @@ local function update_tags(message, changes, history)
   nm.message_tags_to_maildir_flags(message)
 end
 
-function M.change_tag(db, id, str, bufnr)
+--- @param db ffi.cdata* notmuch db connection
+--- @param id string a notmuch message id
+--- @param tag_changes string tags we want to change for the query
+--- @param bufnr number? bufnr (0 for current) we want to add this to history
+function M.change_tag(db, id, tag_changes, bufnr)
   local history
   if bufnr then
     history = {}
   end
 
-  local changes = vim.split(str, ' ')
+  local changes = vim.split(tag_changes, ' ')
   if not verify_changes(changes) then
     vim.notify("The tag changing string is of the wrong format", vim.log.levels.ERROR)
     return
@@ -164,16 +186,22 @@ function M.change_tag(db, id, str, bufnr)
   nm.db_atomic_begin(db)
   update_tags(message, changes, history)
   nm.db_atomic_end(db)
-  hi.push_local(bufnr, history)
+  if bufnr then
+    hi.push_local(bufnr, history)
+  end
 end
 
-function M.change_tag_query(db, query, str, bufnr)
+--- @param db ffi.cdata* notmuch db connection
+--- @param query string a notmuch query
+--- @param tag_changes string tags we want to change for the query
+--- @param bufnr number? bufnr (0 for current) we want to add this to history
+function M.change_tag_query(db, query, tag_changes, bufnr)
   local history
   if bufnr then
     history = {}
   end
 
-  local changes = vim.split(str, ' ')
+  local changes = vim.split(tag_changes, ' ')
   if not verify_changes(changes) then
     vim.notify("The tag changing string is of the wrong format", vim.log.levels.ERROR)
     return
@@ -188,19 +216,32 @@ function M.change_tag_query(db, query, str, bufnr)
     update_tags(message, changes, history)
     nm.db_atomic_end(db)
   end
-  hi.push_local(bufnr, history)
+  if bufnr then
+    hi.push_local(bufnr, history)
+  end
 end
 
--- TODO: change this to a hook
+--- @param db ffi.cdata* notmuch db connection
+--- @param id string a notmuch id
+--- @param tag string? a default tag.
+--- Set a default tag if the all tags are removed. This is useful because trying to browse
+--- messages without tags can be annoying. A common thing is to is to set messages without any
+--- tags to be archived.
 function M.tag_if_nil(db, id, tag)
+  if not tag then
+    return
+  end
   local message = nm.db_find_message(db, id)
   local tags = u.collect(nm.message_get_tags(message))
-  if vim.tbl_isempty(tags) and tag then
+  if vim.tbl_isempty(tags) then
     M.change_tag(db, id, tag)
   end
 end
 
-function M.undo(db, bufnr, fun)
+--- @param db ffi.cdata* notmuch db connection
+--- @param bufnr number a bufnr or 0 for current buffer
+--- Reverts the last tag changeset for the buffer
+function M.undo(db, bufnr)
   local bufchanges = hi.pop_local(bufnr)
   if not bufchanges then
     return
@@ -218,6 +259,8 @@ function M.undo(db, bufnr, fun)
   end
 end
 
+--- @param db ffi.cdata* notmuch db connection
+--- @param line_info number
 function M.update_line(db, line_info)
   local message = nm.db_find_message(db, line_info.id)
   local new_info = M.get_message(message)

@@ -234,8 +234,8 @@ config.values = {
         },
         ['a'] = {
           rhs = function(tmb)
-            local cb = require('galore.callback')
-            cb.change_tag_ask(tmb)
+            local br = require("galore.browser")
+            br.message_change_tag(tmb, "-something")
           end,
           desc = 'Change tag',
         },

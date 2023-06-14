@@ -76,9 +76,14 @@ function Mb:commands()
 end
 
 function Mb:thread()
-  local _, mid = browser.select(self)
+  local vline, mid = browser.select(self)
   local tid = message_action.get_tid(mid)
-  return nil, tid
+  return vline, tid
+end
+
+function Mb:message()
+  local vline, mid = browser.select(self)
+  return vline, mid
 end
 
 --- Open the selected mail in the browser for viewing
@@ -92,7 +97,7 @@ end
 --- @param mode any
 function Mb:select_thread(mode)
   local vline, mid = browser.select()
-  local tid = message_action(mid)
+  local tid = message_action.get_tid(mid)
   thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid})
 end
 

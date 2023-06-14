@@ -1,6 +1,7 @@
 local async_job = require('telescope._')
 local LinesPipe = async_job.LinesPipe
 local async = require('plenary.async')
+
 local Browser = {}
 
 --- Move to the next line in the browser
@@ -245,7 +246,6 @@ function Browser.next_highlight(browser)
   highlight_move(browser.highlight, win_id, pos, true)
 end
 
--- move to browser 
 --- Yank the current line using the selector
 --- @param browser any
 function Browser.yank_browser(browser)

@@ -62,11 +62,13 @@ function Threads:update(line_nr)
   browser.update_lines_helper(self, 'show-thread', 'thread:' .. id, line_nr)
 end
 
-function Threads:commands() end
-
 function Threads:thread()
-  local line = vim.api.nvim_win_get_cursor(0)[1]
-  return line, self.State[line]
+  local line, tid = browser.select(self)
+  return line, tid
+end
+
+function Threads:message()
+  error("Can't get a message from a thread")
 end
 
 function Threads:select_thread(mode)

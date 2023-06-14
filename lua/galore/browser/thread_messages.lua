@@ -104,9 +104,14 @@ function Tmb:commands()
 end
 
 function Tmb:thread()
-  local _, mid = browser.select(self)
+  local vline, mid = browser.select(self)
   local tid = message_action.get_tid(mid)
-  return nil, tid
+  return vline, tid
+end
+
+function Tmb:message()
+  local vline, mid = browser.select(self)
+  return vline, mid
 end
 
 function Tmb:thread_next(line)
