@@ -25,7 +25,7 @@ The idea is to be more powerful than mutt but way easier to configure.
 Other than the basic notmuch features Galore has support for: 
 - cmp for address completion
 - telescope for fuzzy searching emails
-- encrypting and decrypting emails
+- encrypting and decrypting emails (multiple engines, autocrypt support(WIP))
 - signing and verifying emails
 
 The idea is to provide a good email experiance by default where you configure
@@ -43,13 +43,27 @@ To be able to run qeuries async it uses another program called [nm-livesearch](h
 it's used to both populate browser windows and telescope. You *need* to install it before using galore
 
 Some html emails are just to impossible to render in galore (or any text email client), for these
-you need full blown webbrowser. For this you can use a tool like
+you need something more powerful than w3m. For this you can use a tool like
 [browser-pipe](https://github.com/dagle/browser-pipe) and then pipe the html into it.
-(look in config for an example)
+(look in config for an example).
+
+To install these you can do
+
+``` bash
+cargo install browser-pipe
+cargo install nm-livesearch
+```
 
 You need to install neovim and notmuch.
 
 Then using your favorite plugin-manager install galore.
+
+To load the gmime code, we need a loader called [lgi](https://github.com/lgi-devs/lgi).
+We can install this package 3 different ways:
+
+- Using the [lgi.nvim wrapper](https://github.com/dagle/lgi.nvim)
+- Using a package manager that supports luarocks
+- Using [nvim_rocks](https://github.com/theHamsta/nvim_rocks)
 
 With packer:
 ``` lua
@@ -64,17 +78,41 @@ With packer:
       'hrsh7th/nvim-cmp', -- optional
       'dagle/cmp-notmuch', -- optional
       'dagle/cmp-mates', -- optional
+      { 'dagle/lgi.nvim', build = 'bash install.sh' }, -- or install it manually
     }
   }
+``` 
+
+With lazy:
+
+``` lua
+  { 'dagle/galore', build = 'bash install_local.sh',
+  	dependencies = {
+        { 'dagle/lgi.nvim', build = 'bash install.sh' }
+  		'nvim-telescope/telescope.nvim',
+  		'nvim-telescope/telescope-file-browser.nvim',
+  		'nvim-lua/popup.nvim',
+  		'nvim-lua/plenary.nvim',
+        'dagle/notmuch-luajit',
+  		'hrsh7th/nvim-cmp', -- optional
+        'dagle/cmp-notmuch', -- optional
+        'dagle/cmp-mates', -- optional
+  	}
+  },
+``` 
+
+The mates plugin requires the mates binary to be installed. Writing a custom address plugin
+should be pretty easy.
+
+To make sure everything is working after installing do
 ```
-You need to install **telescope** and **cmp** if you want support for that
-
-It also has optional support for the address book mates,  so install that for
-mates support (will be moved to a seperate plugin later)
-
-After installing do
 :checkhealth galore
-To make sure everything is working
+```
+
+Galore also uses the awesome gmime library (the same notmuch use) for parsing and constructing email.
+Since this is a C library and you might want lsp support, you can install these 2 tools to load and generate
+lsp stubs. [invader](https://github.com/dagle/invader.nvim) and 
+[gir-to-stub](https://github.com/dagle/gir-to-stub/)
 
 ## Usage
 After installing galore, you need to add the following to init:

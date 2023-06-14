@@ -12,7 +12,7 @@ are destructive atm
 
 - Being able to reuse bindings from different views?
 
-- make Galoremailto safe?
+- make Galore mailto safe?
 
 - mixminion support?
 
@@ -37,8 +37,14 @@ Maybe use a sliding reader that loads messages when you scroll instead of loadin
 Todo: Tests, (hooks, templates, compose), documentation, logging
 
 - [ ] Packageing
--- upstream reply filter?
--- up
+-- move gmime-extra to it's own thing
+
+- [ ] emacs
+-- notmuch-message-headers/notmuch-message-headers-visible (easier)
+-- notmuch-multipart/alternative-discouraged (easier)
+-- filter on searches (we kinda have that in telescope)
+-- galore-saved-searches (a vim.ui.select)
+-- notmuch-show-empty-saved-searches / notmuch-show-empty-saved-special-searches
 
 - [ ] Textobjects in views (we should almost get this for free from ts?) and 
 -- views
@@ -50,22 +56,24 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 - [ ] encryption UI and callbacks/checks. Being able to tell or something during composition 
     if a mail can be encrypted
 
-- [ ] decrypt/signed parts
+- [-] decrypt/signed parts
 
 - [?] Being able to diff between the whole message being signed or a part of the message.
 -- (you currently can but maybe better?)
 
-- [ ] Display relative dates (nm-livesearch)
+- [x] Display relative dates (nm-livesearch)
 
+- user defined templates, instead of compose_headers
+-- [ ] You can do this atm. Just make it easier, move compose header into their own file
+
+-- huh?
 - [ ] Parts could be keys, are they attachments?
 
-- [ ] tag undo
--- [ ] Should it be local to browser or global? Lets assume local
--- [ ] Save a history of {ids, "changes"}
+- [x] tag undo
 - [ ] excluded tags when showing a thread and in tmb
-- [ ] resend?
+- [x] resend?
 - [ ] Refresh all buffers
-- [ ] Fold long headers
+- [x] Fold long headers (no, this should be done in TS?)
 
 - Logging 
 - [ ] Todo, log more stuff?
@@ -79,6 +87,7 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 -- [ ] Buffer specific tests: saved, tmb, mb, tb, mv, tv, compose
 --- [ ] Saved create a view with all generators and make sure the output and state is correct
 --- [ ] Test sending email to a dummy inbox (with an attachment), checkoutput
+    (just use cat?)
 --- [ ] Test draft
 --- [ ] Testing that sending is async and doesn't use more mem then the pipe.
 (--- [ ] Create a browser and make sure it creates the correct folds)
