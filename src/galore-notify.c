@@ -8,10 +8,10 @@
 #include <gmime/gmime-message-part.h>
 
 GMimeMessage *g_mime_message_make_notification_response(GMimeMessage *message,
-	InternetAddressMailbox *from, InternetAddressMailbox *to) {
+	InternetAddressMailbox *from, InternetAddressMailbox *to, const char *ua) {
 	GMimeMessage *notification;
 	GMimeMultipart *mp;
-	GString *prologe;
+	char *prologe;
 	GMimePart *part;
 	GMimeMessagePart *msg_part;
 
@@ -26,13 +26,14 @@ GMimeMessage *g_mime_message_make_notification_response(GMimeMessage *message,
 			INTERNET_ADDRESS(to)->name, to->addr);
 
 	char *from_str = internet_address_to_string(INTERNET_ADDRESS(from), NULL, 0);
+	// TODO: free date?
 	GDateTime *date = g_mime_message_get_date(message);
 	char *date_str = g_mime_utils_header_format_date(date);
 
-	// generate mid
-	prologe = g_string_new("");
+	// TODO: generate mid
+	// prologe = g_string_new("");
 
-	g_string_printf(prologe, 
+	prologe = g_strdup_printf(
 			"The message sent on %s to %s with subject"
 			"\"%s\" has been displayed."
 			"This is no guarantee that the message has been read or understood.",
@@ -46,21 +47,27 @@ GMimeMessage *g_mime_message_make_notification_response(GMimeMessage *message,
 	g_mime_object_set_content_type_parameter(GMIME_OBJECT(mp),
 			"report-type", "disposition-notification");
 
-	g_mime_multipart_set_prologue(mp, prologe->str);
-	g_string_free(prologe, TRUE);
+	g_mime_multipart_set_prologue(mp, prologe);
+	g_free(prologe);
 
 	part = g_mime_part_new_with_type ("message", "disposition-notification");
-	// g_mime_object_set_header(GMIME_OBJECT(part), "Reporting-UA",
-	// 		"joes-pc.cs.example.com; Galore 0.1", NULL);
+	g_mime_object_set_header(GMIME_OBJECT(part), "Reporting-UA",
+			ua, NULL);
+
+	char *recipient;
+	recipient = g_strdup_printf ("rfc822;%s", from->addr);
 	g_mime_object_set_header(GMIME_OBJECT(part), "Original-Recipient",
-	// TODO:add rfc822;
-			from->addr, NULL);
+			recipient, NULL);
 	g_mime_object_set_header(GMIME_OBJECT(part), "Final-Recipient",
-	// TODO:add rfc822;
-			from->addr, NULL);
+			recipient, NULL);
+	g_free(recipient);
+
+	char *msgid;
+	msgid = g_strdup_printf ("<%s>", g_mime_message_get_message_id(message));
 	g_mime_object_set_header(GMIME_OBJECT(part), "Original-Message-ID",
-			// should we dup this?
-			g_mime_message_get_message_id(message), NULL);
+			msgid, NULL);
+	g_free(msgid);
+
 	g_mime_object_set_header(GMIME_OBJECT(part), "Disposition",
 			"manual-action/MDN-sent-manually; displayed", NULL);
 

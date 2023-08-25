@@ -1,9 +1,9 @@
-local Telescope = require("galore.telescope.notmuch")
-local action_set = require('telescope.actions.set')
-local actions = require('telescope.actions')
-local action_state = require('telescope.actions.state')
+local Telescope = require "galore.telescope.notmuch"
+local action_set = require "telescope.actions.set"
+local actions = require "telescope.actions"
+local action_state = require "telescope.actions.state"
 
-local cb = require('galore.callback')
+local cb = require "galore.view.message"
 
 local Compose = {}
 
@@ -12,11 +12,11 @@ local function load_draft(kind, message, opts)
 end
 
 local function load_compose(kind, message, opts)
-  cb.message_reply(kind, message, 'reply', opts)
+  cb.message_reply(kind, message, "reply", opts)
 end
 
 local function load_compose_all(kind, message, opts)
-  cb.message_reply(kind, message, 'reply_all', opts)
+  cb.message_reply(kind, message, "reply_all", opts)
 end
 
 function Telescope.compose_search(bufnr, type)
@@ -35,10 +35,10 @@ Compose.load_draft = function(opts)
   opts = opts or {}
   -- local search = opts.search or ""
   -- opts.default_text = "tag:draft and not tag:sent "
-  opts.presearch = opts.presearch or 'tag:draft and not tag:sent'
-  opts.prompt_title = 'Load draft'
-  opts.results_title = 'Drafts'
-  opts.preview_title = 'Draft preview'
+  opts.presearch = opts.presearch or "tag:draft and not tag:sent"
+  opts.prompt_title = "Load draft"
+  opts.results_title = "Drafts"
+  opts.preview_title = "Draft preview"
   opts.galore_keymaps = {}
   opts.attach_mappings = function()
     action_set.select:replace(open_draft)
@@ -49,7 +49,7 @@ end
 
 Telescope.attach_file = function(comp, opts)
   opts = opts or {}
-  opts.prompt_title = 'Attach file'
+  opts.prompt_title = "Attach file"
   -- is this even the best way? works now tm
   opts.attach_mappings = function(prompt_bufnr, _)
     action_set.select:replace_if(function()
@@ -63,7 +63,7 @@ Telescope.attach_file = function(comp, opts)
     end)
     return true
   end
-  require('telescope').extensions.file_browser.file_browser(opts)
+  require("telescope").extensions.file_browser.file_browser(opts)
 end
 
 return Compose

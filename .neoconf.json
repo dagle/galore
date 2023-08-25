@@ -3,15 +3,17 @@
     "library": {
       "enabled": true,
       "plugins": [
-        "notmuch-lua",
-		"plenary.nvim",
-		"telescope.nvim",
-		"telescope-file-browser.nvim"
+        "notmuch-luajit",
+        "plenary.nvim",
+        "telescope.nvim",
+        "telescope-file-browser.nvim"
       ]
     }
   },
   "invader": {
-	"enabled": true,
-	"typelibs": ["GMime-3.0"]
+    "enabled": true,
+    "typelibs": [
+      "GMime-3.0"
+    ]
   }
 }

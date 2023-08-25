@@ -1,18 +1,20 @@
-local Buffer = require('galore.lib.buffer')
-local o = require('galore.opts')
-local async = require('plenary.async')
-local browser = require('galore.browser')
-local message_view = require('galore.view.message')
-local thread_view = require('galore.view.thread')
-local message_action = require('galore.message_action')
+local Buffer = require "galore.lib.buffer"
+local o = require "galore.opts"
+local async = require "plenary.async"
+local browser = require "galore.browser"
+local message_view = require "galore.view.message"
+local thread_view = require "galore.view.thread"
+local message_action = require "galore.message_action"
 
 local Tmb = Buffer:new()
 
 Tmb.Commands = {
-  change_tag = { fun = function(buffer, line)
-    local cb = require('galore.callback')
-    cb.change_tag(buffer, line.fargs[2])
-  end}
+  change_tag = {
+    fun = function(buffer, line)
+      local cb = require "galore.callback"
+      cb.change_tag(buffer, line.fargs[2])
+    end,
+  },
   -- Reply = { fun = function (buffer, line)
   --   local mid = buffer.line.id
   --   local kind = get_kind(line.smods)
@@ -24,7 +26,7 @@ Tmb.Commands = {
 local function tmb_get(self)
   local first = true
   self.highlight = {}
-  return browser.get_entries(self, 'show-tree', function(thread, n)
+  return browser.get_entries(self, "show-tree", function(thread, n)
     local i = 0
     for _, message in ipairs(thread) do
       table.insert(self.State, message.id)
@@ -37,7 +39,7 @@ local function tmb_get(self)
       if message.highlight then
         local idx = i + n - 1
         table.insert(self.highlight, idx)
-        vim.api.nvim_buf_add_highlight(self.handle, self.dians, 'GaloreHighlight', idx, 0, -1)
+        vim.api.nvim_buf_add_highlight(self.handle, self.dians, "GaloreHighlight", idx, 0, -1)
       end
       i = i + 1
     end
@@ -89,18 +91,7 @@ end
 
 function Tmb:update(line_nr)
   local id = self.State[line_nr]
-  browser.update_lines_helper(self, 'show-single-tree', 'id:' .. id, line_nr)
-end
-
-function Tmb:commands()
-  vim.api.nvim_buf_create_user_command(self.handle, 'GaloreChangetag', function(args)
-    if args.args then
-      local callback = require('galore.callback')
-      callback.change_tag(self, args)
-    end
-  end, {
-    nargs = '*',
-  })
+  browser.update_lines_helper(self, "show-single-tree", "id:" .. id, line_nr)
 end
 
 function Tmb:thread()
@@ -134,7 +125,7 @@ end
 function Tmb:select_thread(mode)
   local vline, mid = browser.select()
   local tid = message_action.get_tid(mid)
-  thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid})
+  thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid })
 end
 
 --- Create a browser grouped by threads
@@ -145,18 +136,18 @@ function Tmb:create(search, opts)
   o.tmb_options(opts)
   return Buffer.create({
     name = opts.bufname(search),
-    ft = 'galore-browser',
+    ft = "galore-browser",
     kind = opts.kind,
-    cursor = 'top',
+    cursor = "top",
     parent = opts.parent,
     mappings = opts.key_bindings,
     init = function(buffer)
       buffer.search = search
       buffer.opts = opts
       buffer.diagnostics = {}
-      buffer.dians = vim.api.nvim_create_namespace('galore-dia')
+      buffer.dians = vim.api.nvim_create_namespace "galore-dia"
       buffer:refresh(search)
-      buffer:commands()
+      -- buffer:commands()
       if opts.limit then
         browser.scroll(buffer)
       end

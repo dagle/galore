@@ -39,6 +39,8 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 - [ ] Packageing
 -- move gmime-extra to it's own thing
 
+- [ ] keys 
+
 - [ ] emacs
 -- notmuch-message-headers/notmuch-message-headers-visible (easier)
 -- notmuch-multipart/alternative-discouraged (easier)

@@ -1,6 +1,6 @@
-local async_job = require('telescope._')
+local async_job = require "telescope._"
 local LinesPipe = async_job.LinesPipe
-local async = require('plenary.async')
+local async = require "plenary.async"
 
 local Browser = {}
 
@@ -29,7 +29,6 @@ end
 --   thread_view:create(line_info, { kind = mode, parent = browser, vline = vline })
 -- end
 
-
 --- Commit the line to the browser
 --- Moving to the next line doesn't really move to the next line
 --- it asks for the next line relative to the line in the view
@@ -45,15 +44,15 @@ end
 -- TODO: run this in lua with vim.schedule
 function Browser.update_lines_helper(self, mode, search, line_nr)
   local bufnr = self.handle
-  local args = { 'nm-livesearch', '-d', self.opts.runtime.db_path, mode, search }
+  local args = { "nm-livesearch", "-d", self.opts.runtime.db_path, mode, search }
   if self.opts.show_message_description then
     args = {
-      'nm-livesearch',
-      '-e',
+      "nm-livesearch",
+      "-e",
       self.opts.show_message_description[1],
-      '-r',
+      "-r",
       self.opts.show_message_description[2],
-      '-d',
+      "-d",
       self.opts.runtime.db_path,
       mode,
       search,
@@ -68,14 +67,14 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
     on_stdout = function(_, data, _)
       local message = vim.fn.json_decode(data)
       if message then
-        vim.api.nvim_buf_set_option(bufnr, 'readonly', false)
-        vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
+        vim.api.nvim_buf_set_option(bufnr, "readonly", false)
+        vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
         vim.api.nvim_buf_set_lines(bufnr, line_nr - 1, line_nr, false, { message.entry })
         if message.highlight then
-          vim.api.nvim_buf_add_highlight(bufnr, self.dians, 'GaloreHighlight', line_nr, 0, -1)
+          vim.api.nvim_buf_add_highlight(bufnr, self.dians, "GaloreHighlight", line_nr, 0, -1)
         end
-        vim.api.nvim_buf_set_option(bufnr, 'readonly', true)
-        vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
+        vim.api.nvim_buf_set_option(bufnr, "readonly", true)
+        vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
       end
     end,
   })
@@ -89,25 +88,25 @@ function Browser.get_entries(self, mode, buffer_runner)
 
   local job
   local iter
-  local args = { '-d', self.opts.runtime.db_path, mode, self.search }
+  local args = { "-d", self.opts.runtime.db_path, mode, self.search }
   if self.opts.show_message_description then
     args = vim.list_extend(
-      { '-e', self.opts.show_message_description[1], '-r', self.opts.show_message_description[2] },
+      { "-e", self.opts.show_message_description[1], "-r", self.opts.show_message_description[2] },
       args
     )
   end
   if self.opts.emph then
     local highlight = vim.json.encode(self.opts.emph)
-    args = vim.list_extend({ '-h', highlight }, args)
+    args = vim.list_extend({ "-h", highlight }, args)
   end
 
-  job = async_job.spawn({
-    command = 'nm-livesearch',
+  job = async_job.spawn {
+    command = "nm-livesearch",
     args = args,
     writer = writer,
 
     stdout = stdout,
-  })
+  }
   iter = stdout:iter(true)
   return setmetatable({
     close = function()
@@ -141,7 +140,7 @@ end
 
 -- Produce more entries when we scroll
 function Browser.scroll(self)
-  vim.api.nvim_create_autocmd({ 'CursorMoved, WinScrolled' }, {
+  vim.api.nvim_create_autocmd({ "CursorMoved, WinScrolled" }, {
     buffer = self.handle,
     callback = function()
       local line = vim.api.nvim_win_get_cursor(0)[1]
@@ -197,7 +196,6 @@ local function insert_highlight(highlight, pos)
   table.insert(highlight, i, pos)
 end
 
-
 -- TODO: Remove this and write examples on how to do it
 -- with synIDattr
 local function find_highlight(highlight, pos)
@@ -250,7 +248,7 @@ end
 --- @param browser any
 function Browser.yank_browser(browser)
   local _, id = Browser.select(browser)
-  vim.fn.setreg('', id)
+  vim.fn.setreg("", id)
 end
 
 return Browser

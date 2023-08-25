@@ -2,23 +2,23 @@
 -- these should functions work on views (thread and message-view), browsers (tmb and message)
 -- and telescope.
 
-local nm = require('notmuch')
-local nu = require('galore.notmuch-util')
-local runtime = require('galore.runtime')
-local gu = require('galore.gmime-util')
-local tm = require('galore.compose.templates')
-local compose = require('galore.compose.compose')
+local nm = require "notmuch"
+local nu = require "galore.notmuch-util"
+local runtime = require "galore.runtime"
+local gu = require "galore.gmime-util"
+local tm = require "galore.compose.templates"
+local compose = require "galore.compose.compose"
 
 local M = {}
 
 --- Create a reply compose from a message view
 --- @param message gmime.Message
 --- @param mode 'reply' | 'reply_all'
---- @param opts any
+-- @param opts any
 function M.message_reply(kind, message, mode, opts)
   opts = opts or {}
   opts.reply = true
-  mode = mode or 'reply'
+  mode = mode or "reply"
 
   local msg = tm.response_message(message, opts, mode)
   --- create a msg
@@ -50,10 +50,10 @@ function M.mid_reply(kind, mid, mode, opts)
     local nm_message = nm.db_find_message(db, mid)
     line = nu.get_message(nm_message)
   end)
-  local draft = vim.tbl_contains(line.tags, 'draft')
+  local draft = vim.tbl_contains(line.tags, "draft")
   local message = gu.parse_message(line.filenames[1])
   if message == nil then
-    error("Couldn't parse message")
+    error "Couldn't parse message"
   end
   if draft then
     M.load_draft(kind, message, opts)
@@ -64,7 +64,7 @@ end
 
 function M.get_tid(mid)
   local id
-  runtime.with_db(function (db)
+  runtime.with_db(function(db)
     local nm_message = nm.db_find_message(db, mid)
     id = nm.message_get_thread_id(nm_message)
   end)

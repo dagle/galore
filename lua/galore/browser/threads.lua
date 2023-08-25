@@ -1,22 +1,24 @@
-local o = require('galore.opts')
-local async = require('plenary.async')
-local Buffer = require('galore.lib.buffer')
-local browser = require('galore.browser')
-local thread_view = require('galore.view.thread')
+local o = require "galore.opts"
+local async = require "plenary.async"
+local Buffer = require "galore.lib.buffer"
+local browser = require "galore.browser"
+local thread_view = require "galore.view.thread"
 
 local Threads = Buffer:new()
 
 Threads.Commands = {
-  change_tag = { fun = function(buffer, line)
-    local cb = require('galore.callback')
-    cb.change_tags_threads(buffer, line.fargs[2])
-  end},
+  change_tag = {
+    fun = function(buffer, line)
+      local cb = require "galore.callback"
+      cb.change_tags_threads(buffer, line.fargs[2])
+    end,
+  },
 }
 
 local function threads_get(self)
   local first = true
   self.highlight = {}
-  return browser.get_entries(self, 'show-thread', function(thread, n)
+  return browser.get_entries(self, "show-thread", function(thread, n)
     if thread then
       table.insert(self.State, thread.id)
       if first then
@@ -27,7 +29,7 @@ local function threads_get(self)
       end
       if thread.highlight then
         table.insert(self.highlight, n)
-        vim.api.nvim_buf_add_highlight(self.handle, self.dians, 'GaloreHighlight', n, 0, -1)
+        vim.api.nvim_buf_add_highlight(self.handle, self.dians, "GaloreHighlight", n, 0, -1)
       end
       return 1
     end
@@ -59,7 +61,7 @@ end
 
 function Threads:update(line_nr)
   local id = self.State[line_nr]
-  browser.update_lines_helper(self, 'show-thread', 'thread:' .. id, line_nr)
+  browser.update_lines_helper(self, "show-thread", "thread:" .. id, line_nr)
 end
 
 function Threads:thread()
@@ -68,29 +70,28 @@ function Threads:thread()
 end
 
 function Threads:message()
-  error("Can't get a message from a thread")
+  error "Can't get a message from a thread"
 end
 
 function Threads:select_thread(mode)
   local vline, tid = self:thread()
-  thread_view:create(tid, { kind = mode, parent = self, vline = vline})
+  thread_view:create(tid, { kind = mode, parent = self, vline = vline })
 end
 
 function Threads:create(search, opts)
   o.threads_options(opts)
   Buffer.create({
     name = opts.bufname(search),
-    ft = 'galore-browser',
+    ft = "galore-browser",
     kind = opts.kind,
-    cursor = 'top',
+    cursor = "top",
     parent = opts.parent,
     mappings = opts.key_bindings,
     init = function(buffer)
       buffer.opts = opts
       buffer.search = search
-      buffer.dians = vim.api.nvim_create_namespace('galore-dia')
+      buffer.dians = vim.api.nvim_create_namespace "galore-dia"
       buffer:refresh()
-      buffer:commands()
       if opts.limit then
         browser.scroll(buffer)
       end

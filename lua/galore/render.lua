@@ -1,14 +1,14 @@
-local config = require('galore.config')
-local gcu = require('galore.crypt-utils')
-local lgi = require('lgi')
-local gmime = require("galore.gmime")
-local galore = lgi.require('Galore', '0.1')
-local gu = require('galore.gmime-util')
+local config = require "galore.config"
+local gcu = require "galore.crypt-utils"
+local lgi = require "lgi"
+local gmime = require "galore.gmime"
+local galore = lgi.require("Galore", "0.1")
+local gu = require "galore.gmime-util"
 
 local M = {}
 
 local function format(str)
-  return vim.split(str, '\n', {})
+  return vim.split(str, "\n", {})
 end
 
 local function mime_type(object)
@@ -25,19 +25,19 @@ local function mark(buffer, ns, content, i)
   local col_num = 0
 
   local opts = {
-    virt_text = { { content, 'GaloreHeader' } },
+    virt_text = { { content, "GaloreHeader" } },
   }
   vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
 end
 
 local marks = {
   From = function(buffer, ns, i, line)
-    local tags = table.concat(line.tags, ' ')
-    mark(buffer, ns, '(' .. tags .. ')', i)
+    local tags = table.concat(line.tags, " ")
+    mark(buffer, ns, "(" .. tags .. ")", i)
   end,
   Subject = function(buffer, ns, i, line)
     if line.index and line.total then
-      local str = string.format('[%d/%d]', line.index, line.total)
+      local str = string.format("[%d/%d]", line.index, line.total)
       mark(buffer, ns, str, i)
     end
   end,
@@ -46,29 +46,29 @@ local marks = {
 local function show_key(key)
   local at = gmime.AddressType
   if key == at.SENDER then
-    return 'Sender'
+    return "Sender"
   end
   if key == at.FROM then
-    return 'From'
+    return "From"
   end
   if key == at.REPLY_TO then
-    return 'Reply_to'
+    return "Reply_to"
   end
   if key == at.TO then
-    return 'To'
+    return "To"
   end
   if key == at.CC then
-    return 'Cc'
+    return "Cc"
   end
   if key == at.BCC then
-    return 'Bcc'
+    return "Bcc"
   end
 end
 
 local function show_header(buffer, key, value, ns, i, line)
-  if value and value ~= '' then
-    local str = key .. ': ' .. value
-    local lines = vim.fn.split(str, '\n')
+  if value and value ~= "" then
+    local str = key .. ": " .. value
+    local lines = vim.fn.split(str, "\n")
     vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, lines)
     if marks[key] and ns then
       marks[key](buffer, ns, i, line)
@@ -95,13 +95,17 @@ function M.show_headers(message, buffer, opts, line, start)
   -- local num = date:to_unix()
   -- local date_str = os.date('%c', num)
   local date_str = gmime.utils_header_format_date(date)
-  i = show_header(buffer, 'Date', date_str, opts.ns, i, line)
+  i = show_header(buffer, "Date", date_str, opts.ns, i, line)
   local subject = message:get_subject()
-  i = show_header(buffer, 'Subject', subject, opts.ns, i, line)
+  i = show_header(buffer, "Subject", subject, opts.ns, i, line)
   return i
 end
 
 --- XXX add a way to configure what filters are used etc
+
+--- @param part GMime.Part
+--- @param opts table
+--- @param outstream GMime.Stream
 function M.part_to_stream(part, opts, outstream)
   local dw = part:get_content()
   local stream = dw:get_stream()
@@ -114,9 +118,9 @@ function M.part_to_stream(part, opts, outstream)
     filters:add(basic)
   end
 
-  local charset = part:get_content_type_parameter('charset')
+  local charset = part:get_content_type_parameter "charset"
   if charset then
-    local utf8 = gmime.FilterCharset.new(charset, 'UTF-8')
+    local utf8 = gmime.FilterCharset.new(charset, "UTF-8")
     filters:add(utf8)
   end
 
@@ -131,8 +135,9 @@ function M.part_to_stream(part, opts, outstream)
   filters:write_to_stream(outstream)
 end
 
--- @param part gmime.Part
--- @return string
+--- @param part GMime.Part
+--- @param opts table
+--- @return string
 function M.part_to_string(part, opts)
   local mem = gmime.StreamMem.new()
   M.part_to_stream(part, opts, mem)
@@ -169,18 +174,18 @@ end
 
 local function language_match(lang1, lang2)
   local function split(inputstr, sep)
-    for str in string.gmatch(inputstr, '([^' .. sep .. ']+)') do
+    for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
       return str
     end
   end
 
   lang1 = lang1:lower()
-  lang1 = lang2:lower()
+  lang2 = lang2:lower()
   if lang1 == lang2 then
     return true
   end
-  local head1 = split(lang1, '-_')
-  local head2 = split(lang1, '-_')
+  local head1 = split(lang1, "-_")
+  local head2 = split(lang2, "-_")
   return head1[1] == head2[1]
 end
 
@@ -264,7 +269,7 @@ function M.add_custom_header(names, render)
       headers[name] = object.get_header(object, name)
     end
     for k, v in pairs(headers) do
-      local str = string.format('%s:%s', k, v)
+      local str = string.format("%s:%s", k, v)
       self.draw(buf, format(str))
     end
   end
@@ -284,12 +289,12 @@ function M.new(opts, defaults)
   local result = {}
 
   for k, v in pairs(defaults) do
-    assert(type(k) == 'string', 'Should be string, found: ' .. type(k))
+    assert(type(k) == "string", "Should be string, found: " .. type(k))
     result[k] = v
   end
 
   for k, v in pairs(opts) do
-    assert(type(k) == 'string', 'Should be string, found: ' .. type(k))
+    assert(type(k) == "string", "Should be string, found: " .. type(k))
     result[k] = v
     if v == false then
       result[k] = nil
@@ -305,13 +310,13 @@ function M.extend(opts, defaults)
   local result = {}
 
   for k, v in pairs(defaults) do
-    assert(type(k) == 'string', 'Should be string, found: ' .. type(k))
+    assert(type(k) == "string", "Should be string, found: " .. type(k))
     result[k] = v
   end
 
   for k, v in pairs(opts) do
     if result[k] == nil then
-      assert(type(k) == 'string', 'Should be string, found: ' .. type(k))
+      assert(type(k) == "string", "Should be string, found: " .. type(k))
       result[k] = v
     else
       local default_value = result[k]
@@ -331,13 +336,13 @@ function M.prepend(opts, defaults)
   local result = {}
 
   for k, v in pairs(defaults) do
-    assert(type(k) == 'string', 'Should be string, found: ' .. type(k))
+    assert(type(k) == "string", "Should be string, found: " .. type(k))
     result[k] = v
   end
 
   for k, v in pairs(opts) do
     if result[k] == nil then
-      assert(type(k) == 'string', 'Should be string, found: ' .. type(k))
+      assert(type(k) == "string", "Should be string, found: " .. type(k))
       result[k] = v
     else
       local default_value = result[k]
@@ -358,16 +363,16 @@ M.default_render = {
   end,
   part = function(self, part, buf, opts, state)
     local type = mime_type(part)
-    if type == 'text/plain' then
+    if type == "text/plain" then
       local str = M.part_to_string(part, opts)
       if str == nil then
-        str = ''
+        str = ""
       end
       self.draw(buf, format(str))
-    elseif type == 'text/html' then
+    elseif type == "text/html" then
       local str = M.part_to_string(part, opts)
       if str == nil then
-        str = ''
+        str = ""
       end
       local html = config.values.show_html(str, state.unsafe)
       self.draw(buf, html)
@@ -401,8 +406,7 @@ M.default_render = {
     -- end
     --- none of the keys worked
 
-    de_part, verified, new_keys =
-      gcu.decrypt_and_verify(object, gmime.DecryptFlags(config.values.decrypt_flags), '')
+    de_part, verified, new_keys = gcu.decrypt_and_verify(object, gmime.DecryptFlags(config.values.decrypt_flags), "")
     return de_part, verified, new_keys
   end,
 }

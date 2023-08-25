@@ -1,21 +1,21 @@
-local pickers = require('telescope.pickers')
-local previewers = require('telescope.previewers')
-local finders = require('telescope.finders')
-local putils = require('telescope.previewers.utils')
-local actions = require('telescope.actions')
-local action_state = require('telescope.actions.state')
-local action_set = require('telescope.actions.set')
+local pickers = require "telescope.pickers"
+local previewers = require "telescope.previewers"
+local finders = require "telescope.finders"
+local putils = require "telescope.previewers.utils"
+local actions = require "telescope.actions"
+local action_state = require "telescope.actions.state"
+local action_set = require "telescope.actions.set"
 
-local r = require('galore.render')
-local u = require('galore.util')
-local util = require("galore.telescope.util")
+local r = require "galore.render"
+local u = require "galore.util"
+local util = require "galore.telescope.util"
 
-local runtime = require('galore.runtime')
-local nu = require('galore.notmuch-util')
-local nm = require('notmuch')
-local gu = require('galore.gmime-util')
+local runtime = require "galore.runtime"
+local nu = require "galore.notmuch-util"
+local nm = require "notmuch"
+local gu = require "galore.gmime-util"
 
-local config = require('galore.config')
+local config = require "galore.config"
 
 local Telescope = {}
 
@@ -33,7 +33,8 @@ end
 -- I don't really want this here but I really
 -- don't want the user to having to define it everywhere
 local function open_search(bufnr, type)
-  local message_view = require('galore.message_view')
+  -- TODO: add support for opening the thread
+  local message_view = require "galore.view.message"
 
   local entry = action_state.get_selected_entry()
   entry.value.keys = util.list_to_table(entry.value.keys)
@@ -83,16 +84,16 @@ end
 
 -- change to entry
 local function mime_preview(buf, winid, entry)
-  local ui = require('galore.ui')
-  local ns = vim.api.nvim_create_namespace('galore-preview')
+  local ui = require "galore.ui"
+  local ns = vim.api.nvim_create_namespace "galore-preview"
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   -- this should never be false?
-  if entry.id and entry.id ~= '' then
+  if entry.id and entry.id ~= "" then
     local telerender = r.new({
       verify = false,
       -- attachment = false,
       encrypted = function(_, _, _, _)
-        util.encrypted(buf, winid, 'encrypted')
+        util.encrypted(buf, winid, "encrypted")
       end,
     }, r.default_render)
     -- vim.api.nvim_get_keymap
@@ -105,7 +106,7 @@ local function mime_preview(buf, winid, entry)
     local buffer = {}
     local state = r.render_message(telerender, message, buffer, {})
     u.purge_empty(buffer)
-    vim.api.nvim_buf_set_lines(buf, -1, -1, true, {""})
+    vim.api.nvim_buf_set_lines(buf, -1, -1, true, { "" })
     vim.api.nvim_buf_set_lines(buf, -1, -1, true, buffer)
     vim.api.nvim_buf_set_lines(buf, -2, -1, true, {})
 
@@ -115,7 +116,7 @@ local function mime_preview(buf, winid, entry)
     if not vim.tbl_isempty(state.attachments) then
       ui.render_attachments(state.attachments, linenr, buf, ns)
     end
-    putils.highlighter(buf, 'mail')
+    putils.highlighter(buf, "mail")
   end
 end
 
@@ -125,35 +126,35 @@ Telescope.notmuch_search = function(opts)
   opts.galore_keymaps = opts.galore_keymaps or config.values.key_bindings.telescope
   local live_notmucher = finders.new_job(function(prompt)
     if opts.presearch then
-      if not prompt or prompt == '' then
+      if not prompt or prompt == "" then
         prompt = opts.presearch
       else
-        prompt = opts.presearch .. ' and ' .. prompt
+        prompt = opts.presearch .. " and " .. prompt
       end
     end
-    if not prompt or prompt == '' and not opts.search_group then
+    if not prompt or prompt == "" and not opts.search_group then
       return nil
     end
-    local group = opts.search_group or 'messages'
+    local group = opts.search_group or "messages"
 
     -- TODO use the values from opts and not config!
 
-    local ret = vim.tbl_flatten({ 'nm-livesearch', '-d', config.values.db_path, group, prompt })
+    local ret = vim.tbl_flatten { "nm-livesearch", "-d", config.values.db_path, group, prompt }
     return ret
   end, entry_maker(), opts.max_results, opts.cwd)
 
   pickers
     .new(opts, {
-      prompt_title = 'Notmuch search',
-      results_title = 'Notmuch match',
+      prompt_title = "Notmuch search",
+      results_title = "Notmuch match",
       finder = live_notmucher,
-      previewer = previewers.new_buffer_previewer({
-        title = opts.preview_title or 'Notmuch preview',
+      previewer = previewers.new_buffer_previewer {
+        title = opts.preview_title or "Notmuch preview",
         keep_last_buf = false,
         define_preview = function(self, entry, _)
           mime_preview(self.state.bufnr, self.state.winid, entry.value)
         end,
-      }),
+      },
       attach_mappings = function(buf, map)
         action_set.select:replace(open_search)
         for mode, binds in pairs(opts.galore_keymaps) do
