@@ -16,7 +16,11 @@ are destructive atm
 
 - mixminion support?
 
-- keybase
+- keybase (nope, use https://keyoxide.org/ instead, it even comes with a cli frontend)
+
+- Add wks support (being able to send a key)
+-- An Email address => email with a key with everything set
+-- (This api is horrible, we need something better than this)
 
 - What is the semantics for folds in (n)vim? A fold is local to a buffer and window
 -- With an api we could:
@@ -27,7 +31,7 @@ are destructive atm
 --- Highligtning in view for matched
 --- Being able to run code on open
 
-Maybe use a sliding reader that loads messages when you scroll instead of loading all messages
+--- Mirror the GpgOL (gpg for outlook support but more slick). 
 
 * 0.0.1
   - [ ] Cleanup code
@@ -71,7 +75,9 @@ Todo: Tests, (hooks, templates, compose), documentation, logging
 -- huh?
 - [ ] Parts could be keys, are they attachments?
 
+- use iterator instead of my own yanky shit
 - [x] tag undo
+-- [ ] use a ringbuffer and let user set size?
 - [ ] excluded tags when showing a thread and in tmb
 - [x] resend?
 - [ ] Refresh all buffers
