@@ -7,6 +7,18 @@
     version: 0.0.11
 @end
 
+create classes for browser and view.
+
+browser =>
+create => create a new browser
+select_message => create a new view of the currently selected (only aviable for message)
+select_thread => create a new view of the currently selected
+message => line, mid (only aviable for message)
+thread => line, tid 
+update => updates a single line without rerunning the search.
+refresh => rerun the search
+
+
 Maybe load the message again before we send it to templates, because templates
 are destructive atm
 

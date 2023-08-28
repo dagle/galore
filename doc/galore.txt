@@ -63,7 +63,7 @@ that libs are loaded (they are lazy loaded by default).
 Here are 2 examples:
 vim.keymap.set('n', '<leader>mf', function()
 	require("galore").withconnect(function ()
-		require("galore.telescope").load_draft() end)
+		require("galore.telescope.compose").load_draft() end)
 	end, {desc='Load draft'})
 
 vim.keymap.set('n', '<leader>mf', function()

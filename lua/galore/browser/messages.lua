@@ -6,6 +6,8 @@ local message_view = require "galore.view.message"
 local thread_view = require "galore.view.thread"
 local message_action = require "galore.message_action"
 
+---@module 'galore.meta.message_browser'
+
 local Mb = Buffer:new()
 
 Mb.Commands = {
@@ -103,10 +105,13 @@ function Mb:select_thread(mode)
   thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid })
 end
 
--- create a browser class
+--- Create a browser grouped by messages
+--- @param search string a notmuch search string
+--- @param opts table
+--- @return MessageBrowser
 function Mb:create(search, opts)
   o.mb_options(opts)
-  Buffer.create({
+  return Buffer.create({
     name = opts.bufname(search),
     ft = "galore-browser",
     kind = opts.kind,
@@ -114,11 +119,10 @@ function Mb:create(search, opts)
     parent = opts.parent,
     mappings = opts.key_bindings,
     init = function(buffer)
-      buffer.opts = opts
       buffer.search = search
+      buffer.opts = opts
       buffer.dians = vim.api.nvim_create_namespace "galore-dia"
       buffer:refresh()
-      -- buffer:commands()
       if opts.limit then
         browser.scroll(buffer)
       end

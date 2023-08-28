@@ -22,7 +22,7 @@ syntax match GaloreSubject		/.\{0,}\(([^()]\+)$\)\@=/				contained nextgroup=Gal
 syntax match GaloreTags		"(.*)$"							contained
 
 highlight GaloreFrom		guifg=Orange
-highlight GaloreFromConc	guifg=Green
+highlight GaloreFromConc	guifg=Orange
 highlight GaloreFromEnd		guifg=Red
 highlight GaloreHighlight	cterm=bold gui=underline
 highlight link GaloreDate		String

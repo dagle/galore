@@ -123,21 +123,21 @@ config.values = {
       i = {
         --- default additional functionallity for telescope
         ["<C-q>"] = function(buf)
-          local tele = require "galore.telescope"
+          local tele = require "galore.telescope.notmuch"
           local mb = require "galore.message_browser"
           tele.create_search(mb, buf)
         end,
         ["<C-f>"] = function(buf)
-          local tele = require "galore.telescope"
+          local tele = require "galore.telescope.notmuch"
           local tmb = require "galore.thread_message_browser"
           tele.create_search(tmb, buf)
         end,
         ["<C-e>"] = function(buf)
-          local tele = require "galore.telescope"
+          local tele = require "galore.telescope.compose"
           tele.compose_search(buf)
         end,
         ["<C-E>"] = function(buf)
-          local tele = require "galore.telescope"
+          local tele = require "galore.telescope.compose"
           tele.compose_search_all(buf)
         end,
       },
@@ -304,7 +304,7 @@ config.values = {
         },
         ["gD"] = {
           rhs = function(mb)
-            local telescope = require "galore.telescope"
+            local telescope = require "galore.telescope.view"
             local br = require "galore.browser"
             local _, id = br.select(mb)
             telescope.goto_tree(id)
@@ -315,7 +315,7 @@ config.values = {
           rhs = function(browser)
             local action_set = require "telescope.actions.set"
             local tmb = require "galore.thread_message_browser"
-            local tele = require "galore.telescope"
+            local tele = require "galore.telescope.notmuch"
             local opts = {
               default_text = browser.search,
               attach_mappings = function(buf, map)
@@ -326,7 +326,7 @@ config.values = {
                 return true
               end,
             }
-            require("galore.telescope").notmuch_search(opts)
+            tele.notmuch_search(opts)
           end,
           desc = "notmuch sub search",
         },
@@ -395,7 +395,7 @@ config.values = {
         },
         ["gD"] = {
           rhs = function(mb)
-            local telescope = require "galore.telescope"
+            local telescope = require "galore.telescope.view"
             local br = require "galore.browser"
             local _, id = br.select(mb)
             telescope.goto_tree(id)
@@ -406,18 +406,18 @@ config.values = {
           rhs = function(browser)
             local action_set = require "telescope.actions.set"
             local mb = require "galore.message_browser"
-            local tele = require "galore.telescope"
+            local tele = require "galore.telescope.notmuch"
             local opts = {
               default_text = browser.search,
               attach_mappings = function(buf, map)
                 local cb = function(bufnr, type)
-                  tele.open_browser(mb, bufnr, type, browser)
+                  tele.create_search(mb, bufnr, type, browser)
                 end
                 action_set.select:replace(cb)
                 return true
               end,
             }
-            require("galore.telescope").notmuch_search(opts)
+            tele.notmuch_search(opts)
           end,
           desc = "notmuch sub search",
         },
@@ -486,7 +486,7 @@ config.values = {
         },
         ["gD"] = {
           rhs = function(tb)
-            local telescope = require "galore.telescope"
+            local telescope = require "galore.telescope.view"
             local br = require "galore.browser"
             local _, id = br.select(tb)
             telescope.goto_tree(id)
@@ -497,7 +497,7 @@ config.values = {
           rhs = function(browser)
             local action_set = require "telescope.actions.set"
             local tmb = require "galore.thread_message_browser"
-            local tele = require "galore.telescope"
+            local tele = require "galore.telescope.notmuch"
             local opts = {
               default_text = browser.search,
               attach_mappings = function(buf, map)
@@ -508,7 +508,7 @@ config.values = {
                 return true
               end,
             }
-            require("galore.telescope").notmuch_search(opts)
+            tele.notmuch_search(opts)
           end,
           desc = "notmuch sub search",
         },
@@ -534,8 +534,8 @@ config.values = {
         },
         ["s"] = {
           rhs = function(message_view)
-            local telescope = require "galore.telescope"
-            message_view:select_attachment(telescope.save_file)
+            -- local telescope = require "galore.telescope"
+            -- message_view:select_attachment(telescope.save_file)
           end,
           desc = "save attachment",
         },
@@ -585,7 +585,7 @@ config.values = {
         -- end, desc = "Goto next version of message"},
         ["O"] = {
           rhs = function(message_view)
-            local tele = require "galore.telescope"
+            local tele = require "galore.telescope.parts"
             local gmime = require "galore.gmime"
             local function cb(part)
               -- we should only allow this if type is
@@ -614,7 +614,7 @@ config.values = {
         ["mw"] = {
           rhs = function(message_view)
             --- view the part in a webbrowser
-            local tele = require "galore.telescope"
+            local tele = require "galore.telescope.parts"
             local r = require "galore.render"
             local jobs = require "galore.jobs"
             local cb = function(object)
@@ -770,7 +770,7 @@ config.values = {
         },
         ["<leader>ma"] = {
           rhs = function(compose)
-            local tele = require "galore.telescope"
+            local tele = require "galore.telescope.compose"
             tele.attach_file(compose)
           end,
           desc = "Add attachment",
@@ -807,14 +807,14 @@ config.values = {
         },
         ["gd"] = {
           rhs = function(compose)
-            local telescope = require "galore.telescope"
+            local telescope = require "galore.view"
             telescope.goto_message(compose)
           end,
           desc = "goto in-reply-to",
         },
         ["gD"] = {
           rhs = function(compose)
-            local telescope = require "galore.telescope"
+            local telescope = require "galore.telescope.view"
             --- Todo, there is no message in compose
             local mid = compose.message:get_message_id()
             telescope.goto_tree(mid)
@@ -823,7 +823,7 @@ config.values = {
         },
         ["gR"] = {
           rhs = function(compose)
-            local telescope = require "galore.telescope"
+            local telescope = require "galore.telescope.view"
             --- Todo, there is no message in compose
             local mid = compose.message:get_message_id()
             telescope.goto_references(mid)

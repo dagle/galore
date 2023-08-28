@@ -10,10 +10,6 @@ local debug = require('galore.debug')
 local o = require('galore.opts')
 local log = require('galore.log')
 
--- we need to split up the telescope functions, this is redicolus
--- local tele = require('galore.telescope')
--- local hd = require("galore.header-diagnostics")
-
 local Compose = Buffer:new()
 
 Compose.Commands = {

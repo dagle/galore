@@ -26,7 +26,7 @@ Thread.Commands = {
     local _, i = buffer:get_selected()
     local message = buffer.messages[i]
 
-    local tele = require('galore.telescope')
+    local tele = require('galore.telescope.parts')
     tele.parts_pipe(message, { 'browser-pipe'})
   end,
   },

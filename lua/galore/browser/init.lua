@@ -2,22 +2,33 @@ local async_job = require "telescope._"
 local LinesPipe = async_job.LinesPipe
 local async = require "plenary.async"
 
+--- @module 'galore.meta.browser'
+
 local Browser = {}
 
---- Move to the next line in the browser
+--- Try to select the next item in a browser
+--- @param browser Browser
+--- @param line integer
+--- @return integer, integer
 function Browser.next(browser, line)
   line = math.min(line + 1, #browser.State)
   local line_info = browser.State[line]
   return line_info, line
 end
 
---- Move to the prev line in the browser
+--- Try to select the prev item in a browser
+--- @param browser Browser
+--- @param line integer
+--- @return integer, integer
 function Browser.prev(browser, line)
   line = math.max(line - 1, 1)
   local line_info = browser.State[line]
   return line_info, line
 end
 
+--- Select the current line in the browser
+--- @param browser Browser
+--- @return integer, integer
 function Browser.select(browser)
   local line = vim.api.nvim_win_get_cursor(0)[1]
   return line, browser.State[line]
@@ -41,7 +52,7 @@ function Browser.set_line(browser, line)
   end
 end
 
--- TODO: run this in lua with vim.schedule
+--- Gets a single line update in async
 function Browser.update_lines_helper(self, mode, search, line_nr)
   local bufnr = self.handle
   local args = { "nm-livesearch", "-d", self.opts.runtime.db_path, mode, search }
@@ -80,6 +91,7 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
   })
 end
 
+--- Runs in a async runner feeding messages
 function Browser.get_entries(self, mode, buffer_runner)
   local stdout = LinesPipe()
   local writer = nil

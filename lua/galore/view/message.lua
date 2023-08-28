@@ -11,6 +11,10 @@ local o = require "galore.opts"
 local gu = require "galore.gmime-util"
 local ma = require "galore.message_action"
 
+--- @module 'galore.meta.view'
+
+
+--- @class Message : View
 local Message = Buffer:new()
 
 Message.Commands = {
@@ -56,14 +60,14 @@ Message.Commands = {
   },
   web_view = {
     fun = function(buffer, line)
-      local tele = require "galore.telescope"
+      local tele = require "galore.telescope.parts"
       tele.parts_pipe(buffer.message, { "browser-pipe" })
     end,
   },
 }
 
---- add opts
-function Message:select_attachment(cb)
+--- returns a list of attachments
+function Message:get_attachments(cb)
   local files = {}
   for _, v in ipairs(self.state.attachments) do
     table.insert(files, v.filename)

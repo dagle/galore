@@ -29,6 +29,7 @@ local function save_attachment(attachment, save_path, confirm)
   gu.save_part(attachment.part, path:expand())
 end
 
+--- TODO: Remove this it's all horrible
 function M.save_attachment(attachments, name, save_path, overwrite)
   local attachment
 

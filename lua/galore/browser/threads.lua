@@ -4,6 +4,8 @@ local Buffer = require "galore.lib.buffer"
 local browser = require "galore.browser"
 local thread_view = require "galore.view.thread"
 
+---@module 'galore.meta.browser'
+
 local Threads = Buffer:new()
 
 Threads.Commands = {
@@ -78,9 +80,13 @@ function Threads:select_thread(mode)
   thread_view:create(tid, { kind = mode, parent = self, vline = vline })
 end
 
+--- Create a browser grouped by messages
+--- @param search string a notmuch search string
+--- @param opts table
+--- @return Browser
 function Threads:create(search, opts)
   o.threads_options(opts)
-  Buffer.create({
+  return Buffer.create({
     name = opts.bufname(search),
     ft = "galore-browser",
     kind = opts.kind,

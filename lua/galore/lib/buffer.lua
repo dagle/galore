@@ -256,6 +256,7 @@ local function buf_exist(name)
   end
 end
 
+--- @return any
 function Buffer.create(config, class)
   config = config or {}
 

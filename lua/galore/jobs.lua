@@ -77,7 +77,7 @@ end
 local function raw_pipe(object, cmd, args, cb)
   local stdout = uv.new_pipe()
   local stderr = uv.new_pipe()
-  local stdin = uv.new_pipe()
+  local stdin = assert(uv.new_pipe())
 
   local fds = uv.pipe({ nonblock = true }, { nonblock = true })
   -- local stream = gs.stream_pipe_new(fds.write)

@@ -186,10 +186,10 @@ Here is an example of a function that connects (if not connected) and do a teles
 ``` lua
 vim.keymap.set('n', '<leader>ms', function()
 	require("galore").withconnect(function ()
-		require("galore.telescope").notmuch_search() end)
+		require("galore.telescope.notmuch").notmuch_search() end)
 	end, {desc='Search email'})
 ```
-Inside of galore you can call require("galore.telescope").notmuch_search() directly.
+Inside of galore you can call require("galore.telescope.notmuch").notmuch_search() directly.
 
 
 Some jobs doesn't require notmuch to be started:

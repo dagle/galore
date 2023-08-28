@@ -19,11 +19,11 @@ local function load_compose_all(kind, message, opts)
   cb.message_reply(kind, message, "reply_all", opts)
 end
 
-function Telescope.compose_search(bufnr, type)
+function Compose.compose_search(bufnr, type)
   Telescope.open_path(bufnr, type, load_compose)
 end
 
-function Telescope.compose_search_all(bufnr, type)
+function Compose.compose_search_all(bufnr, type)
   Telescope.open_path(bufnr, type, load_compose_all)
 end
 
@@ -47,7 +47,7 @@ Compose.load_draft = function(opts)
   Telescope.notmuch_search(opts)
 end
 
-Telescope.attach_file = function(comp, opts)
+Compose.attach_file = function(comp, opts)
   opts = opts or {}
   opts.prompt_title = "Attach file"
   -- is this even the best way? works now tm

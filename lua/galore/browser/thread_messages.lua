@@ -6,6 +6,8 @@ local message_view = require "galore.view.message"
 local thread_view = require "galore.view.thread"
 local message_action = require "galore.message_action"
 
+---@module 'galore.meta.message_browser'
+
 local Tmb = Buffer:new()
 
 Tmb.Commands = {
@@ -58,6 +60,7 @@ local function tmb_get(self)
   end)
 end
 
+-- TODO: make private
 function Tmb:async_runner()
   self.updating = true
   self.dias = {}
@@ -131,7 +134,7 @@ end
 --- Create a browser grouped by threads
 --- @param search string a notmuch search string
 --- @param opts table
---- @return any
+--- @return MessageBrowser
 function Tmb:create(search, opts)
   o.tmb_options(opts)
   return Buffer.create({
@@ -144,9 +147,8 @@ function Tmb:create(search, opts)
     init = function(buffer)
       buffer.search = search
       buffer.opts = opts
-      buffer.diagnostics = {}
       buffer.dians = vim.api.nvim_create_namespace "galore-dia"
-      buffer:refresh(search)
+      buffer:refresh()
       -- buffer:commands()
       if opts.limit then
         browser.scroll(buffer)
