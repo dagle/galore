@@ -8,19 +8,20 @@ local M = {}
 --- @param browser any
 --- @param change string +tag to add tag, -tag to remove tag
 --- Change the tag for currently selected message and update the browser
-function M.message_change_tag(browser, change)
+function M.message_change_tags(browser, change, empty_tag)
   local vline, id = browser:message()
   runtime.with_db_writer(function(db)
     nu.change_tag(db, id, change, 0)
-    -- nu.tag_if_nil(db, id, config.values.empty_tag)
+    nu.tag_if_nil(db, id, empty_tag)
   end)
-  browser:update(vline)
+  -- todo only do this if the tag has changed
+  browser:update_message(vline)
 end
 
 function M.message_change_tag_ask(browser)
   vim.ui.input({ prompt = "Tags change: " }, function(input)
     if input then
-      M.message_change_tag(browser, input)
+      M.message_change_tags(browser, input)
     else
       error "No tag"
     end
@@ -30,13 +31,13 @@ end
 --- @param browser any
 --- @param change string +tag to add tag, -tag to remove tag
 --- Change the tag for currently selected entry's thread and update the browser
-function M.change_tags_threads(browser, change)
-  local vline, tid = browser.thread()
+function M.threads_change_tags(browser, change)
+  local vline, tid = browser:thread()
   runtime.with_db_writer(function(db)
     nu.change_tag_query(db, "thread: " .. tid, change, 0)
     if vline then
       --- this can be multiple lines, so we can't update just the current line
-      browser:update(vline)
+      browser:update_thread(vline)
     end
   end)
 end
@@ -62,6 +63,7 @@ end
 --- and history isn't updated.
 local function add_tag(message, tag, history)
   if history then
+    --- TODO: move this to the upper function
     for have in nm.message_get_tags(message) do
       if have == tag then
         return
@@ -90,6 +92,7 @@ end
 local function del_tag(message, tag, history)
   local found = false
   if history then
+    --- TODO: move this to the upper function
     for have in nm.message_get_tags(message) do
       if have == tag then
         found = true
@@ -132,6 +135,7 @@ end
 --- @param message notmuch.Message notmuch db connection
 --- @param changes string[]
 --- @param history table?
+--- @return boolean #returns true if the function changed a tag
 local function update_tags(message, changes, history)
   nm.message_freeze(message)
   for _, change in ipairs(changes) do
@@ -151,7 +155,9 @@ end
 --- @param id string a notmuch message id
 --- @param tag_changes string tags we want to change for the query
 --- @param bufnr number? bufnr (0 for current) we want to add this to history
+--- @return boolean #returns true if the function changed a tag
 function M.change_tag(db, id, tag_changes, bufnr)
+  local changed = false
   local history
   if bufnr then
     history = {}
@@ -160,19 +166,20 @@ function M.change_tag(db, id, tag_changes, bufnr)
   local changes = vim.split(tag_changes, " ")
   if not verify_changes(changes) then
     vim.notify("The tag changing string is of the wrong format", vim.log.levels.ERROR)
-    return
+    return false
   end
   local message = nm.db_find_message(db, id)
   if message == nil then
     vim.notify("Can't change tag, message not found", vim.log.levels.ERROR)
-    return
+    return false
   end
   nm.db_atomic_begin(db)
-  update_tags(message, changes, history)
+  changed = update_tags(message, changes, history)
   nm.db_atomic_end(db)
   if bufnr then
     hi.push_local(bufnr, history)
   end
+  return changed
 end
 
 --- @param db notmuch.Db notmuch db connection

@@ -53,7 +53,8 @@ function Browser.set_line(browser, line)
 end
 
 --- Gets a single line update in async
-function Browser.update_lines_helper(self, mode, search, line_nr)
+function Browser.update_lines_helper(self, mode, search, line_nr, stop)
+  stop = stop or line_nr - 1
   local bufnr = self.handle
   local args = { "nm-livesearch", "-d", self.opts.runtime.db_path, mode, search }
   if self.opts.show_message_description then
@@ -80,6 +81,7 @@ function Browser.update_lines_helper(self, mode, search, line_nr)
       if message then
         vim.api.nvim_buf_set_option(bufnr, "readonly", false)
         vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+        --- TODO: line_nr - 1 => stop
         vim.api.nvim_buf_set_lines(bufnr, line_nr - 1, line_nr, false, { message.entry })
         if message.highlight then
           vim.api.nvim_buf_add_highlight(bufnr, self.dians, "GaloreHighlight", line_nr, 0, -1)

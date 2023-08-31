@@ -61,6 +61,7 @@ function Threads:refresh()
   self:async_runner()
 end
 
+--- @deprecated use update_message or update_thread
 function Threads:update(line_nr)
   local id = self.State[line_nr]
   browser.update_lines_helper(self, "show-thread", "thread:" .. id, line_nr)
@@ -71,8 +72,13 @@ function Threads:thread()
   return line, tid
 end
 
-function Threads:message()
-  error "Can't get a message from a thread"
+function Threads:update_message(line_nr)
+  Threads:update_thread(line_nr)
+end
+
+function Threads:update_thread(line_nr)
+  local id = self.State[line_nr]
+  browser.update_lines_helper(self, "show-thread", "thread:" .. id, line_nr)
 end
 
 function Threads:select_thread(mode)

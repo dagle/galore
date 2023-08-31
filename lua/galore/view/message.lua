@@ -123,15 +123,17 @@ function Message:redraw()
   self:update()
 end
 
----@param self Message
----@param pb Browser Parrent class
+---@param view Message
+---@param pb Browser Parrent buffer
 ---@param line table
 ---@param vline integer line in the parent we want to rerun
-local function mark_read(self, pb, line, vline)
-  if self.opts.tag_unread then
+local function mark_read(view, pb, line, vline)
+  if view.opts.tag_unread then
     runtime.with_db_writer(function(db)
-      self.opts.tag_unread(db, line.id)
-      tag.tag_if_nil(db, line.id, self.opts.empty_tag)
+      --- TODO: tag_unread should return a bool if we updated a tag
+      --- or not, so we don't run updates if not needed
+      view.opts.tag_unread(db, line.id)
+      tag.tag_if_nil(db, line.id, view.opts.empty_tag)
       nu.update_line(db, line)
     end)
     if vline and pb then

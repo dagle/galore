@@ -12,9 +12,9 @@ local Tmb = Buffer:new()
 
 Tmb.Commands = {
   change_tag = {
-    fun = function(buffer, line)
-      local cb = require "galore.callback"
-      cb.change_tag(buffer, line.fargs[2])
+    fun = function(buffer, cmd)
+      local tag = require "galore.tags"
+      tag.message_change_tags(buffer, cmd.fargs[2])
     end,
   },
   -- Reply = { fun = function (buffer, line)
@@ -92,10 +92,24 @@ function Tmb:trigger_refresh()
   -- trigger an refresh in autocmd
 end
 
+--- @deprecated use update_message or update_thread
 function Tmb:update(line_nr)
   local id = self.State[line_nr]
   browser.update_lines_helper(self, "show-single-tree", "id:" .. id, line_nr)
 end
+
+function Tmb:update_message(line_nr)
+  local id = self.State[line_nr]
+  browser.update_lines_helper(self, "show-single-tree", "id:" .. id, line_nr)
+end
+
+function Tmb:update_thread(line_nr)
+  --- get the start and stop from the fold
+  local id = self.State[line_nr]
+  browser.update_lines_helper(self, "show-tree", "id:" .. id, start, stop)
+  -- return browser.get_entries(self, "show-tree", function(thread, n)
+end
+
 
 function Tmb:thread()
   local vline, mid = browser.select(self)

@@ -12,9 +12,9 @@ local Mb = Buffer:new()
 
 Mb.Commands = {
   change_tag = {
-    fun = function(buffer, line)
+    fun = function(buffer, cmd)
       local tag = require "galore.tags"
-      tag.message_change_tag(buffer, line.fargs[2])
+      tag.message_change_tags(buffer, cmd.fargs[2])
     end,
   },
 }
@@ -63,21 +63,20 @@ function Mb:refresh()
   self:async_runner()
 end
 
+--- @deprecated
 function Mb:update(line_nr)
   local id = self.State[line_nr]
   browser.update_lines_helper(self, "show-message", "id:" .. id, line_nr)
 end
 
--- function Mb:commands()
---   vim.api.nvim_buf_create_user_command(self.handle, 'GaloreChangetag', function(args)
---     if args.args then
---       local callback = require('galore.callback')
---       callback.change_tag(self, args)
---     end
---   end, {
---     nargs = '*',
---   })
--- end
+function Mb:update_message(line_nr)
+  local id = self.State[line_nr]
+  browser.update_lines_helper(self, "show-message", "id:" .. id, line_nr)
+end
+
+function Mb:update_thread(line_nr)
+  Mb:update_message(line_nr)
+end
 
 function Mb:thread()
   local vline, mid = browser.select(self)
@@ -100,7 +99,7 @@ end
 --- Open the selected thread in the browser for viewing
 --- @param mode any
 function Mb:select_thread(mode)
-  local vline, mid = browser.select()
+  local vline, mid = browser.select(self)
   local tid = message_action.get_tid(mid)
   thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid })
 end
