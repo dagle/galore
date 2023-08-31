@@ -126,7 +126,7 @@ end
 --- Open the selected thread in the browser for viewing
 --- @param mode any
 function Tmb:select_thread(mode)
-  local vline, mid = browser.select()
+  local vline, mid = browser.select(self)
   local tid = message_action.get_tid(mid)
   thread_view:create(tid, { kind = mode, parent = self, vline = vline, mid = mid })
 end

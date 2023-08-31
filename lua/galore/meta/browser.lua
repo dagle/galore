@@ -1,6 +1,8 @@
 --- @meta
+---
+--- @module 'galore.lib.buffer'
 
---- @class Browser
+--- @class Browser : Buffer
 --- @field State integer[]
 local Browser = {}
 

@@ -1,13 +1,13 @@
-local config = require('galore.config')
-local u = require('galore.util')
-local nm = require('notmuch')
-local log = require('galore.log')
+local config = require "galore.config"
+local u = require "galore.util"
+local nm = require "notmuch"
+local log = require "galore.log"
 
-local gmime = require("galore.gmime")
+local gmime = require "galore.gmime"
 
-local runtime_dir = vim.fn.stdpath('data') .. '/galore'
+local runtime_dir = vim.fn.stdpath "data" .. "/galore"
 
-local save_file = runtime_dir .. '/nm_saved.txt'
+local save_file = runtime_dir .. "/nm_saved.txt"
 
 local runtime = {}
 
@@ -20,17 +20,17 @@ local function gets(db, name)
 end
 
 function runtime.add_saved(str)
-  local fp = io.open(save_file, 'a')
+  local fp = io.open(save_file, "a")
   if not fp then
     return
   end
-  fp:write(str .. '\n')
+  fp:write(str .. "\n")
   fp:close()
 end
 
 function runtime.edit_saved()
   if vim.fn.filereadable(save_file) ~= 0 then
-    vim.cmd(':e ' .. save_file)
+    vim.cmd(":e " .. save_file)
   end
 end
 
@@ -44,13 +44,13 @@ end
 local function notmuch_init(path, conf, profile)
   local mode = 0
   local db = nm.db_open_with_config_raw(path, mode, conf, profile)
-  local name = get(db, 'user.name')
-  local primary_email = get(db, 'user.primary_email')
-  local other_email = gets(db, 'user.other_email')
-  local exclude_tags = gets(db, 'search.exclude_tags')
-  local sync_flags = get(db, 'maildir.synchronize_flags')
-  local mail_root = get(db, 'database.mail_root')
-  local db_path = get(db, 'database.path')
+  local name = get(db, "user.name")
+  local primary_email = get(db, "user.primary_email")
+  local other_email = gets(db, "user.other_email")
+  local exclude_tags = gets(db, "search.exclude_tags")
+  local sync_flags = get(db, "maildir.synchronize_flags")
+  local mail_root = get(db, "database.mail_root")
+  local db_path = get(db, "database.path")
   config.values.name = config.values.name or name
   config.values.synchronize_flags = vim.F.if_nil(config.values.synchronize_flags, sync_flags)
   config.values.primary_email = vim.F.if_nil(config.values.primary_email, primary_email)
@@ -62,34 +62,19 @@ local function notmuch_init(path, conf, profile)
 end
 
 function runtime.with_db(func)
-  local db = nm.db_open_with_config_raw(
-    config.values.db_path,
-    0,
-    config.values.nm_config,
-    config.values.nm_profile
-  )
+  local db = nm.db_open_with_config_raw(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
   func(db)
   nm.db_close(db)
 end
 
 --- for use in async/callback code
 function runtime.with_db_raw(func)
-  local db = nm.db_open_with_config_raw(
-    config.values.db_path,
-    0,
-    config.values.nm_config,
-    config.values.nm_profile
-  )
+  local db = nm.db_open_with_config_raw(config.values.db_path, 0, config.values.nm_config, config.values.nm_profile)
   func(db)
 end
 
 function runtime.with_db_writer(func)
-  local db = nm.db_open_with_config_raw(
-    config.values.db_path,
-    1,
-    config.values.nm_config,
-    config.values.nm_profile
-  )
+  local db = nm.db_open_with_config_raw(config.values.db_path, 1, config.values.nm_config, config.values.nm_profile)
   local ok, err = pcall(func, db)
   if not ok then
     log.log(err, vim.log.levels.ERROR)
@@ -98,14 +83,14 @@ function runtime.with_db_writer(func)
 end
 
 --- @param offset number
---- @param error gmime.ParserWarning
+--- @param error GMime.ParserWarning
 --- @param item string
 local function parser_warning(offset, error, item, _)
   local off = tonumber(offset)
-  local str = safe.safestring(item) or ''
+  local str = safe.safestring(item) or ""
   local error_str = convert.show_parser_warning(error)
   local level = convert.parser_warning_level(error)
-  local notification = string.format('Parsing error, %s: %s at: %d ', error_str, str, off)
+  local notification = string.format("Parsing error, %s: %s at: %d ", error_str, str, off)
   log.debug(notification)
 end
 
@@ -127,9 +112,9 @@ end
 function runtime.init()
   if vim.fn.isdirectory(runtime_dir) == 0 then
     if vim.fn.empty(vim.fn.glob(runtime_dir)) == 0 then
-      error("runtime_dir exist but isn't a directory")
+      error "runtime_dir exist but isn't a directory"
     end
-    vim.fn.mkdir(runtime_dir, 'p', '0o700')
+    vim.fn.mkdir(runtime_dir, "p", "0o700")
   end
   notmuch_init(config.values.db_path, config.values.nm_config, config.values.nm_profile)
   -- runtime.header_function = {}

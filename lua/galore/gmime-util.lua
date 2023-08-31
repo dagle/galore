@@ -1,12 +1,12 @@
-local config = require('galore.config')
-local lgi = require('lgi')
-local glib = lgi.require('GLib', '2.0')
-local gmime = require("galore.gmime")
+local config = require "galore.config"
+local lgi = require "lgi"
+local glib = lgi.require("GLib", "2.0")
+local gmime = require "galore.gmime"
 
 local M = {}
 
 function M.get_domainname(mail_str)
-  local fqdn = mail_str:gsub('.*@(%w*)%.(%w*).*', '%1.%2')
+  local fqdn = mail_str:gsub(".*@(%w*)%.(%w*).*", "%1.%2")
   return fqdn
 end
 
@@ -39,14 +39,18 @@ function M.show_addr(id)
   return str:gsub("^%l", string.upper)
 end
 
+--- Parse a filename into a gmime message
+--- @param filename string
+--- @return GMime.Message
 function M.parse_message(filename)
-  local stream = assert(gmime.StreamFile.open(filename, 'r'))
+  local stream = assert(gmime.StreamFile.open(filename, "r"))
   local parser = gmime.Parser.new_with_stream(stream)
   local opts = gmime.ParserOptions.new()
-  local message = parser:construct_message(opts)
-  return message
+  return assert(parser:construct_message(opts))
 end
 
+--- @param part GMime.Part
+--- @param filename string
 function M.save_part(part, filename)
   local stream = assert(gmime.StreamFile.open(filename, "w"))
   local dw = part:get_content()
@@ -101,7 +105,7 @@ function M.reconstruct(filenames, idx)
 end
 
 function M.make_ref(message, msg)
-  local ref_str = message:get_header('References')
+  local ref_str = message:get_header "References"
   local ref
   if ref_str then
     ref = gmime.References.parse(nil, ref_str)
@@ -112,7 +116,7 @@ function M.make_ref(message, msg)
   local reply = gmime.References.parse(nil, mid)
   ref:append(mid)
   msg.headers.References = M.references_format(ref)
-  msg.headers['In-Reply-To'] = M.references_format(reply)
+  msg.headers["In-Reply-To"] = M.references_format(reply)
 end
 
 function M.references_format(refs)
@@ -121,14 +125,14 @@ function M.references_format(refs)
   end
   local box = {}
   for ref in M.reference_iter(refs) do
-    table.insert(box, '<' .. ref .. '>')
+    table.insert(box, "<" .. ref .. ">")
   end
-  return table.concat(box, '\n\t')
+  return table.concat(box, "\n\t")
 end
 
 function M.is_multipart_alt(object)
   local type = M.mime_type(object)
-  if type == 'multipart/alternative' then
+  if type == "multipart/alternative" then
     return true
   end
   return false
@@ -136,7 +140,7 @@ end
 
 function M.is_multipart_multilingual(object)
   local type = M.mime_type(object)
-  if type == 'multipart/alternative' then
+  if type == "multipart/alternative" then
     return true
   end
   return false
@@ -144,7 +148,7 @@ end
 
 function M.is_multipart_related(object)
   local type = M.mime_type(object)
-  if type == 'multipart/alternative' then
+  if type == "multipart/alternative" then
     return true
   end
   return false

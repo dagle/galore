@@ -67,7 +67,7 @@ config.values = {
     return vim.fn.split(text)
   end,
   tag_unread = function(db, id)
-    local nu = require "galore.notmuch-util"
+    local nu = require "galore.tags"
     return nu.change_tag(db, id, "-unread")
   end,
   init = function(opts)

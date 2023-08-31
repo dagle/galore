@@ -1,7 +1,12 @@
 --- @meta
+---
+--- @module 'galore.lib.buffer'
 
---- @class View
+--- @class View : Buffer
 --- @field line table
+--- @field vline integer
+--- @field parent table
+--- @field opts table
 local View = {}
 
 --- @return GMime.Part[]

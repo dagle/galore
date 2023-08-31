@@ -1,8 +1,7 @@
 local config = require "galore.config"
 local gcu = require "galore.crypt-utils"
-local lgi = require "lgi"
 local gmime = require "galore.gmime"
-local galore = lgi.require("Galore", "0.1")
+local galore = require "galore.gmime-extra"
 local gu = require "galore.gmime-util"
 
 local M = {}
@@ -65,21 +64,31 @@ local function show_key(key)
   end
 end
 
+--- @param buffer integer
+--- @param key string
+--- @param value string
+--- @param ns string
+--- @param line table
 local function show_header(buffer, key, value, ns, i, line)
   if value and value ~= "" then
     local str = key .. ": " .. value
     local lines = vim.fn.split(str, "\n")
-    vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, lines)
-    if marks[key] and ns then
-      marks[key](buffer, ns, i, line)
+    if lines then
+      vim.api.nvim_buf_set_lines(buffer, i, i + 1, false, lines)
+      if marks[key] and ns then
+        marks[key](buffer, ns, i, line)
+      end
+      return i + #lines
     end
-    return i + #lines
   end
   return i
 end
 
--- TODO
--- this should also be user defined
+---@param message GMime.Message
+---@param buffer integer
+---@param opts table
+---@param line table
+---@param start integer?
 function M.show_headers(message, buffer, opts, line, start)
   local at = gmime.AddressType
   opts = opts or {}
@@ -88,14 +97,18 @@ function M.show_headers(message, buffer, opts, line, start)
   for _, head in ipairs(address_headers) do
     local addr = message:get_addresses(head)
     local addr_str = addr:to_string(nil, false)
-    i = show_header(buffer, show_key(head), addr_str, opts.ns, i, line)
+    if addr_str then
+      i = show_header(buffer, show_key(head), addr_str, opts.ns, i, line)
+    end
   end
 
   local date = message:get_date()
-  -- local num = date:to_unix()
-  -- local date_str = os.date('%c', num)
-  local date_str = gmime.utils_header_format_date(date)
-  i = show_header(buffer, "Date", date_str, opts.ns, i, line)
+  if date then
+    -- local num = date:to_unix()
+    -- local date_str = os.date('%c', num)
+    local date_str = gmime.utils_header_format_date(date)
+    i = show_header(buffer, "Date", date_str, opts.ns, i, line)
+  end
   local subject = message:get_subject()
   i = show_header(buffer, "Subject", subject, opts.ns, i, line)
   return i
@@ -212,8 +225,10 @@ local function rate_lang(object, list)
   return 999
 end
 
--- @param message gmime.Message
--- @param state table containing the parts
+--- @param render table the renderer
+--- @param message GMime.Message message to render
+--- @param buf table buffer to draw to
+--- @param opts table render options
 local function render_message_helper(render, message, buf, opts, state)
   local object = message:get_mime_part()
   if object == nil then
@@ -227,7 +242,7 @@ local function render_message_helper(render, message, buf, opts, state)
 
     -- export a date and author intead? Or the whole message?
     local author = message:get_from()
-    local str = author:to_string()
+    local str = author:to_string(nil, false)
     local qoute = config.values.qoute_header(num, str)
     render.draw(buf, { qoute })
   end
@@ -235,10 +250,11 @@ local function render_message_helper(render, message, buf, opts, state)
   M.walker(render, object, buf, opts, state)
 end
 
--- @param message gmime.Message
--- @param reply bool if this should be qouted
--- @param opts
--- @return a table with state
+--- @param render table the renderer
+--- @param message GMime.Message message to render
+--- @param buf table buffer to draw to
+--- @param opts table render options
+--- @return table
 function M.render_message(render, message, buf, opts)
   -- We set this to "unsafe", this is to battle
   -- This is to handle https://efail.de/ problems

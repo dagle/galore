@@ -13,8 +13,8 @@ local Mb = Buffer:new()
 Mb.Commands = {
   change_tag = {
     fun = function(buffer, line)
-      local cb = require "galore.callback"
-      cb.change_tag(buffer, line.fargs[2])
+      local tag = require "galore.tags"
+      tag.message_change_tag(buffer, line.fargs[2])
     end,
   },
 }

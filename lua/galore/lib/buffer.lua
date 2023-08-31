@@ -1,3 +1,5 @@
+--- @class Buffer
+--- @field handle integer
 local Buffer = {}
 
 function Buffer:new(this)
@@ -11,7 +13,7 @@ end
 function Buffer:focus()
   local windows = vim.fn.win_findbuf(self.handle)
 
-  if #windows == 0 then
+  if #windows == 0 or not windows then
     vim.api.nvim_win_set_buf(0, self.handle)
     return
   end

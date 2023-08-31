@@ -46,11 +46,11 @@ function Ordered.new()
   local tbl = { _values = {}, _list = {} }
   return setmetatable(tbl, {
     __newindex = Ordered.insert,
-    __len = function(t)
+    __len = function(t) -- doesn't work in luajit
       return #t._list
     end,
     __pairs = Ordered.pairs, -- doesn't work in luajit
-    __index = tbl._values,
+    __index = Ordered.index,
   })
 end
 

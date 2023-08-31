@@ -1,8 +1,10 @@
-local Path = require('plenary.path')
-local gu = require('galore.gmime-util')
-local runtime = require('galore.runtime')
-local nu = require('galore.notmuch-util')
+local Path = require "plenary.path"
+local gu = require "galore.gmime-util"
+local runtime = require "galore.runtime"
+local nu = require "galore.notmuch-util"
 local M = {}
+
+--- @module 'galore.meta.view'
 
 local function save_attachment(attachment, save_path, confirm)
   if not attachment then
@@ -19,7 +21,7 @@ local function save_attachment(attachment, save_path, confirm)
     vim.ui.input({
       prompt = "File exist, do you want to overwrite it? [y/N]",
       default = "no",
-    }, function (resp)
+    }, function(resp)
       resp = resp:lower()
       if not (resp == "y" or resp == "yes") then
         return
@@ -53,7 +55,7 @@ end
 --- @param select any
 --- TODO change, we only save mid!
 function M.yank_message(mv, select)
-  vim.fn.setreg('', mv.line[select])
+  vim.fn.setreg("", mv.line[select])
 end
 
 function M.select_attachment(attachments, cb)
@@ -62,12 +64,12 @@ function M.select_attachment(attachments, cb)
     table.insert(files, v.filename)
   end
   vim.ui.select(files, {
-    prompt = 'Select attachment: ',
+    prompt = "Select attachment: ",
   }, function(item, idx)
     if item then
       cb(attachments[idx])
     else
-      vim.api.nvim_err_writeln('No file selected')
+      vim.api.nvim_err_writeln "No file selected"
     end
   end)
 end
@@ -83,16 +85,16 @@ local function mark_read(self, pb, line, vline)
 end
 
 local function make_tag(message)
-  local subject = message:get_header('Subject') or ''
-  local from = { vim.fn.bufnr('%'), vim.fn.line('.'), vim.fn.col('.'), 0 }
+  local subject = message:get_header "Subject" or ""
+  local from = { vim.fn.bufnr "%", vim.fn.line ".", vim.fn.col ".", 0 }
   return { { tagname = subject, from = from } }
 end
 
 local function goto_message(message, id, parent)
-  local message_view = require('galore.message_view')
+  local message_view = require "galore.message_view"
   local items = make_tag(message)
-  vim.fn.settagstack(vim.fn.win_getid(), { items = items }, 't')
-  message_view:create(id, { kind = 'default', parent = parent })
+  vim.fn.settagstack(vim.fn.win_getid(), { items = items }, "t")
+  message_view:create(id, { kind = "default", parent = parent })
 end
 
 function M.goto_message(message, parent)
@@ -101,9 +103,9 @@ function M.goto_message(message, parent)
 end
 
 function M.goto_parent(message, parent)
-  local ref = message:get_header('In-Reply-To')
+  local ref = message:get_header "In-Reply-To"
   if ref == nil then
-    vim.notify('No parent')
+    vim.notify "No parent"
     return
   end
   local mid = gmime.utils_decode_message_id(ref)

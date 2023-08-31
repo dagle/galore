@@ -10,9 +10,9 @@ local browser = require "galore.browser"
 local o = require "galore.opts"
 local gu = require "galore.gmime-util"
 local ma = require "galore.message_action"
+local tag = require "galore.tags"
 
 --- @module 'galore.meta.view'
-
 
 --- @class Message : View
 local Message = Buffer:new()
@@ -36,7 +36,7 @@ Message.Commands = {
     fun = function(buffer, line)
       --- if browser is set we should do another function
       if line.smods.browse then
-        Message:select_attachment(function(attach)
+        views.select_attachment(buffer.state.attachments, function(attach)
           views.save_attachment(attach, ".", line.smods.confirm)
         end)
         return
@@ -90,28 +90,6 @@ function Message:update()
 
   local message = gu.parse_message(self.line.filenames[self.index])
 
-  -- update_private_key (no, notmuch)
-  -- update_last_seen (no, notmuch)
-  -- update_peer (no, notmuch)
-
-  -- galore should do this, maybe sq could do this?
-  -- multi-recommend (yes)
-  -- header (yes)
-  -- gossip_header (yes)
-  -- setup_message (yes)
-  -- install_message (yes)
-
-  -- these should should be standalone and in gmime-sq?
-  -- encrypt (no)
-  -- decrypt (no)
-  -- verify (no)
-
-  -- notmuch should have picked up the key
-  -- decrypt like normal
-  -- ui-recommendation?
-  -- TODO: attachments should be a list and not a map.
-  -- Storing based on filenames is a bad idea.
-
   if message then
     vim.api.nvim_buf_clear_namespace(self.handle, self.ns, 0, -1)
     self.message = message
@@ -145,14 +123,20 @@ function Message:redraw()
   self:update()
 end
 
+---@param self Message
+---@param pb Browser Parrent class
+---@param line table
+---@param vline integer line in the parent we want to rerun
 local function mark_read(self, pb, line, vline)
-  runtime.with_db_writer(function(db)
-    self.opts.tag_unread(db, line.id)
-    nu.tag_if_nil(db, line.id, self.opts.empty_tag)
-    nu.update_line(db, line)
-  end)
-  if vline and pb then
-    pb:update(vline)
+  if self.opts.tag_unread then
+    runtime.with_db_writer(function(db)
+      self.opts.tag_unread(db, line.id)
+      tag.tag_if_nil(db, line.id, self.opts.empty_tag)
+      nu.update_line(db, line)
+    end)
+    if vline and pb then
+      pb:update(vline)
+    end
   end
 end
 

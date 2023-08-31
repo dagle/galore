@@ -1,13 +1,16 @@
+local p = require "plenary.path"
 local M = {}
 
 function M.trim(s)
-  return s:gsub('^%s*(.-)%s*$', '%1')
+  return s:gsub("^%s*(.-)%s*$", "%1")
 end
 
+-- remove
 function M.id(arg)
   return arg
 end
 
+-- remove use vim.tbl_keys
 function M.make_keys(iter)
   local box = {}
   for v in iter do
@@ -24,6 +27,7 @@ function M.keys_concat(t, sep, i, j)
   return table.concat(vim.tbl_keys(t), sep, i, j)
 end
 
+--- remove use vim.iter():find() instead
 function M.contains(list, item)
   for _, l in ipairs(list) do
     if l == item then
@@ -36,9 +40,10 @@ end
 function M.string_setlength(str, len)
   local trimmed = vim.fn.strcharpart(str, 0, len)
   local tlen = vim.fn.strchars(trimmed)
-  return trimmed .. string.rep(' ', len - tlen)
+  return trimmed .. string.rep(" ", len - tlen)
 end
 
+-- remove use vim.iter():rev() instead
 function M.reverse(list)
   local box = {}
   for i = #list, 1, -1 do
@@ -47,6 +52,7 @@ function M.reverse(list)
   return box
 end
 
+-- remove
 function M.upairs(list)
   local i = 1
   return function()
@@ -81,46 +87,43 @@ end
 
 function M.add_prefix(str, prefix)
   if not vim.startswith(str, prefix) then
-    str = prefix .. ' ' .. str
+    str = string.format("%s %s", prefix, str)
   end
   return str
 end
 
-function M.basename(path)
-  return string.gsub(path, '.*/(.*)', '%1')
-end
-
-function M.is_absolute(path)
-  return path:sub(1, 1) == '/'
-end
-
+--- @param path string
+--- @param default_path string a default path to all paths that isn't absolute
+--- @return string An expanded absolute path
 function M.save_path(path, default_path)
-  path = vim.fn.expand(path)
-  default_path = default_path or ''
-  if not M.is_absolute(path) then
-    path = default_path .. path
+  local path = p:new(path)
+  path = p:new(path:expand())
+  if not path:is_absolute() then
+    local base = p:new(default_path)
+    path = base:joinpath(path)
   end
-  return path
+  return path:expand()
 end
 
 function M.gen_name(name, num)
   if num == 1 then
     return name
   end
-  return string.format('%s-%d', name, num)
+  return string.format("%s-%d", name, num)
 end
 
-function M.format(part, qoute)
-  local box = {}
-  for line in string.gmatch(part, '[^\n]+') do
-    table.insert(box, line)
-  end
-  return box
-end
+--- vim.iter(part:gmatch("[^\n]+")):totable()
+-- function M.format(part, qoute)
+--   local box = {}
+--   for line in string.gmatch(part, "[^\n]+") do
+--     table.insert(box, line)
+--   end
+--   return box
+-- end
 
 function M.purge_empty(list)
   for i, v in ipairs(list) do
-    if v == '' then
+    if v == "" then
       table.remove(list, i)
     else
       break
@@ -130,7 +133,7 @@ function M.purge_empty(list)
   --- remove any empty line at the end of the list
   local stop = #list
   while stop > 0 do
-    if list[stop] == '' then
+    if list[stop] == "" then
       table.remove(list, stop)
       stop = stop - 1
     else
@@ -140,7 +143,7 @@ function M.purge_empty(list)
 end
 
 function M.unmailto(addr)
-  return addr:gsub('<mailto:(.*)>', '%1')
+  return addr:gsub("<mailto:(.*)>", "%1")
 end
 
 function M.get_kind(smods)
