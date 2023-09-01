@@ -5,6 +5,18 @@ local hi = require "galore.history"
 
 local M = {}
 
+-- TODO: Figure out the semantics of this, this is good enough?
+
+-- Notmuch keeps tags for every message. It's a core aspect of how notmuch works.
+-- Galore enchants tags by with adding `history` and parent `browser` to it.
+
+-- History is a list of messages and tags updated by 1 action. These are attached to 
+-- browsers and views. When you change a tag, we add it to the list of actions we later
+-- can undo.
+
+-- Updating a tag should re-render the tag in both the view and if the parrent-window
+-- exist it should re-render there too.
+
 --- @param browser any
 --- @param change string +tag to add tag, -tag to remove tag
 --- Change the tag for currently selected message and update the browser
@@ -135,7 +147,7 @@ end
 --- @param message notmuch.Message notmuch db connection
 --- @param changes string[]
 --- @param history table?
---- @return boolean #returns true if the function changed a tag
+-- --- @return boolean #returns true if the function changed a tag
 local function update_tags(message, changes, history)
   nm.message_freeze(message)
   for _, change in ipairs(changes) do
@@ -155,7 +167,7 @@ end
 --- @param id string a notmuch message id
 --- @param tag_changes string tags we want to change for the query
 --- @param bufnr number? bufnr (0 for current) we want to add this to history
---- @return boolean #returns true if the function changed a tag
+-- --- @return boolean #returns true if the function changed a tag
 function M.change_tag(db, id, tag_changes, bufnr)
   local changed = false
   local history
@@ -223,11 +235,32 @@ function M.tag_if_nil(db, id, tag)
     return
   end
   local message = nm.db_find_message(db, id)
-  local tags = u.collect(nm.message_get_tags(message))
-  -- local tags = vim.iter(nm.message_get_tags(message)):collect()
+  local tags = vim.iter(nm.message_get_tags(message)):totable()
   if vim.tbl_isempty(tags) then
     M.change_tag(db, id, tag)
   end
 end
+
+--- @param db notmuch.Db
+--- @param bufnr number a bufnr or 0 for current buffer
+--- Reverts the last tag changeset for the buffer
+function M.undo(db, bufnr)
+  local bufchanges = hi.pop_local(bufnr)
+  if not bufchanges then
+    return
+  end
+
+  -- should we add a redo?
+  for action in ipairs(bufchanges) do
+    local message = nm.db_find_message(db, action.mid)
+    -- if we don't find the message, we just ignore it.
+    if message then
+      nm.db_atomic_begin(db)
+      update_tags(message, action.changes)
+      nm.db_atomic_end(db)
+    end
+  end
+end
+
 
 return M

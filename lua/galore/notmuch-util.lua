@@ -56,8 +56,8 @@ local function pop_helper(line, iter, i)
   return i
 end
 
---- @param db ffi.cdata* a notmuch message
---- @param line number
+--- @param db notmuch.Db
+--- @param line table
 function M.line_populate(db, line)
   local id = line.id
   local query = nm.create_query(db, "mid:" .. id)
@@ -66,27 +66,6 @@ function M.line_populate(db, line)
     line.total = nm.thread_get_total_messages(thread)
     local iter = nm.thread_get_toplevel_messages(thread)
     pop_helper(line, iter, i)
-  end
-end
-
---- @param db ffi.cdata* notmuch db connection
---- @param bufnr number a bufnr or 0 for current buffer
---- Reverts the last tag changeset for the buffer
-function M.undo(db, bufnr)
-  local bufchanges = hi.pop_local(bufnr)
-  if not bufchanges then
-    return
-  end
-
-  -- should we add a redo?
-  for action in ipairs(bufchanges) do
-    local message = nm.db_find_message(db, action.mid)
-    -- if we don't find the message, we just ignore it.
-    if message then
-      nm.db_atomic_begin(db)
-      update_tags(message, action.changes)
-      nm.db_atomic_end(db)
-    end
   end
 end
 

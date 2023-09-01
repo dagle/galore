@@ -19,14 +19,14 @@ end
 -- TODO
 -- these should be user defined
 -- and users should be able to easily
-local function mark(buffer, ns, content, i)
-  local line_num = i
+local function mark(buffer, ns, content, line_num, id)
   local col_num = 0
 
   local opts = {
     virt_text = { { content, "GaloreHeader" } },
+    id = id,
   }
-  vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
+  local index = vim.api.nvim_buf_set_extmark(buffer, ns, line_num, col_num, opts)
 end
 
 local marks = {
@@ -39,6 +39,34 @@ local marks = {
       local str = string.format("[%d/%d]", line.index, line.total)
       mark(buffer, ns, str, i)
     end
+  end,
+}
+
+function M.tags(line)
+  return string.format("(%s)", table.concat(line.tags, " "))
+end
+
+function M.index(line)
+  return string.format("[%d/%d]", line.index, line.total)
+end
+
+M.Marks = {
+  From = M.tags,
+  Subject = M.index
+}
+
+  -- From = function(buffer, ns, i, line)
+  --   local tags = table.concat(line.tags, " ")
+  --   mark(buffer, ns, "(" .. tags .. ")", i)
+  -- end,
+
+
+local marks2 = {
+  From = function(buffer, ns, i, opts)
+    mark(buffer, ns, opts.tags, i)
+  end,
+  Subject = function(buffer, ns, i, opts)
+    mark(buffer, ns, opts.index, i)
   end,
 }
 
@@ -110,7 +138,9 @@ function M.show_headers(message, buffer, opts, line, start)
     i = show_header(buffer, "Date", date_str, opts.ns, i, line)
   end
   local subject = message:get_subject()
-  i = show_header(buffer, "Subject", subject, opts.ns, i, line)
+  if subject then 
+    i = show_header(buffer, "Subject", subject, opts.ns, i, line)
+  end
   return i
 end
 

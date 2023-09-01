@@ -3,6 +3,11 @@
 local M = {}
 
 --- Adds the attachments in the bottom of the buffer
+--- It doesn't render the attachment it self but rather a filename.
+---@param attachments Attachment
+---@param line any
+---@param buffer any
+---@param ns any
 function M.render_attachments(attachments, line, buffer, ns)
   if #attachments == 0 then
     return

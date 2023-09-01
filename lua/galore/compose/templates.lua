@@ -23,11 +23,11 @@ end
 
 --- Headers have the type headervalue, it's either a string or a internetaddresslist.
 
---- @alias path_attachment {filename: string, path: string, mime_type: string}
---- @alias part_attachment {filename: string, part: gmime.Part, mime_type: string}
---- @alias data_attachment {filename: string, data: userdata, mime_type: string}
+--- @alias Path_attachment {filename: string, path: string, mime_type: string}
+--- @alias Part_attachment {filename: string, part: GMime.Part, mime_type: string}
+--- @alias Data_attachment {filename: string, data: userdata, mime_type: string}
 
---- @alias attachment path_attachment | part_attachment | data_attachment
+--- @alias Attachment Path_attachment | Part_attachment | Data_attachment
 
 --- @class template
 --- headers can't contain any of the headers in addresses
@@ -36,7 +36,7 @@ end
 --- @field addresses table<string, gmime.InternetAddressList>
 --- @field date glib.GDateTime|nil
 --- @field body string[]
---- @field attachments attachment[]
+--- @field attachments Attachment[]
 
 -- TODO, make things more composable
 -- Atm we overwrite all the headers instead of merging them
