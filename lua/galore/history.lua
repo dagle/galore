@@ -24,7 +24,7 @@ end
 
 --- @param bufnr number
 --- @param changelist string[]
---- commit a changeset to history. A changeset is a list of change 
+--- commit a changeset to history. A changeset is a list of change
 --- {"+tag1", "-tag2"}.
 function History.push_local(bufnr, changelist)
   if not bufnr or not changelist or vim.tbl_isempty(changelist) then
@@ -44,7 +44,7 @@ end
 
 --- @param bufnr number
 --- @return string[]?
---- pop a changeset from history. 
+--- pop a changeset from history.
 function History.pop_local(bufnr)
   local buf = History.get_bufnr(bufnr)
   if not buf or vim.tbl_isempty(buf) then

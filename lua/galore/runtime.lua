@@ -86,12 +86,12 @@ end
 --- @param error GMime.ParserWarning
 --- @param item string
 local function parser_warning(offset, error, item, _)
-  local off = tonumber(offset)
-  local str = safe.safestring(item) or ""
-  local error_str = convert.show_parser_warning(error)
-  local level = convert.parser_warning_level(error)
-  local notification = string.format("Parsing error, %s: %s at: %d ", error_str, str, off)
-  log.debug(notification)
+  -- local off = tonumber(offset)
+  -- local str = safe.safestring(item) or ""
+  -- local error_str = convert.show_parser_warning(error)
+  -- local level = convert.parser_warning_level(error)
+  -- local notification = string.format("Parsing error, %s: %s at: %d ", error_str, str, off)
+  -- log.debug(notification)
 end
 
 local function make_gmime_parser_options()

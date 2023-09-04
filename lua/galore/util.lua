@@ -69,7 +69,7 @@ end
 --- @param it function iterator to loop over
 --- @param t? table
 --- @param i? number index
---- @return array
+--- @return any[]
 function M.collect(it, t, i)
   local box = {}
   if t == nil then

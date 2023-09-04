@@ -1,20 +1,20 @@
-local gmime = require("galore.gmime")
+local gmime = require "galore.gmime"
 
-local gu = require('galore.gmime-util')
-local gcu = require('galore.crypt-utils')
-local u = require('galore.util')
-local runtime = require('galore.runtime')
-local log = require('galore.log')
+local gu = require "galore.gmime-util"
+local gcu = require "galore.crypt-utils"
+local u = require "galore.util"
+local runtime = require "galore.runtime"
+local log = require "galore.log"
 
 local M = {}
 
 local function make_attach(attach)
-  local mime = u.collect(string.gmatch(attach.mime_type, '([^/]+)'))
+  local mime = vim.iter(string.gmatch(attach.mime_type, "([^/]+)")):totable()
   if mime and #mime < 2 then
-    log.error('bad mime-type')
+    log.error "bad mime-type"
   end
   local attachment = gmime.Part.new_with_type(mime[1], mime[2])
-  attachment:set_disposition("attachment")
+  attachment:set_disposition "attachment"
   attachment:set_filename(attach.filename)
   return attachment
 end
@@ -22,7 +22,7 @@ end
 local function create_path_attachment(attach)
   local attachment = make_attach(attach)
 
-  local fd = assert(vim.loop.fs_open(attach.path, 'r', 0644))
+  local fd = assert(vim.loop.fs_open(attach.path, "r", 0644))
   local stream = gmime.StreamFs.new(fd)
 
   local content = gmime.DataWrapper.new_with_stream(stream, gmime.ContentEncoding.DEFAULT)
@@ -69,19 +69,12 @@ end
 function M.secure(part, pgp_id, opts, recipients)
   local ctx = opts.crypto_context()
   if opts.encrypt then
-    local encrypt, err = gmime.MultipartEncrypted.encrypt(
-      ctx,
-      part,
-      opts.sign,
-      pgp_id,
-      opts.encrypt_flags,
-      recipients
-    )
+    local encrypt, err = gmime.MultipartEncrypted.encrypt(ctx, part, opts.sign, pgp_id, opts.encrypt_flags, recipients)
     if encrypt ~= nil then
       return encrypt
     end
 
-    if opts.encrypt == 'MUST' then
+    if opts.encrypt == "MUST" then
       local str = string.format("Couldn't encrypt message: %s", err)
       log.error(str)
     end
@@ -91,7 +84,7 @@ function M.secure(part, pgp_id, opts, recipients)
     if signed ~= nil then
       return signed
     else
-      local str = string.format('Could not sign message: %s', err)
+      local str = string.format("Could not sign message: %s", err)
       log.error(str)
     end
   end
@@ -107,15 +100,14 @@ local function required_headers(message)
   local from = message:get_from()
   local to = message:get_to()
   local sub = message:get_subject()
-  return l(from) and l(to) and sub and sub ~= ''
+  return l(from) and l(to) and sub and sub ~= ""
 end
 
 function M.textbuilder(text)
-  local body = gmime.TextPart.new_with_subtype('plain')
-  body:set_text(table.concat(text, '\n'))
+  local body = gmime.TextPart.new_with_subtype "plain"
+  body:set_text(table.concat(text, "\n"))
   return body
 end
-
 
 --- TODO Should take a template called msg
 --- The rest should be in opts
@@ -142,7 +134,7 @@ end
 --- A msg describes a toplevel message, it's a table that is a reduced form of
 --- https://datatracker.ietf.org/doc/html/rfc8621#section-4.1.4 with only
 --- headers, body part. Then to create a complex message, just apply a custom
---- bodybuilder. 
+--- bodybuilder.
 
 --- sender, from, to, cc, bcc, replyto
 
@@ -162,8 +154,8 @@ function M.create_message(msg, opts)
   end
 
   for k, v in pairs(msg.addresses) do
-      local address = message:get_addresses(k)
-      address:append(v)
+    local address = message:get_addresses(k)
+    address:append(v)
   end
 
   if not msg.headers["Message-Id"] then
@@ -176,7 +168,7 @@ function M.create_message(msg, opts)
   end
 
   if not required_headers(message) then
-    log.error('Missing non-optional headers')
+    log.error "Missing non-optional headers"
     return
   end
 
@@ -185,7 +177,7 @@ function M.create_message(msg, opts)
 
   -- add attachments
   if not vim.tbl_isempty(msg.attachments) then
-    local multipart = gmime.Multipart.new_with_subtype('mixed')
+    local multipart = gmime.Multipart.new_with_subtype "mixed"
     multipart:add(current)
     current = multipart
     for _, attach in pairs(msg.attachments) do
