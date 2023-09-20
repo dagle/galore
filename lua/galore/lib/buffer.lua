@@ -2,6 +2,9 @@
 --- @field handle integer
 local Buffer = {}
 
+-- TODO: Save a list of all buffers that has tags and then signal
+-- send a signal for update when a tag has changed
+
 function Buffer:new(this)
   this = this or {}
   self.__index = self
@@ -397,6 +400,7 @@ function Buffer.create(config, class)
   vim.api.nvim_buf_create_user_command(buffer.handle, "Galore", function(line)
     local cmd = buffer.Commands[line.fargs[1]]
 
+    -- TODO: Why fun and not map cmd directly to the command?
     if cmd then
       cmd.fun(buffer, line)
     end

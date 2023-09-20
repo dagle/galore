@@ -20,6 +20,7 @@ function Saved.add_saved(entry)
   fp:close()
 end
 
+--- this should be removed in favor of query.notmuch
 function Saved.save_search(query)
   vim.ui.input({
     prompt="Name for saved search: "

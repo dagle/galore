@@ -17,6 +17,13 @@ Tmb.Commands = {
       tag.message_change_tags(buffer, cmd.fargs[2])
     end,
   },
+  -- TODO: This should be in all browsers
+  save_search = {
+    fun = function(buffer, cmd)
+      local jobs = require "galore.jobs"
+      jobs.save_query(buffer, cmd.fargs[2])
+    end,
+  }
   -- Reply = { fun = function (buffer, line)
   --   local mid = buffer.line.id
   --   local kind = get_kind(line.smods)

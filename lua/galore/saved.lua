@@ -31,6 +31,7 @@ local function make_entry(self, db, box, search)
   })
 end
 
+-- use get_pairs("query")
 function Saved.manual(manual)
   return function(self, searches)
     for search in ipairs(manual) do

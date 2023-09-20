@@ -43,7 +43,7 @@ function History.push_local(bufnr, changelist)
 end
 
 --- @param bufnr number
---- @return string[]?
+--- @return history_entry|nil
 --- pop a changeset from history.
 function History.pop_local(bufnr)
   local buf = History.get_bufnr(bufnr)

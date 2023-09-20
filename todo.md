@@ -7,6 +7,39 @@
     version: 0.0.11
 @end
 
+Real todo: 
+
+- Fix templates, they should be easy to work from lua. Only attachments are fine to optimize, the rest can be optimized later.
+-- Everything should be utf8 all the time, this should make things easier.
+-- Write helper functions in C to check compare addresses.
+
+- Tags and history:
+-- Save history for these buffers:
+Message, browers, (and thread?)
+
+[
+- Partial redrawing. Don't use the parrent but actually do it in a real way.
+--- lua
+
+Signal = {
+    browsers = {}
+    messages = {}
+}
+
+function RegisterBrowser(buffer)
+end
+
+function RegisterMessage(buffer)
+end
+
+function SendSignal(mid, tags?)
+end
+--- end
+
+We could do updates lazy?
+]
+
+
 create classes for browser and view.
 
 browser =>
@@ -29,6 +62,7 @@ are destructive atm
 - mixminion support?
 
 - keybase (nope, use https://keyoxide.org/ instead, it even comes with a cli frontend)
+-- this isn't a galore thing. This is a thing for pgp (gpg/sequoia)
 
 - Add wks support (being able to send a key)
 -- An Email address => email with a key with everything set

@@ -33,8 +33,8 @@ end
 --- headers can't contain any of the headers in addresses
 --- or date etc. Doing so will cause UB and overwrite it.
 --- @field headers table<string, string>
---- @field addresses table<string, gmime.InternetAddressList>
---- @field date glib.GDateTime|nil
+--- @field addresses table<string, string>
+--- @field date number|nil
 --- @field body string[]
 --- @field attachments Attachment[]
 

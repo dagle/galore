@@ -9,6 +9,32 @@ local uv = vim.loop
 
 local M = {}
 
+function M.save_query(name, query)
+  if type(name) ~= "string" then
+    error("name can't be nil")
+  end
+  if type(query) ~= "string" then
+    error("query can't be nil")
+  end
+  local query_name = string.format("query.%s", name)
+  M.notmuch_set(query_name, query)
+end
+
+function M.notmuch_set(name, value)
+  Job:new({
+    command = 'notmuch',
+    args = { 'config', 'set', name, value },
+    on_exit = function(_, ret_val)
+      if ret_val == 0 then
+        vim.notify('Value added successfully')
+      else
+        vim.notify('Failed to set value', vim.log.levels.ERROR)
+      end
+    end,
+  }):start()
+end
+
+
 function M.new()
   Job:new({
     command = 'notmuch',

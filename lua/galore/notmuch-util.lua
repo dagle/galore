@@ -22,7 +22,7 @@ end
 function M.get_message(message)
   local id = nm.message_get_id(message)
   local tid = nm.message_get_thread_id(message)
-  local filenames = u.collect(nm.message_get_filenames(message))
+  local filenames = vim.iter(nm.message_get_filenames(message)):totable()
   local sub = nm.message_get_header(message, "Subject")
   local tags = u.collect(nm.message_get_tags(message))
   local from = nm.message_get_header(message, "From")
