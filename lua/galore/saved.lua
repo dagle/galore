@@ -32,10 +32,10 @@ local function make_entry(self, db, box, search)
 end
 
 -- get all our saved queries
-function Saved.manual(searches)
+function Saved:manual(searches)
   runtime.with_db(function(db)
-    for search in nm.config_get_pairs(db, "query") do
-      ordered.insert(searches, search, { search = search, name = search, exclude = true })
+    for name, search in nm.config_get_pairs(db, "query") do
+      ordered.insert(searches, search, { search = search, name = name, exclude = true })
     end
   end)
 end

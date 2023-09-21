@@ -19,7 +19,11 @@ local function gets(db, name)
   return u.collect(nm.config_get_values_string(db, name))
 end
 
-function runtime.add_saved(str)
+
+--- add a query to the 
+---@param query string
+---@param name string?
+function runtime.add_saved(query, name)
   local fp = io.open(save_file, "a")
   if not fp then
     return
@@ -28,18 +32,19 @@ function runtime.add_saved(str)
   fp:close()
 end
 
-function runtime.edit_saved()
-  if vim.fn.filereadable(save_file) ~= 0 then
-    vim.cmd(":e " .. save_file)
-  end
+function runtime.edit_notmuch()
+  runtime.with_db(function (db)
+    local cfg = nm.config_path(db)
+    vim.cmd(":e " .. cfg)
+  end)
 end
 
-function runtime.iterate_saved()
-  if vim.fn.filereadable(save_file) == 0 then
-    return function() end
-  end
-  return io.lines(save_file)
-end
+-- function runtime.iterate_saved()
+--   if vim.fn.filereadable(save_file) == 0 then
+--     return function() end
+--   end
+--   return io.lines(save_file)
+-- end
 
 local function notmuch_init(path, conf, profile)
   local mode = 0

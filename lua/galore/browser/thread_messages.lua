@@ -21,7 +21,7 @@ Tmb.Commands = {
   save_search = {
     fun = function(buffer, cmd)
       local jobs = require "galore.jobs"
-      jobs.save_query(buffer, cmd.fargs[2])
+      jobs.save_query(buffer.search, cmd.fargs[2])
     end,
   }
   -- Reply = { fun = function (buffer, line)

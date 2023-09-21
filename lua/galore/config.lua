@@ -292,7 +292,7 @@ config.values = {
         },
         ["A"] = {
           rhs = function(tmb)
-            require("galore.runtime").add_saved(tmb.search)
+            require("galore.jobs").save_query_ask(tmb.search)
           end,
           desc = "Save this search",
         },
@@ -314,7 +314,7 @@ config.values = {
         ["<leader>m/"] = {
           rhs = function(browser)
             local action_set = require "telescope.actions.set"
-            local tmb = require "galore.thread_message_browser"
+            local tmb = require "galore.browser.thread_messages"
             local tele = require "galore.telescope.notmuch"
             local opts = {
               default_text = browser.search,
@@ -374,7 +374,7 @@ config.values = {
         },
         ["A"] = {
           rhs = function(mb)
-            require("galore.runtime").add_saved(mb.search)
+            require("galore.jobs").save_query_ask(mb.search)
           end,
           desc = "Save this search",
         },
@@ -465,7 +465,7 @@ config.values = {
         },
         ["A"] = {
           rhs = function(tb)
-            require("galore.runtime").add_saved(tb.search)
+            require("galore.jobs").add_saved(tb.search)
           end,
           desc = "Save this search",
         },

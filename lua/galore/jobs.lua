@@ -9,9 +9,14 @@ local uv = vim.loop
 
 local M = {}
 
-function M.save_query(name, query)
+function M.save_query_ask(query)
+    vim.ui.input({ prompt = "Tags change: " }, function(name)
+      M.save_query(query, name)
+    end)
+end
+function M.save_query(query, name)
   if type(name) ~= "string" then
-    error("name can't be nil")
+    error("name has to be a string")
   end
   if type(query) ~= "string" then
     error("query can't be nil")
