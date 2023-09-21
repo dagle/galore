@@ -1,5 +1,7 @@
 local gu = require('galore.gmime-util')
 local ac = require('galore.address-compare')
+local lgi = require 'lgi'
+local glib = lgi.GLib
 
 local r = require('galore.render')
 local config = require('galore.config')
@@ -45,30 +47,39 @@ end
 
 -- TODO move helper functions that could be useful for outside of this file
 
--- Get the first none-nil value in a list of fields
+--- Get the first none-nil value in a list of address fields
 --- Can use non-standard fields
+---@param message GMime.Message
+---@param list GMime.AddressType[]
+---@return GMime.InternetAddressList?
 local function get_backup(message, list)
   for _, v in ipairs(list) do
     local addr = message:get_addresses(v)
-    if addr ~= nil and addr:length(addr) > 0 then
+    if addr ~= nil and addr:length() > 0 then
       return addr
     end
   end
 end
 
+---@param message GMime.Message
+---@param list string[]
+---@return string?
 local function get_backup_header(message, list)
   for _, v in ipairs(list) do
     local header = message:get_header(v)
-    if header ~= nil and header:length(header) > 0 then
+    if header ~= nil and header:len() > 0 then
       return header
     end
   end
 end
 
+---@param message GMime.Message
+---@param list string[]
+---@return GMime.InternetAddressList?
 local function get_backup_addresses(message, list)
   for _, v in ipairs(list) do
     local header = message:get_header(v)
-    if header ~= nil and header:length(header) > 0 then
+    if header ~= nil and header:len() > 0 then
       local addr = gmime.InternetAddressList.parse(nil, header)
       if addr then
         return addr
@@ -76,29 +87,6 @@ local function get_backup_addresses(message, list)
     end
   end
 end
-
--- local function remove(list, addr)
---   local i = 0
---   for demail in gu.internet_address_list_iter(list) do
---     if ac.address_equal(demail, addr) then
---       list:remove_at(i)
---       return true
---     end
---     i = i + 1
---   end
---   return false
--- end
-
--- local function append_no_dup(addr, dst)
---   local matched = ac.ialist_contains(addr, dst)
---   if not matched then
---     dst:add(addr)
---   end
--- end
-
--- local function PP(list)
---   return list:to_string(nil, false)
--- end
 
 local function pp(header)
   if glib.DateTime:is_type_of(header) then
@@ -243,20 +231,6 @@ function Templ.buffer(buffer, headers)
       msg.headers = header:gsub("^%l", string.upper)
     end
   end
-end
-
-function Templ:mft_insert_notsubbed(message)
-  local headers = self.headers
-  headers['Mail-Reply-To'] = pp(self.headers['Reply-To'])
-  local to = headers.to
-  local cc = headers.cc
-  local ml = message:get_header('List-Post')
-  if ml and not (issubscribed(to) or issubscribed(cc)) then
-    ml = gmime.InternetAddressList.parse(nil, ml)
-    ml:add(headers.From)
-    headers['Mail-Followup-To'] = ml
-  end
-  self.headers = headers
 end
 
 -- function M.smart_response(old_message, msg, opts)

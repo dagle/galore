@@ -14,6 +14,7 @@ function M.save_query_ask(query)
       M.save_query(query, name)
     end)
 end
+
 function M.save_query(query, name)
   if type(name) ~= "string" then
     error("name has to be a string")

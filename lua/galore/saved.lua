@@ -31,7 +31,6 @@ local function make_entry(self, db, box, search)
   })
 end
 
--- get all our saved queries
 function Saved:manual(searches)
   runtime.with_db(function(db)
     for name, search in nm.config_get_pairs(db, "query") do

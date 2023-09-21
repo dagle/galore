@@ -4,6 +4,10 @@ local gmime = require("galore.gmime")
 
 local M = {}
 
+-- TODO:
+--- most of this should be rewritten
+--- gmime-extra so it can be used in gmime-extra
+
 local function unwild(ia)
   -- local myString = "some+text+here"
   local addr = ia:get_addr()
@@ -89,6 +93,8 @@ end
 --- from the correct email
 --- This looks horrible and is but it's kinda tho only way
 --- and how is most mailers do it
+
+--- TODO: This should always return a string
 function M.get_our_email(message)
   local at = gmime.AddressType
   local emails = {}
