@@ -31,13 +31,13 @@ local function make_entry(self, db, box, search)
   })
 end
 
--- use get_pairs("query")
-function Saved.manual(manual)
-  return function(self, searches)
-    for search in ipairs(manual) do
-      ordered.insert(searches, search.search, search)
+-- get all our saved queries
+function Saved.manual(searches)
+  runtime.with_db(function(db)
+    for search in nm.config_get_pairs(db, "query") do
+      ordered.insert(searches, search, { search = search, name = search, exclude = true })
     end
-  end
+  end)
 end
 
 function Saved:gen_tags(searches)
