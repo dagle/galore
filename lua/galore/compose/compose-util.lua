@@ -1,8 +1,8 @@
-local gmime = require("galore.gmime")
-local gu = require('galore.gmime-util')
-local config = require("galore.config")
-local ac = require('galore.address-compare')
-local lgi = require 'lgi'
+local gmime = require "galore.gmime"
+local gu = require "galore.gmime-util"
+local config = require "galore.config"
+local ac = require "galore.address-compare"
+local lgi = require "lgi"
 local glib = lgi.GLib
 
 local M = {}
@@ -52,7 +52,6 @@ function M.get_backup_addresses(message, list)
   end
 end
 
-
 --- @param header any
 --- @return string
 function M.pp(header)
@@ -87,7 +86,7 @@ end
 -- end
 
 function M.issubscribed(addresses)
-  local str = table.concat(config.values.mailinglist_subscribed, ', ')
+  local str = table.concat(config.values.mailinglist_subscribed, ", ")
   local list = gmime.InternetAddressList.parse(nil, str)
   for v in gu.internet_address_list_iter(list) do
     if ac.ialist_contains(v, addresses) then
@@ -103,5 +102,15 @@ function M.get_key(gpg_id)
   return mem:get_byte_array()
 end
 
+--- write these in C
 
+--- Clone all addresses in a message for the message type where
+--- the message but filters the out the addresses.
+---@param message GMime.Message
+---@param type GMime.AddressType
+---@param address GMime.InternetAddress|GMime.InternetAddressList
+function M.response_address(message, type, address) end
+
+---@param addresses GMime.InternetAddressList
+function M.filter_address(addresses, filter) end
 return M
