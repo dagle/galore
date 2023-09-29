@@ -1,4 +1,3 @@
-local config = require "galore.config"
 local lgi = require "lgi"
 local glib = lgi.require("GLib", "2.0")
 local gmime = require "galore.gmime"

@@ -9,19 +9,6 @@
 
 Real todo: 
 
-- !!! PRETEND that it's just json and write the code in that style and then try to adapt the code -
-
-BAD: Render: Projects the "3d" mime type => to a 2d object. We can't do this because we lose info during
-the projection.
-
-- Fix templates, they should be easy to work from lua. Only attachments are fine to optimize, the rest can be optimized later.
--- Everything should be utf8 all the time, this should make things easier.
--- Write helper functions in C to check compare addresses.
-
-- Tags and history:
--- Save history for these buffers:
-Message, browers, (and thread?)
-
 [
 - Partial redrawing. Don't use the parrent but actually do it in a real way.
 --- lua

@@ -21,6 +21,7 @@ local Templ = {}
 --- @alias Data_attachment2 {filename: string, data: userdata, mime_type: string}
 
 --- @alias Attachment2 Path_attachment2 | Part_attachment2 | Data_attachment2
+--- @alias Rfc822 GMime.Message
 
 --- @class Template2
 --- headers can't contain any of the headers in addresses
@@ -31,6 +32,7 @@ local Templ = {}
 --- @field date number|nil
 --- @field body string[]
 --- @field attachments Attachment2[]
+--- @field messages Rfc822[]
 
 ---@param templ Template2?
 ---@return Template2
@@ -125,7 +127,7 @@ function Templ.load_template(message)
     msg.headers[k] = v
   end
 
-  msg:load_body(msg)
+  msg:load_body(message)
   return msg
 end
 
@@ -147,7 +149,10 @@ local function resent(message, to)
   headers['Resent-Bcc'] = pp(message:get_address(at.BCC))
   headers['Recent-Date'] = pp(message:get_date())
   headers['Recent-Id'] = message:get_message_id()
-  -- insert before the body
+
+  -- TODO: we should should include the message
+  -- as a rfc822
+
   msg.headers = headers
 
   return msg
