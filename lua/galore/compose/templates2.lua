@@ -1,16 +1,12 @@
-local gu = require('galore.gmime-util')
-local ac = require('galore.address-compare')
+local gu = require "galore.gmime-util"
+local ac = require "galore.address-compare"
 
-local lgi = require 'lgi'
-local glib = lgi.GLib
-
-local r = require('galore.render')
-local config = require('galore.config')
-local runtime = require('galore.runtime')
-local u = require('galore.util')
-local gmime = require("galore.gmime")
-local log = require('galore.log')
--- local glib = 
+local r = require "galore.render"
+local config = require "galore.config"
+local u = require "galore.util"
+local gmime = require "galore.gmime"
+local log = require "galore.log"
+local cu = require "galore.compose.compose-util"
 
 local Templ = {}
 
@@ -36,7 +32,7 @@ local Templ = {}
 
 ---@param templ Template2?
 ---@return Template2
-function Templ:new (templ)
+function Templ:new(templ)
   templ = templ or {
     headers = {},
     addresses = {},
@@ -71,29 +67,28 @@ function Templ.response_message(message, opts)
   addresses.to = our
 
   local sub = message:get_subject()
-  headers.subject = u.add_prefix(sub, 'Re:')
+  headers.subject = u.add_prefix(sub, "Re:")
 
-  local from = get_backup(message, { at.REPLY_TO, at.FROM, at.SENDER })
+  local from = cu.get_backup(message, { at.REPLY_TO, at.FROM, at.SENDER })
 
   if not from then
-    error("Couldn't reply to message, couldn't find any sender field")
+    error "Couldn't reply to message, couldn't find any sender field"
   end
 
-  if not opts.type or opts.type == 'reply' then
+  if not opts.type or opts.type == "reply" then
     addresses.to = from
-  elseif opts.type == 'reply_all' then
-
-    addresses.to = response_addr(message, at.TO, our)
+  elseif opts.type == "reply_all" then
+    addresses.to = cu.response_addr(message, at.TO, our)
     add_no_dup(addresses.to, from)
 
-    addresses.cc = response_addr(message, at.TO, our)
-    addresses.bcc = response_addr(message, at.TO, our)
-  elseif opts.type == 'mailinglist' then
-    local ml = message:get_header('List-Post')
+    addresses.cc = cu.response_addr(message, at.TO, our)
+    addresses.bcc = cu.response_addr(message, at.TO, our)
+  elseif opts.type == "mailinglist" then
+    local ml = message:get_header "List-Post"
     if ml then
       addresses.to = gmime.InternetAddressList.parse(nil, ml)
     else
-      error("Message isn't a mailing list")
+      error "Message isn't a mailing list"
     end
   end
 
@@ -101,9 +96,9 @@ function Templ.response_message(message, opts)
 end
 
 function Templ.smart_response(message, opts)
-  local ml = message:get_header('List-Post')
+  local ml = message:get_header "List-Post"
   if ml then
-    opts.type = 'mailinglist'
+    opts.type = "mailinglist"
   end
   return Templ.response_message(message, opts)
 end
@@ -143,16 +138,16 @@ local function resent(message, to)
 
   addresses.to = to
 
-  headers['Resent-To'] = pp(message:get_address(at.TO))
-  headers['Resent-From'] = pp(message:get_address(at.FROM))
-  headers['Resent-Cc'] = pp(message:get_address(at.CC))
-  headers['Resent-Bcc'] = pp(message:get_address(at.BCC))
-  headers['Recent-Date'] = pp(message:get_date())
-  headers['Recent-Id'] = message:get_message_id()
+
+  headers["Resent-To"] = cu.pp(message:get_address(at.TO))
+  headers["Resent-From"] = cu.pp(message:get_address(at.FROM))
+  headers["Resent-Cc"] = cu.pp(message:get_address(at.CC))
+  headers["Resent-Bcc"] = cu.pp(message:get_address(at.BCC))
+  headers["Recent-Date"] = cu.pp(message:get_date())
+  headers["Recent-Id"] = message:get_message_id()
 
   -- TODO: we should should include the message
   -- as a rfc822
-
   msg.headers = headers
 
   return msg
@@ -160,12 +155,12 @@ end
 
 function Templ.bounce(message)
   local at = gmime.AddressType
-  local from = get_backup(message, { at.REPLY_TO, at.FROM, at.SENDER })
+  local from = cu.get_backup(message, { at.REPLY_TO, at.FROM, at.SENDER })
 
   local msg = resent(message, from)
 
   local sub = message:get_subject()
-  sub = u.add_prefix(sub, 'Return:')
+  sub = u.add_prefix(sub, "Return:")
   msg.headers.subject = sub
 
   table.insert(msg.body, 1, { "--- This email isn't for me ---" })
@@ -178,10 +173,10 @@ function Templ.forward_resent(message, to_str)
   local msg = resent(message, to)
 
   local sub = message:get_subject()
-  sub = u.add_prefix(sub, 'FWD:')
+  sub = u.add_prefix(sub, "FWD:")
   msg.headers.subject = sub
 
-  table.insert(msg.body, 1, { '--- Forwarded message ---' })
+  table.insert(msg.body, 1, { "--- Forwarded message ---" })
 
   return msg
 end
@@ -191,14 +186,14 @@ function Templ.subscribe(message)
   local headers = msg.headers
   local addresses = msg.addresses
 
-  local unsub = message:get_header('List-Subscribe')
-  if unsub == nil then
-    log.error('Subscribe header not found')
+  local sub = message:get_header "List-Subscribe"
+  if sub == nil then
+    log.error "Subscribe header not found"
   end
   local our = ac.get_our_email(message)
-  addresses.from = { our }
-  headers.to = { u.unmailto(unsub) }
-  headers.subject = 'Subscribe'
+  addresses.from = our
+  addresses.to = gmime.InternetAddressList.parse(nil, u.unmailto(sub))
+  headers.subject = "Subscribe"
 end
 
 function Templ.unsubscribe(message)
@@ -206,14 +201,14 @@ function Templ.unsubscribe(message)
   local headers = msg.headers
   local addresses = msg.addresses
 
-  local unsub = message:get_header('List-Unsubscribe')
+  local unsub = message:get_header "List-Unsubscribe"
   if unsub == nil then
-    log.error('Subscribe header not found')
+    log.error "Subscribe header not found"
   end
   local our = ac.get_our_email(message)
-  addresses.from = { our }
-  addresses.to = u.unmailto(unsub)
-  headers.subject = 'Unsubscribe'
+  addresses.from = our
+  addresses.to = gmime.InternetAddressList.parse(nil, u.unmailto(unsub))
+  headers.subject = "Unsubscribe"
 end
 
 --- If the message contains a 'Mail-Reply-To' header, we replace the
@@ -222,7 +217,7 @@ end
 function Templ:mft_response(message, opts)
   local addresses = self.addresses
 
-  local mft = message:get_header('Mail-Reply-To')
+  local mft = message:get_header "Mail-Reply-To"
   if mft ~= nil then
     local to = gmime.InternetAddressList.parse(nil, mft)
     addresses.to = { to }
@@ -234,15 +229,16 @@ end
 function Templ:mft_insert_notsubbed(message)
   local headers = self.headers
   local addresses = self.addresses
-  headers['Mail-Reply-To'] = self.headers['Reply-To']
+  -- TODO: don't read from the headers, read from the message
+  headers["Mail-Reply-To"] = headers["Reply-To"]
   local to = addresses.to
   local cc = addresses.cc
-  local ml = message:get_header('List-Post')
-  if ml and not (issubscribed(to) or issubscribed(cc)) then
-    ml = gmime.InternetAddressList.parse(nil, ml)
-    if ml ~= nil then
-      ml:add(headers.From)
-      headers['Mail-Followup-To'] = pp(ml)
+  local ml = message:get_header "List-Post"
+  if ml and not (cu.issubscribed(to) or cu.issubscribed(cc)) then
+    local list = gmime.InternetAddressList.parse(nil, ml)
+    if list ~= nil then
+      list:add(addresses.From)
+      headers["Mail-Followup-To"] = pp(list)
     end
   end
   self.headers = headers
@@ -252,13 +248,10 @@ function Templ:send_key(pgp_id)
   local attachments = self.attachments
   pgp_id = pgp_id or config.values.pgp_id
   if not pgp_id then
-    error("Couldn't find your pgp key")
+    error "Couldn't find your pgp key"
   end
   local key = get_key(pgp_id)
-  table.insert(
-    attachments,
-    { filename = 'opengpg_pubkey.asc', data = key, mime_type = 'application/pgp-keys' }
-  )
+  table.insert(attachments, { filename = "opengpg_pubkey.asc", data = key, mime_type = "application/pgp-keys" })
 end
 
 return Templ
