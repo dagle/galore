@@ -6,16 +6,17 @@ config.values = {
   nm_config = nil,
   nm_profile = nil,
   primary_email = nil, -- String
-  other_email = nil, -- {String}
+  other_email = nil, -- {String | MatchAddress}
   name = nil, -- String
   mail_root = nil,
   exclude_tags = nil, -- A list of tags that you want to filter out from searches
   synchronize_flags = nil,
 
   -- select_dir is a function that select the sub folder for a messag
-  select_dir = function(from) -- maybe message?
-    return ""
+  select_dir = function(message) -- maybe message?
+    return "."
   end,
+  default_address_match = "",
   draft_dir = "Draft", -- directory is relative to the nm root
   draft_tag = "+draft",
   sent_dir = "Sent", -- String|function(from)

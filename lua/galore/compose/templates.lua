@@ -1,14 +1,14 @@
-local gu = require('galore.gmime-util')
-local ac = require('galore.address-compare')
-local lgi = require 'lgi'
+local gu = require "galore.gmime-util"
+local ac = require "galore.address-compare"
+local lgi = require "lgi"
 local glib = lgi.GLib
 
-local r = require('galore.render')
-local config = require('galore.config')
-local runtime = require('galore.runtime')
-local u = require('galore.util')
-local gmime = require("galore.gmime")
-local log = require('galore.log')
+local r = require "galore.render"
+local config = require "galore.config"
+local runtime = require "galore.runtime"
+local u = require "galore.util"
+local gmime = require "galore.gmime"
+local log = require "galore.log"
 
 local Templ = {}
 
@@ -108,7 +108,7 @@ end
 local function ialist(...)
   local l = gmime.InternetAddressList.new()
 
-  for i = 1, select('#', ...) do
+  for i = 1, select("#", ...) do
     local ia = select(i, ...)
     if ia then
       l:add(ia)
@@ -130,7 +130,7 @@ end
 
 --- TODO: add support for IA
 local function issubscribed(addresses)
-  local str = table.concat(config.values.mailinglist_subscribed, ', ')
+  local str = table.concat(config.values.mailinglist_subscribed, ", ")
   local list = gmime.InternetAddressList.parse(runtime.parser_opts, str)
   for v in gu.internet_address_list_iter(list) do
     if ac.ialist_contains(v, addresses) then
@@ -138,7 +138,6 @@ local function issubscribed(addresses)
     end
   end
 end
-
 
 local function get_key(gpg_id)
   local ctx = gmime.GpgContext.new()
@@ -153,10 +152,7 @@ function Templ:send_key(pgp_id)
   local attachments = self.attachments or {}
   pgp_id = pgp_id or config.values.pgp_id
   local key = get_key(pgp_id)
-  table.insert(
-    attachments,
-    { filename = 'opengpg_pubkey.asc', data = key, mime_type = 'application/pgp-keys' }
-  )
+  table.insert(attachments, { filename = "opengpg_pubkey.asc", data = key, mime_type = "application/pgp-keys" })
   self.attachments = attachments
 end
 
@@ -189,13 +185,13 @@ end
 
 function Templ:mft_insert()
   local headers = self.headers
-  headers['Mail-Reply-To'] = self.headers['Reply-To']
+  headers["Mail-Reply-To"] = self.headers["Reply-To"]
   local to = headers.to
   local cc = headers.cc
   if issubscribed(to) or issubscribed(cc) then
     --- should we remove look and remove dups?
     --- because an address could be in both to and cc
-    headers['Mail-Followup-To'] = ialist(headers.to, headers.cc)
+    headers["Mail-Followup-To"] = ialist(headers.to, headers.cc)
   end
   self.headers = headers
 end
@@ -241,11 +237,9 @@ end
 --   M.response_message(old_message, msg, opts)
 -- end
 
-local function response_addr(message, field, filter)
-end
+local function response_addr(message, field, filter) end
 
-local function add_no_dup(message, field)
-end
+local function add_no_dup(message, field) end
 
 function Templ.compose_new()
   local msg = {}
@@ -259,20 +253,20 @@ function Templ.compose_new()
 end
 
 function Templ:mft_response(message, opts)
-  local type = opts.type or 'reply'
+  local type = opts.type or "reply"
   local addresses = self.addresses
 
-  if type == 'reply' then
-    local from = get_backup_addresses(message, { 'Mail-Reply-To', 'Reply-To', 'From', 'Sender' })
+  if type == "reply" then
+    local from = get_backup_addresses(message, { "Mail-Reply-To", "Reply-To", "From", "Sender" })
     addresses.to = from or addresses.to
-  elseif type == 'reply_all' then
-    local from = get_backup_addresses(message, { 'Mail-Followup-To', 'Reply-To', 'From', 'Sender' })
+  elseif type == "reply_all" then
+    local from = get_backup_addresses(message, { "Mail-Followup-To", "Reply-To", "From", "Sender" })
     addresses.to = from or addresses.to
   end
 end
 
 --- can we configure this some how?
-function Templ:new (o)
+function Templ:new(o)
   o = o or {
     headers = {},
     body = nil,
@@ -296,21 +290,20 @@ function Templ.response_message(message, opts)
   addresses.to = our
 
   local sub = message:get_subject()
-  headers.subject = u.add_prefix(sub, 'Re:')
+  headers.subject = u.add_prefix(sub, "Re:")
 
   local from = get_backup(message, { at.REPLY_TO, at.FROM, at.SENDER })
 
-  if not opts.type or opts.type == 'reply' then
+  if not opts.type or opts.type == "reply" then
     addresses.to = from
-  elseif opts.type == 'reply_all' then
-
+  elseif opts.type == "reply_all" then
     addresses.to = response_addr(message, at.TO, our)
     add_no_dup(addresses.to, from)
 
     addresses.cc = response_addr(message, at.TO, our)
     addresses.bcc = response_addr(message, at.TO, our)
-  elseif opts.type == 'mailinglist' then
-    local ml = message:get_header('List-Post')
+  elseif opts.type == "mailinglist" then
+    local ml = message:get_header "List-Post"
     if ml then
       addresses.to = gmime.InternetAddressList.parse(nil, ml)
     end
@@ -330,12 +323,12 @@ local function resent(message, to)
 
   headers.to = to
 
-  headers['Resent-To'] = pp(message:get_address(at.TO))
-  headers['Resent-From'] = pp(message:get_address(at.FROM))
-  headers['Resent-Cc'] = pp(message:get_address(at.CC))
-  headers['Resent-Bcc'] = pp(message:get_address(at.BCC))
-  headers['Recent-Date'] = pp(message:get_date())
-  headers['Recent-Id'] = message:get_message_id()
+  headers["Resent-To"] = pp(message:get_address(at.TO))
+  headers["Resent-From"] = pp(message:get_address(at.FROM))
+  headers["Resent-Cc"] = pp(message:get_address(at.CC))
+  headers["Resent-Bcc"] = pp(message:get_address(at.BCC))
+  headers["Recent-Date"] = pp(message:get_date())
+  headers["Recent-Id"] = message:get_message_id()
   -- insert before the body
   msg.headers = headers
 
@@ -348,10 +341,10 @@ function Templ.forward_resent(message, to_str)
   local msg = resent(message, to)
 
   local sub = message:get_subject()
-  sub = u.add_prefix(sub, 'FWD:')
+  sub = u.add_prefix(sub, "FWD:")
   msg.headers.subject = sub
 
-  table.insert(msg.body, 1, { '--- Forwarded message ---' })
+  table.insert(msg.body, 1, { "--- Forwarded message ---" })
 
   return msg
 end
@@ -363,7 +356,7 @@ function Templ.bounce(message)
   local msg = resent(message, from)
 
   local sub = message:get_subject()
-  sub = u.add_prefix(sub, 'Return:')
+  sub = u.add_prefix(sub, "Return:")
   msg.headers.subject = sub
 
   table.insert(msg.body, 1, { "--- This email isn't for me ---" })
@@ -374,28 +367,28 @@ function Templ.subscribe(message)
   local msg = Templ:new()
   local headers = msg.headers
 
-  local unsub = message:get_header('List-Subscribe')
+  local unsub = message:get_header "List-Subscribe"
   if unsub == nil then
-    log.error('Subscribe header not found')
+    log.error "Subscribe header not found"
   end
   local addr = ac.get_our_email(message)
   headers.from = { config.values.name, addr }
   headers.to = u.unmailto(unsub)
-  headers.subject = 'Subscribe'
+  headers.subject = "Subscribe"
 end
 
 function Templ.unsubscribe(message)
   local msg = Templ:new()
   local headers = msg.headers
 
-  local unsub = message:get_header('List-Unsubscribe')
+  local unsub = message:get_header "List-Unsubscribe"
   if unsub == nil then
-    log.error('Subscribe header not found')
+    log.error "Subscribe header not found"
   end
   local addr = ialist(ac.get_our_email(message))
   headers.from = { config.values.name, addr }
   headers.to = u.unmailto(unsub)
-  headers.subject = 'Unsubscribe'
+  headers.subject = "Unsubscribe"
 end
 
 return Templ
