@@ -228,7 +228,6 @@ function Thread:create(tid, opts)
       buffer.dians = vim.api.nvim_create_namespace "galore-dia"
       -- mark_read(buffer, opts.parent, line, opts.vline)
       buffer:update(tid)
-      buffer:commands()
       buffer:set(opts.index)
       opts.init(buffer)
     end,

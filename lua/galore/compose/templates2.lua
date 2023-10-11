@@ -48,6 +48,7 @@ end
 function Templ.compose_new()
   local msg = Templ:new()
   local addresses = {}
+  --- TODO: this should be the first account
   local our = gmime.InternetAddressMailbox.new(config.values.name, config.values.primary_email)
   addresses.from = { our }
 

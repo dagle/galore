@@ -1,28 +1,83 @@
 local config = {}
 
+--- make an easier way to change the default account
+config.default_account = {
+  email = nil, -- String, if not set it will try to configure this value from notmuch
+  draft_dir = "Draft",
+  draft_tag = "+draft",
+  sent_dir = "Sent", -- String|function(from)
+  sent_tags = "+sent",
+
+  match = nil, -- run the default matcher which is detect
+
+  pgp_id = nil, --- what gpg id to use, string or {email = string}[]
+  sign = false,
+  encrypt = false,
+  draft_encrypt = false,
+  sent_encrypt = false,
+
+  autocrypt_enable = false, -- generate a key on upstart if one doesn't exist
+  autocrypt_insert = false, -- always insert our autoencrypt key into the header
+  autocrypt_reply = false, -- use autocrypt in replys if their header includes one.
+
+  compose_headers = { { "From", true }, { "To", true }, { "Cc", false }, { "Bcc", false }, { "Subject", true } },
+  custom_headers = function(message) -- a list of headers/producers to be inserted into the header
+  end,
+
+  empty_subject = "no topic",
+  qoute_header = function(date, author)
+    return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
+  end,
+
+  send_cmd = function(message) --- sendmail command to pipe the email into
+    return "msmtp", { "--read-envelope-from", "-t" }
+  end,
+  init = function(self)
+  end,
+}
+
 config.values = {
   --- These values are generate from notmuch if set to nil
   db_path = nil,
   nm_config = nil,
   nm_profile = nil,
-  primary_email = nil, -- String
-  other_email = nil, -- {String | MatchAddress}
-  name = nil, -- String
+  accounts = nil, -- this is order dependant, the first your main account
+
+  -- TODO: these are moved to account, update galore
+  --- 99% of these should only be used in in template, compose and builder
+
+  -- primary_email = nil, -- String
+  -- other_email = nil, -- {String | MatchAddress}
+  -- name = nil, -- String
+  -- draft_dir = "Draft", -- directory is relative to the nm root
+  -- draft_tag = "+draft",
+  -- sent_dir = "Sent", -- String|function(from)
+  -- select_dir is a function that select the sub folder for a messag
+  -- draft_encrypt = false, -- TODO
+  -- sent_encrypt = false, -- TODO
+  -- pgp_id = nil, --- what gpg id to use, string or {email = string}[]
+  -- sign = false, -- Should we crypto sign the email?
+  -- encrypt = false, -- Should we encrypt the email by default? false, 1 or 2. 1 = try to encrypt
+  -- autocrypt = true, -- insert the gpg_id in our emails
+  -- autocrypt_reply = true, -- use autocrypt in replys if their header includes one.
+  -- custom_headers = {}, -- a list of headers/producers to be inserted into the header
+  -- send_cmd = function(message) --- sendmail command to pipe the email into
+  --   return "msmtp", { "--read-envelope-from", "-t" }
+  -- end,
+  -- compose_headers = { { "From", true }, { "To", true }, { "Cc", false }, { "Bcc", false }, { "Subject", true } },
+  -- empty_subject = "no topic",
+  -- qoute_header = function(date, author)
+  --   return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
+  -- end,
+
   mail_root = nil,
   exclude_tags = nil, -- A list of tags that you want to filter out from searches
   synchronize_flags = nil,
 
-  -- select_dir is a function that select the sub folder for a messag
   select_dir = function(message) -- maybe message?
     return "."
   end,
-  default_address_match = "",
-  draft_dir = "Draft", -- directory is relative to the nm root
-  draft_tag = "+draft",
-  sent_dir = "Sent", -- String|function(from)
   key_writeback = false, --- should we write back keys we got from decryption
-  draft_encrypt = false, -- TODO
-  sentencrypt = false, -- TODO
 
   mailinglist_subscribed = {}, -- mailing lists we are subscribed to
   default_browser = "tmb", -- default browser to use in default_bindings, also for telescope
@@ -35,22 +90,13 @@ config.values = {
   -- when you scroll to the bottom, we resume the printer
 
   -- Order dependant, true means always show (with "" if no value), false means only show if we added a value to it and not in the list = hidden header, if it exists
-  compose_headers = { { "From", true }, { "To", true }, { "Cc", false }, { "Bcc", false }, { "Subject", true } },
-  -- compose_headers = {
-  --   ['From'] = true , ['To'] = true, ['Cc'] = false, ['Bcc'] = false , ['Subject'] = true
-  -- },
-  extra_headres = {}, -- table with key value of headers to insert if missing
-  idn = true, -- TODO
+  idn = true,
   sort = "newest", -- "newest" | "oldest" | "message-id" | "unsort"
   sent_tags = "+sent",
   unsafe_tags = { "spam" }, -- tags we don't want to use for unsafe stuff
-  empty_topic = "no topic",
   guess_email = false, -- if we can't determain your email for reply use primary
   empty_tag = "+archive", -- nil or "tag", add a tag when there is no tag
   default_emph = { tags = { "unread" } }, --- maybe change this to a function in the future?
-  qoute_header = function(date, author)
-    return "On " .. os.date("%Y-%m-%d ", date) .. author .. " wrote:"
-  end,
   alt_mode = true, -- Only render one part of alts
   alt_order = { "text/plain", "text/enriched", "text/html" }, -- table or function?
   -- alt_order = {"text/html", "text/plain", "text/enriched"}, -- table or function?
@@ -91,16 +137,7 @@ config.values = {
   end,
   verify_flags = { "ENABLE_KEYSERVER_LOOKUPS" },
   decrypt_flags = { "ENABLE_KEYSERVER_LOOKUPS" },
-  sign = false, -- Should we crypto sign the email?
-  encrypt = false, -- Should we encrypt the email by default? false, 1 or 2. 1 = try to encrypt
   -- create message anyways. 2 = always encrypt and failing is an error
-  pgp_id = nil, --- what gpg id to use, string or {email = string}[]
-  autocrypt = true, -- insert the gpg_id in our emails
-  autocrypt_reply = true, -- use autocrypt in replys if their header includes one.
-  custom_headers = {}, -- a list of headers/producers to be inserted into the header
-  send_cmd = function(message) --- sendmail command to pipe the email into
-    return "msmtp", { "--read-envelope-from", "-t" }
-  end,
   --- how to notify the user that a part has been verified
   annotate_signature = function(bufnr, ns, status, before, after, _)
     local ui = require "galore.ui"
@@ -114,7 +151,6 @@ config.values = {
       vim.notify("Signature failed", vim.log.levels.WARN)
     end
   end,
-  from_length = 25, --- The from length the default show_message_descripiton
   show_message_description = {
     "{date} [{index:02}/{total:02}] {from:25}│ {subject} ({tags})",
     "{date} [{index:02}/{total:02}] {from:25}│ {response}▶ ({tags})",

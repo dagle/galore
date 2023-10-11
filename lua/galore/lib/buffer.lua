@@ -2,6 +2,18 @@
 --- @field handle integer
 local Buffer = {}
 
+-- Tracked is a table of browser we have opened that could need to
+-- be updated. This should be farely quick unless we have 2000 browsers open
+-- at the same time.
+-- In tracked we 
+local tracked = {}
+
+function update_parent(id)
+  for _, b in ipairs(tracked) do
+    b:update(id)
+  end
+end
+
 -- TODO: Save a list of all buffers that has tags and then signal
 -- send a signal for update when a tag has changed
 
@@ -62,47 +74,29 @@ function Buffer:stop_timers()
 end
 
 local function cleanup(self)
+  if self.runner then
+    self.runner.close()
+  end
+  if self.timers then
+    self:stop_timers()
+  end
   if self.cleanup then
     self:cleanup()
   end
-  self.timers = {}
-  self.parent = nil
+  -- TODO: remove the buffer from 
+  -- the tracked parents
 end
 
 -- split up this and add a callback handler for when the buffer is deleted
-function Buffer:close(delete)
-  local bufwins = #vim.fn.win_findbuf(self.handle)
+function Buffer:close()
+  local current = vim.api.nvim_win_get_config(0)
 
-  local floating = vim.api.nvim_win_get_config(0).zindex
-
-  if floating then
+  if current ~= self.win_id then
     vim.api.nvim_win_close(0, true)
-    if self.parent then
-      self.parent:focus()
-    end
-  elseif self.kind == "replace" and self.parent then
-    if self.parent.handle and vim.fn.bufexists(self.parent.handle) ~= 0 then
-      vim.api.nvim_win_set_buf(0, self.parent.handle)
-    end
-  -- elseif self.kind == "floating" then
-  -- 	vim.api.nvim_win_close(0, true)
-  -- 	if self.parent then
-  -- 		self.parent:focus()
-  -- 	end
+  elseif not self.parent then
+    vim.api.nvim_win_close(0, true)
   else
-    if self.parent then
-      self.parent:focus()
-    end
-  end
-  if delete and bufwins <= 1 then
-    if self.runner then
-      self.runner.close()
-    end
-    if self.timers then
-      self:stop_timers()
-    end
-    cleanup(self)
-    vim.api.nvim_buf_delete(self.handle, {})
+    vim.api.nvim_win_set_buf(0, self.parent.handle)
   end
 end
 
@@ -337,6 +331,7 @@ function Buffer.create(config, class)
   buffer.parent = config.parent
   buffer.cleanup = config.cleanup
   buffer.update = config.update
+  buffer.win_id = vim.api.nvim_get_current_win()
 
   vim.wo.nu = false
   vim.wo.rnu = false
@@ -440,25 +435,12 @@ function Buffer.create(config, class)
     end,
   })
 
-  -- if config.autocmds then
-  -- 	-- vim.api.nvim_create_augroup("") -- unique id?
-  -- 	for event, cb in pairs(config.autocmds) do
-  -- 		local cbfunc = function ()
-  -- 			cb(buffer)
-  -- 		end
-  -- 		vim.api.nvim_create_autocmd(event, {callback = cbfunc, buffer = buffer.handle})
-  -- 	end
-  -- end
   vim.api.nvim_create_autocmd("BufDelete", {
-    callback = function()
-      -- buffer_delete(buffer.handle)
-    end,
     buffer = buffer.handle,
+    callback = function()
+      cleanup(buffer)
+    end,
   })
-
-  -- if not config.modifiable then
-  -- 	buffer:set_option("modifiable", false)
-  -- end
 
   if config.readonly ~= nil and config.readonly then
     buffer:set_option("readonly", true)

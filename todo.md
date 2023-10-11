@@ -31,6 +31,22 @@ end
 We could do updates lazy?
 ]
 
+--- Navigation navigaton navigation
+Problem atm: If I open saved => browser => split => quit => quit, the original saved buffer is
+deleted and trying to back in the original browser will create a problem.
+
+- Move navigation from buffer.lua to window.lua?
+- Solution: When we close a buffer with q (or such), we should look if this buffer is connected
+to a window. If that is the case and the current window match the window the buffer knows about
+we should just jump back in the history.
+
+- Checking if window is visible isn't an option because saved wasn't visible but shouldn't have been
+closed.
+
+
+- removing and adding from a thread
+
+- async runner offset and limit rather than just sleeping.
 
 create classes for browser and view.
 

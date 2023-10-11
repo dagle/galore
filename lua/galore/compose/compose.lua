@@ -143,7 +143,7 @@ function Compose:parse_buffer()
   local msg = templ.buffer(headers, self.extra_headers)
 
   if msg.headers.Subject == nil then
-    headers.Subject = self.opts.empty_topic
+    headers.Subject = self.opts.empty_subject
   end
 
   msg.body = body

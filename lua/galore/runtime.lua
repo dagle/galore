@@ -2,6 +2,7 @@ local config = require "galore.config"
 local u = require "galore.util"
 local nm = require "notmuch"
 local log = require "galore.log"
+local acc = require("galore.account")
 
 local gmime = require "galore.gmime"
 
@@ -56,10 +57,27 @@ local function notmuch_init(path, conf, profile)
   local sync_flags = get(db, "maildir.synchronize_flags")
   local mail_root = get(db, "database.mail_root")
   local db_path = get(db, "database.path")
-  config.values.name = config.values.name or name
+
+  if config.accounts == nil then
+    other_email = other_email or {}
+    table.insert(other_email, 1, primary_email)
+    local accounts = {}
+
+    for _, m in ipairs(other_email) do
+      if name then
+        local email = string.format("%s <%s>", name, m)
+        local account = acc.new(email)
+        table.insert(accounts, account)
+      else
+      end
+    end
+    config.accounts = accounts
+  end
+  for _, account in ipairs(config.accounts) do
+    acc.init(account)
+  end
+
   config.values.synchronize_flags = vim.F.if_nil(config.values.synchronize_flags, sync_flags)
-  config.values.primary_email = vim.F.if_nil(config.values.primary_email, primary_email)
-  config.values.other_email = vim.F.if_nil(config.values.other_email, other_email)
   config.values.exclude_tags = vim.F.if_nil(config.values.exclude_tags, exclude_tags)
   config.values.mail_root = vim.F.if_nil(config.values.mail_root, mail_root)
   config.values.db_path = vim.F.if_nil(config.values.db_path, db_path)
