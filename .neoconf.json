@@ -13,7 +13,8 @@
   "invader": {
     "enabled": true,
     "typelibs": [
-      "GMime-3.0"
+      "GMime-3.0",
+	  "GLib-2.0"
     ]
   }
 }

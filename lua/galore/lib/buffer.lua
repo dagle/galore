@@ -392,48 +392,27 @@ function Buffer.create(config, class)
   end
 
   --- add globals
-  vim.api.nvim_buf_create_user_command(buffer.handle, "Galore", function(line)
-    local cmd = buffer.Commands[line.fargs[1]]
+  if buffer.Commands then
+    vim.api.nvim_buf_create_user_command(buffer.handle, "Galore", function(line)
+      local cmd = buffer.Commands[line.fargs[1]]
 
-    -- TODO: Why fun and not map cmd directly to the command?
-    if cmd then
-      cmd.fun(buffer, line)
-    end
-  end, {
+      if cmd then
+        cmd.fun(buffer, line)
+      end
+    end, {
     nargs = "*",
-    complete = function(_, line, _)
-      if buffer.Commands then
-        local l = vim.split(line, "%s+")
-        local i
-        local n
-
-        for j, v in ipairs(l) do
-          if v == "Galore" then
-            n = #l - j - 1
-            i = j
-            break
-          end
-        end
-
-        if n == 0 then
-          local keys = vim.tbl_keys(buffer.Commands)
-          return vim.tbl_filter(function(val)
-            return vim.startswith(val, l[i + 1])
-          end, keys)
-        end
-        if n > 0 then
-          local cmd = buffer.Commands[l[i + 1]]
-
-          if cmd.cmp and cmd.cmp[n] then
-            local comp = cmd.cmp[n](buffer)
-            return vim.tbl_filter(function(val)
-              return vim.startswith(val, l[#l])
-            end, comp)
-          end
-        end
+    complete = function(lead, line, _)
+      local keys = vim.tbl_keys(buffer.Commands)
+      if vim.trim(line) == "Galore" then
+        return keys
+      elseif lead ~= "" then
+        return vim.tbl_filter(function(val)
+          return vim.startswith(val, lead)
+        end, keys)
       end
     end,
-  })
+    })
+  end
 
   vim.api.nvim_create_autocmd("BufDelete", {
     buffer = buffer.handle,
